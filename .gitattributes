@@ -1,0 +1,6 @@
+# Saltos de línea LF en el repositorio aunque se trabaje en Windows: evita
+# diferencias falsas entre equipos y scripts de shell rotos en los contenedores.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
