@@ -26,6 +26,7 @@
   "dependencies": {
     "@mantine/core": "^9.7.2",
     "@mantine/hooks": "^9.7.2",
+    "@tabler/icons-react": "^3.50.0",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.1",
     "postgres": "^3.4.9",

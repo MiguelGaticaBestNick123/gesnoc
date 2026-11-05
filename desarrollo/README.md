@@ -52,6 +52,14 @@ npm run dev                   # http://localhost:3000
   edita: cada cambio es una migración nueva.
 - `src/shared/db/esquema/` se genera con `npm run db:esquema`; no se edita a mano.
 
+## Roles
+
+La portada permite entrar como administración (`/admin`), garzón (`/garzon`), barra (`/barra`),
+cocina (`/cocina`) o guardia (`/guardia`). Los menús de cada rol están en
+`src/modules/acceso/roles.ts`; las secciones que aún no se construyen muestran las historias que las
+completarán. Las pantallas usan datos del local de demostración, no necesitan base de datos y el rol
+todavía no restringe el acceso (llega con el inicio de sesión, HU-01).
+
 ## Estructura
 
 ```

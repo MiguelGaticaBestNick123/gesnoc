@@ -10,7 +10,7 @@ async function tocarMesa(page: Page, nombre: string, esperado: string) {
 }
 
 test('el mapa muestra las mesas del ambiente y la cuenta de una mesa ocupada', async ({ page }) => {
-  await page.goto('/mesas');
+  await page.goto('/garzon');
   await expect(page.getByRole('heading', { name: 'Mesas' })).toBeVisible();
 
   await tocarMesa(page, 'Mesa 4, ocupada', 'Cuenta 12');

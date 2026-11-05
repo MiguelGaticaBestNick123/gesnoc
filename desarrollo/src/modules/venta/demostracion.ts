@@ -1,6 +1,8 @@
 // Cuentas abiertas de una noche de demostración. Cada pedido se divide en comandas
 // por estación, igual que en el modelo: una línea va a la barra del ambiente o a la cocina.
 
+import { ambientes } from '@/modules/local/demostracion';
+
 export type EstadoComanda = 'pendiente' | 'lista' | 'entregada';
 
 export interface LineaPedido {
@@ -32,6 +34,15 @@ export interface Cuenta {
   garzon: string;
   pedidos: Pedido[];
   pagado: number;
+}
+
+export interface ComandaEnCola {
+  pedido: number;
+  estado: EstadoComanda;
+  enviadoEn: string;
+  ubicacion: string;
+  garzon: string;
+  lineas: LineaPedido[];
 }
 
 export const cuentasAbiertas: Cuenta[] = [
@@ -179,4 +190,28 @@ export function totalCuenta(cuenta: Cuenta): number {
 
 export function saldoCuenta(cuenta: Cuenta): number {
   return totalCuenta(cuenta) - cuenta.pagado;
+}
+
+/** Comandas por preparar o por retirar de una estación, en orden de llegada (RF-21). */
+export function colaDe(estacion: string): ComandaEnCola[] {
+  return cuentasAbiertas
+    .flatMap((cuenta) =>
+      cuenta.pedidos.flatMap((pedido) =>
+        pedido.comandas
+          .filter((c) => c.estacion === estacion && c.estado !== 'entregada')
+          .map((c) => ({
+            pedido: pedido.numero,
+            estado: c.estado,
+            enviadoEn: pedido.enviadoEn,
+            ubicacion: cuenta.referencia ?? `Mesa ${numeroDeMesa(cuenta.mesaId)}`,
+            garzon: cuenta.garzon,
+            lineas: pedido.lineas.filter((l) => l.estacion === estacion),
+          })),
+      ),
+    )
+    .sort((a, b) => a.pedido - b.pedido);
+}
+
+function numeroDeMesa(mesaId: number | null): number | undefined {
+  return ambientes.flatMap((a) => a.mesas).find((m) => m.id === mesaId)?.numero;
 }
