@@ -1,0 +1,51 @@
+# Uso local: docker compose up -d db migrar   (base y migraciones)
+#            docker compose --profile app up -d --build   (también la aplicación en :3000)
+# Las claves salen de .env (ver .env.example).
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${CLAVE_POSTGRES:?Falta CLAVE_POSTGRES en .env}
+      POSTGRES_DB: gesnoc
+      CLAVE_MIGRADOR: ${CLAVE_MIGRADOR:?Falta CLAVE_MIGRADOR en .env}
+      CLAVE_APP: ${CLAVE_APP:?Falta CLAVE_APP en .env}
+    ports:
+      - '5432:5432'
+    volumes:
+      - datos:/var/lib/postgresql/data
+      - ./db/roles.sql:/gesnoc/roles.sql:ro
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d gesnoc']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrar:
+    image: ghcr.io/amacneil/dbmate:2
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gesnoc_migrador:${CLAVE_MIGRADOR}@db:5432/gesnoc?sslmode=disable
+      DBMATE_MIGRATIONS_TABLE: migraciones.schema_migrations
+      DBMATE_NO_DUMP_SCHEMA: 'true'
+    volumes:
+      - ./db/migrations:/db/migrations:ro
+    command: ['--wait', 'migrate']
+
+  app:
+    build: .
+    depends_on:
+      migrar:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://gesnoc_app:${CLAVE_APP}@db:5432/gesnoc
+    ports:
+      - '3000:3000'
+    profiles: ['app']
+
+volumes:
+  datos:
