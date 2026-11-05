@@ -1,4 +1,4 @@
-import { Container, Stack, Text, Title } from '@mantine/core';
+import { Anchor, Container, Stack, Text, Title } from '@mantine/core';
 
 export default function Inicio() {
   return (
@@ -6,6 +6,9 @@ export default function Inicio() {
       <Stack gap="sm">
         <Title order={1}>GesNoc</Title>
         <Text c="dimmed">Gestión nocturna: turnos, pedidos, caja y puerta en un solo lugar.</Text>
+        <Anchor href="/mesas" fw={600} mt="md">
+          Entrar al local de demostración
+        </Anchor>
       </Stack>
     </Container>
   );
