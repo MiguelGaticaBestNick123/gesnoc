@@ -7,6 +7,10 @@
 create role gesnoc_migrador login password :'clave_migrador';
 create role gesnoc_app      login password :'clave_app';
 
+-- En un host administrado el administrador no es superusuario: necesita poder actuar como
+-- el migrador para dejarle el esquema y definir sus permisos por omisión.
+grant gesnoc_migrador to current_user;
+
 -- El migrador es dueño del esquema: solo él ejecuta DDL.
 create schema if not exists gesnoc authorization gesnoc_migrador;
 

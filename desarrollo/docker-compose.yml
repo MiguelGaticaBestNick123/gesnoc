@@ -2,6 +2,8 @@
 #            docker compose --profile app up -d --build   (también la aplicación en :3000)
 # Las claves salen de .env (ver .env.example).
 
+name: gesnoc
+
 services:
   db:
     image: postgres:17
