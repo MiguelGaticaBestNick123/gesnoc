@@ -1,12 +1,17 @@
 import { Card, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { entradasNoche, recaudado } from '@/modules/porteria/demostracion';
+import { estado } from '@/modules/noche/servicios/noches';
 import { cuentasAbiertas, saldoCuenta, totalCuenta } from '@/modules/venta/demostracion';
+import { exigirVista } from '@/shared/sesion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
+import { formatearFecha } from '@/shared/utilidades/fechas';
 
 export const metadata = { title: 'Administración · GesNoc' };
 
-// Resumen de la noche abierta con los datos de demostración; las cifras reales llegan con HU-29.
-export default function PaginaAdmin() {
+// El estado de la noche ya es real; las cifras son de demostración hasta HU-29.
+export default async function PaginaAdmin() {
+  const actor = await exigirVista('admin');
+  const { abierta } = await estado(actor);
   const vendido = cuentasAbiertas.reduce((suma, c) => suma + totalCuenta(c), 0);
   const porCobrar = cuentasAbiertas.reduce((suma, c) => suma + saldoCuenta(c), 0);
   const indicadores = [
@@ -21,7 +26,8 @@ export default function PaginaAdmin() {
       <div>
         <Title order={2}>Resumen de la noche</Title>
         <Text c="dimmed" size="sm">
-          Noche abierta · local de demostración
+          {abierta ? `Noche abierta: ${formatearFecha(abierta.fecha)}` : 'Sin noche abierta'} ·
+          cifras de demostración
         </Text>
       </div>
       <SimpleGrid cols={{ base: 2, md: 4 }}>

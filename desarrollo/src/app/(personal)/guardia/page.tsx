@@ -10,12 +10,14 @@ import {
   Title,
 } from '@mantine/core';
 import { entradasNoche, recaudado } from '@/modules/porteria/demostracion';
+import { exigirVista } from '@/shared/sesion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 
 export const metadata = { title: 'Entrada · GesNoc' };
 
 // Esqueleto de la puerta: el registro real llega con HU-30 y el escaneo de la cédula con HU-31.
-export default function PaginaGuardia() {
+export default async function PaginaGuardia() {
+  await exigirVista('guardia');
   const ultimoTicket = entradasNoche.find((e) => e.ticket !== null)?.ticket;
 
   return (

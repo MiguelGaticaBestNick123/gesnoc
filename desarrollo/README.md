@@ -22,26 +22,32 @@ migraciones SQL con dbmate, Vitest y Playwright. Docker Compose para el ambiente
 npm install
 cp .env.example .env          # completar las claves
 docker compose up -d db migrar  # PostgreSQL 17, roles y migraciones
+npm run db:semilla            # local de demostración
 npm run dev                   # http://localhost:3000
 ```
+
+Las cuentas de demostración son `admin`, `garzon`, `garzon2`, `barra`, `cocina`, `guardia` y
+`sinturno`, todas `@gesnoc.test`, con la contraseña definida en `CLAVE_DEMO`. Las noches quedan
+programadas: para que cada persona opere su rol, la administración debe abrir la noche.
 
 `GET /api/salud` responde `{"estado":"ok"}` cuando la aplicación llega a la base.
 
 ## Comandos
 
-| Comando                                                   | Para qué                                                                       |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `npm run dev`                                             | Servidor de desarrollo                                                         |
-| `npm run build`                                           | Build de producción                                                            |
-| `npm run lint` / `npm run typecheck`                      | ESLint / tipos de TypeScript                                                   |
-| `npm run format`                                          | Formatear con Prettier                                                         |
-| `npm test`                                                | Pruebas unitarias y de integración (la integración necesita la base levantada) |
-| `npm run test:unit`                                       | Solo unitarias                                                                 |
-| `npx vitest run tests/unit/dinero.test.ts -t "decimales"` | Un archivo o una sola prueba                                                   |
-| `npm run test:e2e`                                        | Playwright (levanta el servidor solo)                                          |
-| `npm run db:migrar`                                       | Aplicar migraciones pendientes                                                 |
-| `npm run db:nueva -- nombre`                              | Crear una migración nueva en `db/migrations/`                                  |
-| `npm run db:esquema`                                      | Regenerar los tipos de Drizzle desde la base migrada                           |
+| Comando                                                   | Para qué                                                           |
+| --------------------------------------------------------- | ------------------------------------------------------------------ |
+| `npm run dev`                                             | Servidor de desarrollo                                             |
+| `npm run build`                                           | Build de producción                                                |
+| `npm run lint` / `npm run typecheck`                      | ESLint / tipos de TypeScript                                       |
+| `npm run format`                                          | Formatear con Prettier                                             |
+| `npm test`                                                | Pruebas unitarias y de integración (usan la base `gesnoc_pruebas`) |
+| `npm run test:unit`                                       | Solo unitarias                                                     |
+| `npx vitest run tests/unit/dinero.test.ts -t "decimales"` | Un archivo o una sola prueba                                       |
+| `npm run test:e2e`                                        | Playwright (levanta el servidor en :3100 contra `gesnoc_pruebas`)  |
+| `npm run db:migrar`                                       | Aplicar migraciones pendientes                                     |
+| `npm run db:nueva -- nombre`                              | Crear una migración nueva en `db/migrations/`                      |
+| `npm run db:semilla`                                      | Cargar el local de demostración si la base no tiene personal       |
+| `npm run db:esquema`                                      | Regenerar los tipos de Drizzle desde la base migrada               |
 
 ## Base de datos
 
@@ -51,20 +57,26 @@ npm run dev                   # http://localhost:3000
 - El SQL de `db/migrations/` es la fuente de verdad. Una migración ya fusionada en `main` no se
   edita: cada cambio es una migración nueva.
 - `src/shared/db/esquema/` se genera con `npm run db:esquema`; no se edita a mano.
+- Las pruebas crean y vacían su propia base, `gesnoc_pruebas`, y se niegan a correr contra un host
+  que no sea local. Necesitan `CLAVE_POSTGRES` para crearla la primera vez.
 
-## Roles
+## Acceso y roles
 
-La portada permite entrar como administración (`/admin`), garzón (`/garzon`), barra (`/barra`),
-cocina (`/cocina`), guardia (`/guardia`) o sin turno (`/personal`), y abrir la carta del cliente
-(`/carta/demo`). Los menús de cada rol están en `src/modules/acceso/roles.ts`; cada sección indica
-las historias que la construyen y las que aún no existen se muestran en construcción. Las pantallas
-usan datos del local de demostración, no necesitan base de datos y el rol todavía no restringe el
-acceso (llega con el inicio de sesión, HU-01).
+No hay registro público: las cuentas las crea la administración. Al entrar, cada persona llega a la
+pantalla del rol que tiene en la noche abierta (RF-04): `/garzon`, `/barra`, `/cocina` o `/guardia`.
+Sin turno solo ve su calendario en `/personal` (RN-05) y la administración (`/admin`) accede a todo.
+La carta del cliente (`/carta/[token]`) es pública.
+
+Los permisos se deciden en un solo lugar, `src/shared/autorizacion/`: cada servicio llama a `exigir`
+y cada página a `exigirVista`. Los menús están en `src/modules/acceso/roles.ts`; las secciones que
+aún no se construyen se muestran en construcción, y las pantallas de garzón, barra, cocina y guardia
+usan datos de demostración hasta que lleguen sus historias.
 
 ## Estructura
 
 ```
 db/migrations/      migraciones SQL (dbmate)
+db/seeds/           local de demostración con datos ficticios
 src/app/            rutas por rol y la carta pública
 src/modules/        un módulo por área: servicios (reglas) y repositorios (SQL)
 src/shared/         base de datos, sesión, autorización y utilidades comunes

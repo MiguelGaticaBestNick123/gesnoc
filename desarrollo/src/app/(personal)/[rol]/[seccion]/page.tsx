@@ -1,9 +1,12 @@
 import { notFound } from 'next/navigation';
 import { roles } from '@/modules/acceso/roles';
+import { exigirVista } from '@/shared/sesion';
 import { EnConstruccion } from '@/shared/ui/EnConstruccion';
 
 const secciones = roles.flatMap((rol) =>
-  rol.secciones.filter((s) => s.ruta && !s.destino).map((seccion) => ({ rol, seccion })),
+  rol.secciones
+    .filter((s) => s.ruta && !s.destino && !s.construida)
+    .map((seccion) => ({ rol, seccion })),
 );
 
 export const dynamicParams = false;
@@ -18,6 +21,7 @@ export default async function PaginaSeccion({
   const { rol, seccion } = await params;
   const encontrada = secciones.find((s) => s.rol.clave === rol && s.seccion.ruta === seccion);
   if (!encontrada) notFound();
+  await exigirVista(encontrada.rol.clave);
 
   return (
     <EnConstruccion
