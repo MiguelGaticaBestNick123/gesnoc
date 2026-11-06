@@ -42,6 +42,7 @@ jobs:
 
     # Claves de una base desechable que solo existe durante la ejecución.
     env:
+      CLAVE_POSTGRES: postgres
       DATABASE_URL: postgres://gesnoc_app:app_ci@localhost:5432/gesnoc
       DATABASE_URL_MIGRADOR: postgres://gesnoc_migrador:migrador_ci@localhost:5432/gesnoc?sslmode=disable
 

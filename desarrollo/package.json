@@ -21,11 +21,13 @@
     "db:migrar": "dbmate -e DATABASE_URL_MIGRADOR --migrations-table migraciones.schema_migrations --no-dump-schema --wait migrate",
     "db:estado": "dbmate -e DATABASE_URL_MIGRADOR --migrations-table migraciones.schema_migrations status",
     "db:nueva": "dbmate new",
+    "db:semilla": "node scripts/sembrar.ts",
     "db:esquema": "drizzle-kit pull && node scripts/ajustar-esquema.mjs && prettier --write src/shared/db/esquema"
   },
   "dependencies": {
     "@mantine/core": "^9.7.2",
     "@mantine/hooks": "^9.7.2",
+    "@node-rs/argon2": "^2.2.2",
     "@tabler/icons-react": "^3.50.0",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.1",

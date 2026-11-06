@@ -6,5 +6,7 @@ coverage
 playwright-report
 test-results
 tests
+playwright.config.ts
+vitest.config.ts
 .env
 .env.*

@@ -1,11 +1,5 @@
-try {
-  process.loadEnvFile();
-} catch {
-  // Sin .env (CI): las variables ya vienen del entorno.
-}
+import { cargarEntorno, urlDePruebas } from '../base-pruebas';
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    'Las pruebas de integración necesitan DATABASE_URL: levanta la base con `docker compose up -d db migrar`.',
-  );
-}
+cargarEntorno();
+process.env.DATABASE_URL = urlDePruebas(process.env.DATABASE_URL);
+process.env.DATABASE_URL_MIGRADOR = urlDePruebas(process.env.DATABASE_URL_MIGRADOR);
