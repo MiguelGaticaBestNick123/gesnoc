@@ -28,8 +28,9 @@ import {
   IconUsersGroup,
   type Icon,
 } from '@tabler/icons-react';
+import type { Permiso } from '@/shared/autorizacion';
 
-export type ClaveRol = 'admin' | 'garzon' | 'barra' | 'cocina' | 'guardia' | 'personal';
+export type ClaveRol = Permiso;
 
 export interface Seccion {
   /** Vacío en la pantalla de inicio del rol. */
@@ -43,6 +44,8 @@ export interface Seccion {
   historias?: string[];
   /** Lleva a la pantalla de otro rol en vez de a una sección propia. */
   destino?: string;
+  /** Ya tiene pantalla propia; si no, se muestra en construcción. */
+  construida?: boolean;
 }
 
 export interface Rol {
@@ -60,6 +63,7 @@ const misTurnos: Seccion = {
   grupo: 'Mi cuenta',
   descripcion: 'Calendario de turnos asignados y declaración de disponibilidad.',
   historias: ['HU-09'],
+  construida: true,
 };
 
 const operarComo = (clave: ClaveRol, etiqueta: string, icono: Icon): Seccion => ({
@@ -74,8 +78,7 @@ const operarComo = (clave: ClaveRol, etiqueta: string, icono: Icon): Seccion => 
 export const historiasFueraDelMenu = ['HU-01', 'HU-02', 'HU-38', 'HU-39'];
 
 // Pantallas de cada rol, según RF-04: el rol sale del turno de la noche abierta, quien no tiene
-// turno solo ve su calendario y la administración accede a todo. Mientras no exista el inicio de
-// sesión (HU-01), el rol se elige en la portada y no restringe el acceso.
+// turno solo ve su calendario y la administración accede a todo.
 export const roles: Rol[] = [
   {
     clave: 'admin',
@@ -91,6 +94,7 @@ export const roles: Rol[] = [
         grupo: 'Noche',
         descripcion: 'Abrir la noche con el fondo de caja y cerrarla después de cuadrar el arqueo.',
         historias: ['HU-11', 'HU-12'],
+        construida: true,
       },
       {
         ruta: 'calendario',
@@ -99,6 +103,7 @@ export const roles: Rol[] = [
         grupo: 'Noche',
         descripcion: 'Programar las noches de apertura con una nota y el precio de entrada.',
         historias: ['HU-08'],
+        construida: true,
       },
       {
         ruta: 'asignacion',
@@ -107,6 +112,7 @@ export const roles: Rol[] = [
         grupo: 'Noche',
         descripcion: 'Asignar rol y ambiente a cada persona viendo quién declaró disponibilidad.',
         historias: ['HU-10'],
+        construida: true,
       },
       {
         ruta: 'efectivo',
@@ -147,6 +153,7 @@ export const roles: Rol[] = [
         grupo: 'Local',
         descripcion: 'Ambientes con el tamaño de su plano y sus estaciones de barra y cocina.',
         historias: ['HU-04'],
+        construida: true,
       },
       {
         ruta: 'mapa',
@@ -171,6 +178,7 @@ export const roles: Rol[] = [
         grupo: 'Local',
         descripcion: 'Categorías y productos con la regla que indica a qué estación va cada uno.',
         historias: ['HU-06'],
+        construida: true,
       },
       {
         ruta: 'personal',
@@ -179,6 +187,7 @@ export const roles: Rol[] = [
         grupo: 'Personas',
         descripcion: 'Crear, editar, restablecer y desactivar las cuentas del personal.',
         historias: ['HU-03'],
+        construida: true,
       },
       {
         ruta: 'invitados',

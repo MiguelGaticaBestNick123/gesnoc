@@ -4,6 +4,7 @@ import {
   Anchor,
   AppShell,
   Burger,
+  Button,
   Group,
   NavLink,
   ScrollArea,
@@ -14,14 +15,23 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { salir } from '@/modules/acceso/acciones';
 import { gruposDe, rolDeRuta, rutaDe } from '@/modules/acceso/roles';
+
+interface Props {
+  nombre: string;
+  /** Pantalla que le corresponde a la persona según su turno. */
+  inicio: string;
+  children: React.ReactNode;
+}
 
 // Marco común del personal: el menú lateral cambia según el rol de la ruta. En un
 // teléfono el menú se abre con el botón de la barra superior.
-export function Marco({ children }: Readonly<{ children: React.ReactNode }>) {
+export function Marco({ nombre, inicio, children }: Readonly<Props>) {
   const ruta = usePathname();
   const [abierto, { toggle, close }] = useDisclosure(false);
   const rol = rolDeRuta(ruta);
+  const fueraDeSuInicio = ruta !== inicio && !ruta.startsWith(`${inicio}/`);
 
   return (
     <AppShell
@@ -46,9 +56,21 @@ export function Marco({ children }: Readonly<{ children: React.ReactNode }>) {
               </Text>
             )}
           </Group>
-          <Anchor component={Link} href="/" size="sm">
-            Cambiar rol
-          </Anchor>
+          <Group gap="sm">
+            <Text size="sm" visibleFrom="sm">
+              {nombre}
+            </Text>
+            {fueraDeSuInicio && (
+              <Anchor component={Link} href={inicio} size="sm">
+                Mi pantalla
+              </Anchor>
+            )}
+            <form action={salir}>
+              <Button type="submit" variant="subtle" size="sm" mih={44}>
+                Salir
+              </Button>
+            </form>
+          </Group>
         </Group>
       </AppShell.Header>
 
