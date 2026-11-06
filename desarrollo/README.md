@@ -55,10 +55,11 @@ npm run dev                   # http://localhost:3000
 ## Roles
 
 La portada permite entrar como administración (`/admin`), garzón (`/garzon`), barra (`/barra`),
-cocina (`/cocina`) o guardia (`/guardia`). Los menús de cada rol están en
-`src/modules/acceso/roles.ts`; las secciones que aún no se construyen muestran las historias que las
-completarán. Las pantallas usan datos del local de demostración, no necesitan base de datos y el rol
-todavía no restringe el acceso (llega con el inicio de sesión, HU-01).
+cocina (`/cocina`), guardia (`/guardia`) o sin turno (`/personal`), y abrir la carta del cliente
+(`/carta/demo`). Los menús de cada rol están en `src/modules/acceso/roles.ts`; cada sección indica
+las historias que la construyen y las que aún no existen se muestran en construcción. Las pantallas
+usan datos del local de demostración, no necesitan base de datos y el rol todavía no restringe el
+acceso (llega con el inicio de sesión, HU-01).
 
 ## Estructura
 
@@ -72,9 +73,6 @@ tests/              unit/, integracion/ (contra PostgreSQL 17) y e2e/ (Playwrigh
 
 ## Forma de trabajo
 
-- Una rama corta por historia desde `main` actualizado: `feat/HU-16-enviar-pedido`
-  (o `fix/`, `test/`, `docs/`).
-- Commits con Conventional Commits en español: `feat: ...`, `fix: ...`, `test: ...`.
-- Todo entra a `main` por pull request, con la CI en verde y la revisión del otro integrante.
-- Si hay conflicto con `package-lock.json`, se toma el de `main` y se vuelve a ejecutar
-  `npm install`; no se edita a mano.
+- Una historia a la vez, en commits pequeños con Conventional Commits en español: `feat: ...`,
+  `fix: ...`, `test: ...`.
+- Cada push a `main` pasa por la integración continua; si falla, se corrige antes de seguir.

@@ -1,10 +1,20 @@
 'use client';
 
-import { Anchor, AppShell, Burger, Group, NavLink, Stack, Text, ThemeIcon } from '@mantine/core';
+import {
+  Anchor,
+  AppShell,
+  Burger,
+  Group,
+  NavLink,
+  ScrollArea,
+  Stack,
+  Text,
+  ThemeIcon,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { rolDeRuta, rutaDe } from '@/modules/acceso/roles';
+import { gruposDe, rolDeRuta, rutaDe } from '@/modules/acceso/roles';
 
 // Marco común del personal: el menú lateral cambia según el rol de la ruta. En un
 // teléfono el menú se abre con el botón de la barra superior.
@@ -16,7 +26,7 @@ export function Marco({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <AppShell
       header={{ height: 56 }}
-      navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !abierto } }}
+      navbar={{ width: 260, breakpoint: 'sm', collapsed: { mobile: !abierto } }}
       padding="md"
     >
       <AppShell.Header>
@@ -42,28 +52,41 @@ export function Marco({ children }: Readonly<{ children: React.ReactNode }>) {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
-        <Stack gap="xs">
-          {rol?.secciones.map((seccion) => {
-            const href = rutaDe(rol, seccion);
-            const Icono = seccion.icono;
-            return (
-              <NavLink
-                key={href}
-                component={Link}
-                href={href}
-                label={seccion.etiqueta}
-                active={ruta === href}
-                onClick={close}
-                leftSection={
-                  <ThemeIcon size="sm" radius="sm" variant="light">
-                    <Icono size={14} />
-                  </ThemeIcon>
-                }
-              />
-            );
-          })}
-        </Stack>
+      <AppShell.Navbar>
+        <AppShell.Section grow component={ScrollArea} p="md">
+          <Stack gap="md">
+            {rol &&
+              gruposDe(rol).map((grupo) => (
+                <Stack key={grupo.titulo ?? 'inicio'} gap={4}>
+                  {grupo.titulo && (
+                    <Text size="xs" fw={700} c="dimmed" tt="uppercase" px="sm">
+                      {grupo.titulo}
+                    </Text>
+                  )}
+                  {grupo.secciones.map((seccion) => {
+                    const href = rutaDe(rol, seccion);
+                    const Icono = seccion.icono;
+                    return (
+                      <NavLink
+                        key={href}
+                        component={Link}
+                        href={href}
+                        label={seccion.etiqueta}
+                        active={ruta === href}
+                        onClick={close}
+                        mih={44}
+                        leftSection={
+                          <ThemeIcon size="sm" radius="sm" variant="light">
+                            <Icono size={14} />
+                          </ThemeIcon>
+                        }
+                      />
+                    );
+                  })}
+                </Stack>
+              ))}
+          </Stack>
+        </AppShell.Section>
       </AppShell.Navbar>
 
       <AppShell.Main>{children}</AppShell.Main>

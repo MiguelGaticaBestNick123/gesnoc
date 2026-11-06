@@ -1,4 +1,5 @@
 import { Card, Container, Group, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
+import { IconQrcode } from '@tabler/icons-react';
 import { roles } from '@/modules/acceso/roles';
 
 export default function Inicio() {
@@ -44,6 +45,25 @@ export default function Inicio() {
               </Card>
             );
           })}
+          <Card
+            component="a"
+            href="/carta/demo"
+            withBorder
+            padding="lg"
+            aria-label="Abrir la carta"
+          >
+            <Stack gap="xs">
+              <Group gap="sm">
+                <ThemeIcon size="lg" variant="light">
+                  <IconQrcode size={20} />
+                </ThemeIcon>
+                <Text fw={700}>Carta del cliente</Text>
+              </Group>
+              <Text size="sm" c="dimmed">
+                Lo que abre el cliente al escanear el código QR de su mesa.
+              </Text>
+            </Stack>
+          </Card>
         </SimpleGrid>
       </Stack>
     </Container>
