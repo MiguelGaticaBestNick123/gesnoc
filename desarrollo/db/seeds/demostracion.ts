@@ -10,6 +10,7 @@ const personas = [
   { clave: 'garzon', nombre: 'Diego Soto' },
   { clave: 'garzon2', nombre: 'Paula Vera' },
   { clave: 'barra', nombre: 'Tomás Reyes' },
+  { clave: 'barra2', nombre: 'Matías Fuentes' },
   { clave: 'cocina', nombre: 'Inés Castro' },
   { clave: 'guardia', nombre: 'Bruno Pérez' },
   { clave: 'sinturno', nombre: 'Lucía Díaz' },
@@ -73,6 +74,7 @@ const catalogo: { categoria: string; productos: [nombre: string, precio: number]
     productos: [
       ['Bebida', 2500],
       ['Agua mineral', 2000],
+      ['Jugo de maracuyá', 3000],
     ],
   },
   {
@@ -137,6 +139,11 @@ async function crearPersona(tx: TransactionSql, persona: (typeof personas)[numbe
   return fila!.id;
 }
 
+/** Vacía todas las tablas: el vaciado se propaga por las claves foráneas. Solo el dueño puede. */
+export const vaciar = (sql: Sql) => sql`
+  truncate gesnoc.usuario, gesnoc.ambiente, gesnoc.noche, gesnoc.cliente, gesnoc.invitado
+  restart identity cascade`;
+
 /** Siembra una base vacía; si ya tiene personal no toca nada y devuelve false. */
 export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Promise<boolean> {
   const [fila] = await sql<{ total: number }[]>`
@@ -165,6 +172,7 @@ export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Prom
       ['garzon', 'garzon', salon],
       ['garzon2', 'garzon', terraza],
       ['barra', 'barman', salon],
+      ['barra2', 'barman', terraza],
       ['cocina', 'cocinero', salon],
       ['guardia', 'guardia', null],
     ] as const;

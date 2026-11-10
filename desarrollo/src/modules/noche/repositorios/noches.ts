@@ -67,3 +67,12 @@ export async function abrirNoche(fecha: string, fondoInicial: number): Promise<b
     return true;
   });
 }
+
+/** Fecha operativa de la noche abierta, si la hay: las operaciones de la noche cuelgan de ella. */
+export async function fechaAbierta(): Promise<string | undefined> {
+  const [fila] = await db()
+    .select({ fecha: noche.fecha })
+    .from(noche)
+    .where(and(isNotNull(noche.abiertaEn), isNull(noche.cerradaEn)));
+  return fila?.fecha;
+}

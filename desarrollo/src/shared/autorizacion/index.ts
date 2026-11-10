@@ -19,6 +19,11 @@ export interface Actor {
   turno: Turno | null;
 }
 
+/** Sobre qué se actúa: una cuenta o una estación pertenece a un ambiente. */
+export interface Recurso {
+  ambienteId: number;
+}
+
 const permisoDelTurno: Record<RolTurno, Permiso> = {
   garzon: 'garzon',
   barman: 'barra',
@@ -27,14 +32,15 @@ const permisoDelTurno: Record<RolTurno, Permiso> = {
 };
 
 // RF-04 y RN-05: la administración opera siempre, el turno de la noche abierta decide el resto y
-// sin turno solo queda el calendario propio.
-export function puede(actor: Actor, permiso: Permiso): boolean {
+// sin turno solo queda el calendario propio. RN-14: sobre un recurso, solo en el ambiente del turno.
+export function puede(actor: Actor, permiso: Permiso, recurso?: Recurso): boolean {
   if (actor.esAdministrador || permiso === 'personal') return true;
-  return actor.turno !== null && permisoDelTurno[actor.turno.rol] === permiso;
+  if (actor.turno === null || permisoDelTurno[actor.turno.rol] !== permiso) return false;
+  return recurso === undefined || recurso.ambienteId === actor.turno.ambienteId;
 }
 
-export function exigir(actor: Actor, permiso: Permiso): void {
-  if (!puede(actor, permiso)) throw new NoAutorizado();
+export function exigir(actor: Actor, permiso: Permiso, recurso?: Recurso): void {
+  if (!puede(actor, permiso, recurso)) throw new NoAutorizado();
 }
 
 export function inicioDe(actor: Actor): string {

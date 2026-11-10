@@ -1,8 +1,8 @@
 // Las pruebas vacían la base en cada corrida, así que usan una propia en el servidor local y nunca
 // tocan los datos de desarrollo ni un host remoto.
 import { execSync } from 'node:child_process';
-import postgres, { type Sql } from 'postgres';
-import { sembrar } from '../db/seeds/demostracion.ts';
+import postgres from 'postgres';
+import { sembrar, vaciar } from '../db/seeds/demostracion.ts';
 
 const BASE = 'gesnoc_pruebas';
 export const CLAVE_PRUEBAS = 'clave-de-pruebas-gesnoc';
@@ -60,11 +60,6 @@ export async function asegurarBaseDePruebas() {
     stdio: 'pipe',
   });
 }
-
-/** El vaciado se propaga por las claves foráneas a todas las demás tablas. */
-export const vaciar = (sql: Sql) => sql`
-  truncate gesnoc.usuario, gesnoc.ambiente, gesnoc.noche, gesnoc.cliente, gesnoc.invitado
-  restart identity cascade`;
 
 export async function reiniciarBaseDePruebas() {
   await asegurarBaseDePruebas();

@@ -39,6 +39,33 @@ describe('matriz de permisos (RF-04, RN-05)', () => {
   });
 });
 
+describe('el ambiente del recurso (RN-14)', () => {
+  const salon = { ambienteId: 1 };
+  const terraza = { ambienteId: 2 };
+
+  it('un garzón opera solo las cuentas de su ambiente', () => {
+    expect(puede(persona('garzon'), 'garzon', salon)).toBe(true);
+    expect(puede(persona('garzon'), 'garzon', terraza)).toBe(false);
+  });
+
+  it('un barman marca solo en las estaciones de su ambiente', () => {
+    expect(puede(persona('barman'), 'barra', salon)).toBe(true);
+    expect(puede(persona('barman'), 'barra', terraza)).toBe(false);
+  });
+
+  it('la administración opera en todos los ambientes', () => {
+    expect(puede({ ...persona(), esAdministrador: true }, 'garzon', terraza)).toBe(true);
+  });
+
+  it('el guardia no tiene ambiente: no opera cuentas', () => {
+    expect(puede(persona('guardia'), 'garzon', salon)).toBe(false);
+  });
+
+  it('exigir rechaza el ambiente ajeno', () => {
+    expect(() => exigir(persona('garzon'), 'garzon', terraza)).toThrow(NoAutorizado);
+  });
+});
+
 describe('exigir', () => {
   it('rechaza lo que no está permitido', () => {
     expect(() => exigir(persona('garzon'), 'admin')).toThrow(NoAutorizado);

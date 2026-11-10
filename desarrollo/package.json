@@ -22,6 +22,8 @@
     "db:estado": "dbmate -e DATABASE_URL_MIGRADOR --migrations-table migraciones.schema_migrations status",
     "db:nueva": "dbmate new",
     "db:semilla": "node scripts/sembrar.ts",
+    "db:reiniciar": "node scripts/reiniciar-demo.ts",
+    "host:preparar": "node scripts/preparar-host.ts",
     "db:esquema": "drizzle-kit pull && node scripts/ajustar-esquema.mjs && prettier --write src/shared/db/esquema"
   },
   "dependencies": {

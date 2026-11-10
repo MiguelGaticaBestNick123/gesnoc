@@ -226,6 +226,7 @@ export const roles: Rol[] = [
         descripcion:
           'Cuentas con o sin mesa: tomar pedidos, ver el detalle, anular ítems y cobrar.',
         historias: ['HU-14', 'HU-15', 'HU-16', 'HU-22', 'HU-23', 'HU-24', 'HU-25'],
+        construida: true,
       },
       {
         ruta: 'comandas',

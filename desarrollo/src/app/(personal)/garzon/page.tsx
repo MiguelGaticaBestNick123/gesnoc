@@ -1,13 +1,15 @@
-import { ambientes } from '@/modules/local/demostracion';
-import { cuentasAbiertas } from '@/modules/venta/demostracion';
+import { Text } from '@mantine/core';
 import { MapaMesas } from '@/modules/venta/MapaMesas';
+import { mapa } from '@/modules/venta/servicios/cuentas';
+import { capturarFallaPrevista, ErrorDeNegocio } from '@/shared/errores';
 import { exigirVista } from '@/shared/sesion';
 
 export const metadata = { title: 'Mesas · GesNoc' };
 
-// Vista del garzón (RF-15): el mapa de cada ambiente con el estado de sus mesas.
-// Por ahora usa el local de demostración; la consulta a la base llega con HU-13.
+// Vista del garzón (RF-15): el mapa de su ambiente con el estado de cada mesa.
 export default async function PaginaGarzon() {
-  await exigirVista('garzon');
-  return <MapaMesas ambientes={ambientes} cuentas={cuentasAbiertas} />;
+  const actor = await exigirVista('garzon');
+  const inicial = await capturarFallaPrevista(mapa(actor));
+  if (inicial instanceof ErrorDeNegocio) return <Text c="dimmed">{inicial.message}</Text>;
+  return <MapaMesas inicial={inicial} />;
 }

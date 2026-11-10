@@ -2,7 +2,7 @@ import postgres from 'postgres';
 import { afterAll, beforeEach } from 'vitest';
 import type { Actor, RolTurno } from '@/shared/autorizacion';
 import { hashearClave } from '@/shared/sesion/clave';
-import { vaciar } from '../base-pruebas';
+import { vaciar } from '../../db/seeds/demostracion';
 
 // El migrador es dueño de las tablas: solo él puede vaciar la historia entre pruebas.
 const migrador = postgres(process.env.DATABASE_URL_MIGRADOR!, { max: 1, onnotice: () => {} });

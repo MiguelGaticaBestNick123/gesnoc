@@ -32,3 +32,10 @@ export async function traducir<T>(
     throw error;
   }
 }
+
+/** Devuelve la falla prevista como valor, para que la página la muestre en vez de romperse. */
+export const capturarFallaPrevista = <T>(operacion: Promise<T>): Promise<T | ErrorDeNegocio> =>
+  operacion.catch((falla: unknown) => {
+    if (falla instanceof ErrorDeNegocio) return falla;
+    throw falla;
+  });
