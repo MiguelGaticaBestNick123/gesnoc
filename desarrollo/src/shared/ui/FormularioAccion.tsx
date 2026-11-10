@@ -2,9 +2,7 @@
 
 import { Alert, Button, Stack } from '@mantine/core';
 import { startTransition, useActionState, useEffect, type FormEvent } from 'react';
-import type { EstadoAccion } from '@/shared/acciones';
-
-export type Accion = (previo: EstadoAccion, datos: FormData) => Promise<EstadoAccion>;
+import { conManejoDeRed, type Accion } from './accion';
 
 interface Props {
   accion: Accion;
@@ -15,7 +13,7 @@ interface Props {
 
 // Formulario conectado a una acción de servidor: muestra el error y avisa cuando terminó bien.
 export function FormularioAccion({ accion, textoEnviar, alTerminar, children }: Readonly<Props>) {
-  const [estado, ejecutar, pendiente] = useActionState(accion, {});
+  const [estado, ejecutar, pendiente] = useActionState(conManejoDeRed(accion), {});
 
   useEffect(() => {
     if (estado.ok) alTerminar?.();

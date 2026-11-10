@@ -15,6 +15,7 @@ import {
 } from '@mantine/core';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
+import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import {
@@ -81,15 +82,7 @@ function CamposProducto({
   return (
     <>
       <TextInput name="nombre" label="Nombre" defaultValue={producto?.nombre} size="md" required />
-      <TextInput
-        name="precio"
-        label="Precio"
-        type="number"
-        inputMode="numeric"
-        defaultValue={producto?.precio}
-        size="md"
-        required
-      />
+      <CampoPesos name="precio" label="Precio" valorInicial={producto?.precio} size="md" required />
       <NativeSelect
         name="categoriaId"
         label="Categoría"

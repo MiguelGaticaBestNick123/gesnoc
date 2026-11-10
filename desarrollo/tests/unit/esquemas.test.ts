@@ -41,8 +41,16 @@ describe('catálogo', () => {
     expect(datosCategoria.parse(datos).estacionId).toBeNull();
   });
 
-  it.each(['0', '-500', '1500.5', 'abc'])('rechaza el precio %s (RN-24)', (precio) => {
-    expect(datosProducto.safeParse({ ...producto, precio }).success).toBe(false);
+  it.each(['0', '-500', '1500.5', 'abc', '150.000', '1.500', '150,000', ''])(
+    'rechaza el precio %s (RN-24)',
+    (precio) => {
+      expect(datosProducto.safeParse({ ...producto, precio }).success).toBe(false);
+    },
+  );
+
+  it('acepta el precio escrito solo con dígitos o como número', () => {
+    expect(datosProducto.parse({ ...producto, precio: '150000' }).precio).toBe(150000);
+    expect(datosProducto.parse({ ...producto, precio: 150000 }).precio).toBe(150000);
   });
 
   it('un producto sin estación sigue la regla de su categoría', () => {

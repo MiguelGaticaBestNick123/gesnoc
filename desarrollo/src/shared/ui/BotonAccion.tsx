@@ -2,7 +2,7 @@
 
 import { Button, Text, type ButtonProps } from '@mantine/core';
 import { useActionState } from 'react';
-import type { Accion } from './FormularioAccion';
+import { conManejoDeRed, type Accion } from './accion';
 
 interface Props extends ButtonProps {
   accion: Accion;
@@ -14,7 +14,7 @@ interface Props extends ButtonProps {
 
 // Acción de un solo toque sobre un registro: desactivar, eliminar, quitar.
 export function BotonAccion({ accion, datos, etiqueta, confirmar, ...boton }: Readonly<Props>) {
-  const [estado, ejecutar, pendiente] = useActionState(accion, {});
+  const [estado, ejecutar, pendiente] = useActionState(conManejoDeRed(accion), {});
 
   return (
     <form

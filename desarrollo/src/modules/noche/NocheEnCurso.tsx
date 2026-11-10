@@ -1,6 +1,7 @@
 'use client';
 
-import { Badge, Card, Group, NativeSelect, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Badge, Card, Group, NativeSelect, Stack, Text, Title } from '@mantine/core';
+import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { tituloDeFecha } from '@/shared/utilidades/fechas';
@@ -47,12 +48,10 @@ export function NocheEnCurso({ abierta, programadas }: Readonly<Props>) {
                 label: tituloDeFecha(noche.fecha),
               }))}
             />
-            <TextInput
+            <CampoPesos
               name="fondo"
               label="Fondo de caja"
               description="Efectivo con que abre la caja."
-              type="number"
-              inputMode="numeric"
               size="md"
               required
             />

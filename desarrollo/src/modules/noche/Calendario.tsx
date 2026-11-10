@@ -14,6 +14,7 @@ import {
 } from '@mantine/core';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
+import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearFecha, tituloDeFecha } from '@/shared/utilidades/fechas';
@@ -39,12 +40,10 @@ function CamposNoche({ noche }: Readonly<{ noche?: Noche }>) {
       ) : (
         <TextInput name="fecha" label="Fecha operativa" type="date" size="md" required />
       )}
-      <TextInput
+      <CampoPesos
         name="precioEntrada"
         label="Precio de entrada"
-        type="number"
-        inputMode="numeric"
-        defaultValue={noche?.precioEntrada}
+        valorInicial={noche?.precioEntrada}
         size="md"
         required
       />
