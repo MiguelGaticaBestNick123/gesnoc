@@ -1,26 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
-import { entrarComo } from './apoyo';
+import { expect, test } from '@playwright/test';
+import { abrirMesa, agregar, entrarComo, enviar } from './apoyo';
 
 // Cada prueba usa mesas distintas del Salón: corren en paralelo sobre la misma noche abierta.
-
-async function abrirMesa(page: Page, numero: number) {
-  await page.goto('/garzon');
-  // El mapa responde a los toques recién cuando React termina de hidratar.
-  await expect(async () => {
-    await page.getByRole('button', { name: `Mesa ${numero}, libre` }).click();
-    await expect(page.getByRole('button', { name: 'Abrir cuenta' })).toBeVisible({
-      timeout: 1000,
-    });
-  }).toPass();
-  await page.getByRole('button', { name: 'Abrir cuenta' }).click();
-  await expect(page).toHaveURL(/\/garzon\/cuenta\/\d+$/);
-  await expect(page.getByRole('heading', { name: `Mesa ${numero}` })).toBeVisible();
-}
-
-const agregar = (page: Page, producto: string) =>
-  page.getByRole('button', { name: `Agregar ${producto}` }).click();
-
-const enviar = (page: Page) => page.getByRole('button', { name: /^Enviar ·/ }).click();
 
 test('HU-13: la mesa ocupada en un teléfono se ve en el otro en 5 segundos o menos', async ({
   page,

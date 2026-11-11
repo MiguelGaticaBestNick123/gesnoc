@@ -30,16 +30,3 @@ test('una sección de otro rol no existe', async ({ page }) => {
   const respuesta = await page.goto('/cocina/sorteo');
   expect(respuesta?.status()).toBe(404);
 });
-
-test('la barra marca una comanda como lista', async ({ page }) => {
-  await entrarComo(page, 'barra');
-  await page.goto('/barra');
-  const marcar = page.getByRole('button', { name: 'Marcar lista' }).first();
-  await expect(async () => {
-    const antes = await page.getByRole('button', { name: 'Marcar lista' }).count();
-    await marcar.click();
-    await expect(page.getByRole('button', { name: 'Marcar lista' })).toHaveCount(antes - 1, {
-      timeout: 1000,
-    });
-  }).toPass();
-});

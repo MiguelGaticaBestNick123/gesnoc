@@ -26,6 +26,14 @@ export const datosAbrirCuenta = z
 
 export const conCuenta = z.object({ cuenta: id('Cuenta no válida') });
 
+/** Una comanda se identifica por su pedido y la estación que la prepara. */
+export const datosComanda = z.object({
+  pedido: id('Pedido no válido'),
+  estacionId: id('Estación no válida'),
+});
+
+export const tipoEstacion = z.enum(['barra', 'cocina'], 'Estación no válida');
+
 export const datosPedido = z.object({
   cuenta: id('Cuenta no válida'),
   claveEnvio: z.uuid('La clave de envío no es válida'),

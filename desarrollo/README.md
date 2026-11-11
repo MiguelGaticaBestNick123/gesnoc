@@ -92,6 +92,13 @@ ADR-007). Pedidos y cuentas se envían por rutas JSON (`src/app/api/`): un 4xx s
 registró nada; ante un corte de red el teléfono reintenta con la misma clave de envío y el servidor
 devuelve lo ya registrado (RN-13).
 
+Toda operación de la noche corre dentro de `enLaNoche` (`src/modules/noche/servicios/noches.ts`),
+que bloquea la noche en modo compartido y verifica que siga abierta: el cierre de la noche espera a
+las operaciones en curso y las que llegan después se rechazan (RN-26).
+
+Barra y cocina ven su cola en `/barra` y `/cocina`, con aviso sonoro al entrar una comanda (se
+activa con el primer toque) y la pantalla siempre encendida, que requiere HTTPS.
+
 ## Estructura
 
 ```
