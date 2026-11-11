@@ -1,81 +1,12 @@
-import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import * as noches from '@/modules/noche/servicios/noches';
-import type { DatosPedido } from '@/modules/venta/esquemas';
 import { abrir, cerrarSinConsumo, mapa, pantallaPedido } from '@/modules/venta/servicios/cuentas';
 import { enviar } from '@/modules/venta/servicios/pedidos';
-import type { Actor, RolTurno } from '@/shared/autorizacion';
+import type { Actor } from '@/shared/autorizacion';
 import { NoAutorizado } from '@/shared/errores';
-import { correoDe, sembrar } from '../../db/seeds/demostracion';
-import { administracion, CLAVE, conBaseVacia, consultar } from './apoyo';
+import { conBaseVacia, consultar } from './apoyo';
+import { fecha, linea, pedido, prepararNoche, total, type Local } from './noche-abierta';
 
 conBaseVacia();
-
-const fecha = '2026-11-07';
-
-interface Local {
-  salon: number;
-  terraza: number;
-  mesa: (ambiente: number, numero: number) => number;
-  producto: (nombre: string) => number;
-  persona: (clave: string) => Actor;
-}
-
-// El local de demostración con la noche abierta: dos ambientes, sus estaciones y la dotación.
-async function prepararNoche({ abrirNoche = true } = {}): Promise<Local> {
-  await sembrar(consultar, CLAVE, fecha);
-  if (abrirNoche) await noches.abrir(administracion, fecha, 0);
-
-  const ambientes = await consultar<{ id: number; nombre: string }[]>`
-    select id, nombre from gesnoc.ambiente`;
-  const mesas = await consultar<{ id: number; ambiente_id: number; numero: number }[]>`
-    select id, ambiente_id, numero from gesnoc.mesa`;
-  const productos = await consultar<{ id: number; nombre: string }[]>`
-    select id, nombre from gesnoc.producto`;
-  const personas = await consultar<
-    { id: number; correo: string; rol: RolTurno | null; ambiente_id: number | null }[]
-  >`
-    select u.id, u.correo, a.rol, a.ambiente_id from gesnoc.usuario u
-    left join gesnoc.asignacion a on a.usuario_id = u.id and a.fecha = ${fecha}`;
-
-  const idDe = (nombre: string) => ambientes.find((a) => a.nombre === nombre)!.id;
-  return {
-    salon: idDe('Salón'),
-    terraza: idDe('Terraza'),
-    mesa: (ambiente, numero) =>
-      mesas.find((m) => m.ambiente_id === ambiente && m.numero === numero)!.id,
-    producto: (nombre) => productos.find((p) => p.nombre === nombre)!.id,
-    persona: (clave) => {
-      const fila = personas.find((p) => p.correo === correoDe(clave))!;
-      return {
-        id: fila.id,
-        nombre: clave,
-        esAdministrador: clave === 'admin',
-        turno:
-          abrirNoche && fila.rol ? { fecha, rol: fila.rol, ambienteId: fila.ambiente_id } : null,
-      };
-    },
-  };
-}
-
-const total = async (tabla: string) => {
-  const [fila] = await consultar<{ n: number }[]>`
-    select count(*)::int as n from ${consultar('gesnoc')}.${consultar(tabla)}`;
-  return fila!.n;
-};
-
-const pedido = (cuenta: number, lineas: DatosPedido['lineas'], personas: number | null = null) => ({
-  cuenta,
-  claveEnvio: randomUUID(),
-  personas,
-  lineas,
-});
-
-const linea = (productoId: number, cantidad = 1, nota: string | null = null) => ({
-  productoId,
-  cantidad,
-  nota,
-});
 
 describe('HU-13 mapa de mesas', () => {
   let local: Local;
@@ -395,5 +326,32 @@ describe('HU-16 enviar el pedido', () => {
       select p.tomado_por, d.nota from gesnoc.pedido p
       join gesnoc.detalle_pedido d on d.fecha = p.fecha and d.pedido_numero = p.numero`;
     expect(fila).toEqual({ tomado_por: garzon.id, nota: 'sin azúcar' });
+  });
+});
+
+describe('RN-26: el cierre de la noche y las operaciones en curso', () => {
+  it('una cuenta que se abre mientras se cierra la noche espera y no se registra', async () => {
+    const local = await prepararNoche();
+    // El cierre (HU-12) toma la noche en exclusivo; aquí se simula con otra conexión.
+    const cierre = await consultar.reserve();
+    await cierre`begin`;
+    await cierre`select fecha from gesnoc.noche where fecha = ${fecha} for update`;
+
+    let termino = false;
+    const apertura = abrir(local.persona('garzon'), { mesaId: local.mesa(local.salon, 5) })
+      .then(
+        () => 'registrada',
+        (falla: Error) => falla.message,
+      )
+      .finally(() => (termino = true));
+    await new Promise((listo) => setTimeout(listo, 300));
+    expect(termino).toBe(false);
+
+    await cierre`update gesnoc.noche set cerrada_en = now() where fecha = ${fecha}`;
+    await cierre`commit`;
+    cierre.release();
+
+    expect(await apertura).toBe('No hay una noche abierta');
+    expect(await total('cuenta')).toBe(0);
   });
 });

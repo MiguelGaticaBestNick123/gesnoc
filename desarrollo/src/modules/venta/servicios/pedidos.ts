@@ -1,12 +1,12 @@
 import 'server-only';
+import { enLaNoche } from '@/modules/noche/servicios/noches';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { bloquearCorrelativo } from '@/shared/db/cliente';
 import { ErrorDeNegocio } from '@/shared/errores';
 import type { DatosPedido } from '../esquemas';
-import { bloquearCuenta, transaccion } from '../repositorios/cuentas';
+import { bloquearCuenta } from '../repositorios/cuentas';
 import * as pedidos from '../repositorios/pedidos';
 import { estacionDestino } from '../ruteo';
-import { nocheEnCurso } from './cuentas';
 
 export interface PedidoEnviado {
   numero: number;
@@ -16,15 +16,14 @@ export interface PedidoEnviado {
 }
 
 /**
- * HU-16: registra el pedido completo o nada. El orden importa: primero se serializa el correlativo,
- * después se busca la clave de envío (un reintento devuelve el pedido original aunque la cuenta ya
- * se haya cerrado), y recién entonces se bloquea y valida la cuenta.
+ * HU-16: registra el pedido completo o nada. El orden importa: primero la noche (RN-26) y el
+ * correlativo, después se busca la clave de envío (un reintento devuelve el pedido original aunque la
+ * cuenta ya se haya cerrado), y recién entonces se bloquea y valida la cuenta.
  */
 export async function enviar(actor: Actor, datos: DatosPedido): Promise<PedidoEnviado> {
   exigir(actor, 'garzon');
-  const fecha = await nocheEnCurso();
 
-  return transaccion(async (tx) => {
+  return enLaNoche(async (tx, fecha) => {
     await bloquearCorrelativo(tx, 'pedido', fecha);
     const previo = await pedidos.pedidoPorClave(tx, datos.claveEnvio);
     if (previo) return { ...previo, repetido: true }; // RN-13

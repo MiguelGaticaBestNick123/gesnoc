@@ -1,5 +1,6 @@
 import 'server-only';
 import { fechaAbierta } from '@/modules/noche/repositorios/noches';
+import { enLaNoche } from '@/modules/noche/servicios/noches';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { ErrorDeNegocio, traducir } from '@/shared/errores';
 import type { UbicacionCuenta } from '../esquemas';
@@ -46,7 +47,7 @@ export type Mapa = Awaited<ReturnType<typeof mapa>>;
 
 /** HU-14: abre una cuenta en una mesa libre o para un cliente de pie. */
 export async function abrir(actor: Actor, datos: UbicacionCuenta) {
-  const fecha = await nocheEnCurso();
+  exigir(actor, 'garzon');
   let ambienteId: number;
   if ('mesaId' in datos) {
     const mesa = await cuentas.buscarMesa(datos.mesaId);
@@ -59,9 +60,10 @@ export async function abrir(actor: Actor, datos: UbicacionCuenta) {
       throw new ErrorDeNegocio('Ese ambiente no existe');
   }
   exigir(actor, 'garzon', { ambienteId }); // RN-14
-  return traducir(cuentas.abrirCuenta(fecha, actor.id, datos), {
-    cuenta_mesa_abierta_uq: 'La mesa tiene una cuenta abierta de otra noche',
-  });
+  return traducir(
+    enLaNoche((tx, fecha) => cuentas.abrirCuenta(tx, fecha, actor.id, datos)),
+    { cuenta_mesa_abierta_uq: 'La mesa tiene una cuenta abierta de otra noche' },
+  );
 }
 
 /**
@@ -69,8 +71,8 @@ export async function abrir(actor: Actor, datos: UbicacionCuenta) {
  * esta salida la mesa quedaría ocupada e impediría cerrar la noche (regla nueva, extiende RN-18).
  */
 export async function cerrarSinConsumo(actor: Actor, numero: number) {
-  const fecha = await nocheEnCurso();
-  await cuentas.transaccion(async (tx) => {
+  exigir(actor, 'garzon');
+  await enLaNoche(async (tx, fecha) => {
     const cuenta = await cuentas.bloquearCuenta(tx, fecha, numero);
     if (!cuenta) throw new ErrorDeNegocio('Esa cuenta no existe');
     exigir(actor, 'garzon', { ambienteId: cuenta.ambienteId });

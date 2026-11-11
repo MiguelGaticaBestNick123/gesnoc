@@ -75,30 +75,29 @@ export const cuentasDePie = (fecha: string, ambienteId: number) =>
  * Abre una cuenta con el siguiente número de la noche. Si la mesa ya tiene una cuenta abierta, la
  * devuelve en vez de abrir otra (RN-06): dos garzones que tocan la misma mesa llegan a la misma.
  */
-export async function abrirCuenta(fecha: string, abiertaPor: number, ubicacion: UbicacionCuenta) {
-  return db().transaction(async (tx) => {
-    await bloquearCorrelativo(tx, 'cuenta', fecha);
-    if ('mesaId' in ubicacion) {
-      const [abierta] = await tx
-        .select({ numero: cuenta.numero })
-        .from(cuenta)
-        .where(
-          and(
-            eq(cuenta.fecha, fecha),
-            eq(cuenta.mesaId, ubicacion.mesaId),
-            isNull(cuenta.cerradaEn),
-          ),
-        );
-      if (abierta) return { numero: abierta.numero, existente: true };
-    }
-    const [ultima] = await tx
-      .select({ numero: sql<number>`coalesce(max(${cuenta.numero}), 0)::int` })
+export async function abrirCuenta(
+  tx: Transaccion,
+  fecha: string,
+  abiertaPor: number,
+  ubicacion: UbicacionCuenta,
+) {
+  await bloquearCorrelativo(tx, 'cuenta', fecha);
+  if ('mesaId' in ubicacion) {
+    const [abierta] = await tx
+      .select({ numero: cuenta.numero })
       .from(cuenta)
-      .where(eq(cuenta.fecha, fecha));
-    const numero = (ultima?.numero ?? 0) + 1;
-    await tx.insert(cuenta).values({ fecha, numero, abiertaPor, ...ubicacion });
-    return { numero, existente: false };
-  });
+      .where(
+        and(eq(cuenta.fecha, fecha), eq(cuenta.mesaId, ubicacion.mesaId), isNull(cuenta.cerradaEn)),
+      );
+    if (abierta) return { numero: abierta.numero, existente: true };
+  }
+  const [ultima] = await tx
+    .select({ numero: sql<number>`coalesce(max(${cuenta.numero}), 0)::int` })
+    .from(cuenta)
+    .where(eq(cuenta.fecha, fecha));
+  const numero = (ultima?.numero ?? 0) + 1;
+  await tx.insert(cuenta).values({ fecha, numero, abiertaPor, ...ubicacion });
+  return { numero, existente: false };
 }
 
 /** Lo que muestra la pantalla de una cuenta. */
@@ -157,6 +156,3 @@ export const cerrarCuenta = (tx: Transaccion, fecha: string, numero: number, cer
     .update(cuenta)
     .set({ cerradaPor, cerradaEn: sql`now()` })
     .where(and(eq(cuenta.fecha, fecha), eq(cuenta.numero, numero), isNull(cuenta.cerradaEn)));
-
-export const transaccion = <T>(operacion: (tx: Transaccion) => Promise<T>) =>
-  db().transaction(operacion);

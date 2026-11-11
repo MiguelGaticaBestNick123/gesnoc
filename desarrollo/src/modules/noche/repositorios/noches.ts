@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
-import { db } from '@/shared/db/cliente';
+import { db, type Transaccion } from '@/shared/db/cliente';
 import { arqueo, asignacion, disponibilidad, noche } from '@/shared/db/esquema/schema';
 import type { DatosNoche } from '../esquemas';
 
@@ -66,6 +66,19 @@ export async function abrirNoche(fecha: string, fondoInicial: number): Promise<b
     await tx.insert(arqueo).values({ fecha, fondoInicial });
     return true;
   });
+}
+
+/**
+ * Bloqueo compartido de la noche abierta hasta el fin de la transacción. `for key share` solo choca
+ * con el `for update` del cierre: mientras una operación lo tiene, el cierre espera; si el cierre ya
+ * lo tomó, la operación espera y, al terminar el cierre, la noche ya no cumple el filtro.
+ */
+export async function bloquearNocheAbierta(tx: Transaccion): Promise<string | undefined> {
+  const [fila] = await tx.execute<{ fecha: string }>(sql`
+    select fecha::text as fecha from gesnoc.noche
+    where abierta_en is not null and cerrada_en is null
+    for key share`);
+  return fila?.fecha;
 }
 
 /** Fecha operativa de la noche abierta, si la hay: las operaciones de la noche cuelgan de ella. */

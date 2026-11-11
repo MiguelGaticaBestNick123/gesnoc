@@ -1,8 +1,24 @@
 import 'server-only';
 import { exigir, type Actor } from '@/shared/autorizacion';
+import { db, type Transaccion } from '@/shared/db/cliente';
 import { ErrorDeNegocio, traducir } from '@/shared/errores';
 import type { DatosNoche } from '../esquemas';
 import * as repositorio from '../repositorios/noches';
+
+/**
+ * RN-26: cada operación de la noche (cuentas, pedidos, colas, cobros, puerta) corre en esta
+ * transacción, que verifica dentro de ella que la noche siga abierta. Sin esto, una operación que
+ * leyó la noche antes del cierre se registraba igual en la noche ya cerrada.
+ */
+export function enLaNoche<T>(
+  operacion: (tx: Transaccion, fecha: string) => Promise<T>,
+): Promise<T> {
+  return db().transaction(async (tx) => {
+    const fecha = await repositorio.bloquearNocheAbierta(tx);
+    if (!fecha) throw new ErrorDeNegocio('No hay una noche abierta');
+    return operacion(tx, fecha);
+  });
+}
 
 export function listar(actor: Actor) {
   exigir(actor, 'admin');
