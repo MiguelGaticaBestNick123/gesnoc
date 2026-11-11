@@ -4,6 +4,7 @@ import { enLaNoche } from '@/modules/noche/servicios/noches';
 import { exigir, puede, type Actor, type Permiso } from '@/shared/autorizacion';
 import { ErrorDeNegocio, NoAutorizado } from '@/shared/errores';
 import { armarCola, type TipoEstacion } from '../cola';
+import { ordenarMisComandas } from '../cuenta';
 import * as colas from '../repositorios/colas';
 
 const permisoDe: Record<TipoEstacion, Permiso> = { barra: 'barra', cocina: 'cocina' };
@@ -48,5 +49,33 @@ export async function marcarLista(actor: Actor, pedido: number, estacionId: numb
     if (vigentes === 0)
       throw new ErrorDeNegocio('La comanda se anuló completa: no hay nada que preparar');
     return colas.marcarLista(tx, fecha, pedido, estacionId);
+  });
+}
+
+/**
+ * HU-20: lo que el garzón tiene que retirar. El aviso no es una tabla: son las comandas listas y sin
+ * entregar de los pedidos que tomó él (CA1); entregarlas lo apaga.
+ */
+export async function misComandas(actor: Actor) {
+  exigir(actor, 'garzon');
+  const fecha = (await fechaAbierta()) ?? null;
+  if (!fecha) return { noche: null, listas: [], enPreparacion: [] };
+  return { noche: fecha, ...ordenarMisComandas(await colas.comandasDelGarzon(fecha, actor.id)) };
+}
+
+export type MisComandas = Awaited<ReturnType<typeof misComandas>>;
+
+/**
+ * HU-21: la entrega en la mesa. Puede registrarla cualquier garzón del ambiente de la cuenta (RN-14),
+ * no solo quien la pidió: a veces la lleva un compañero.
+ */
+export async function entregar(actor: Actor, pedido: number, estacionId: number) {
+  exigir(actor, 'garzon');
+  return enLaNoche(async (tx, fecha) => {
+    const comanda = await colas.comandaParaEntregar(tx, fecha, pedido, estacionId);
+    if (!comanda) throw new ErrorDeNegocio('Esa comanda no existe');
+    exigir(actor, 'garzon', { ambienteId: comanda.ambienteId });
+    if (!comanda.lista) throw new ErrorDeNegocio('La comanda aún no está lista'); // CA1
+    return colas.marcarEntregada(tx, fecha, pedido, estacionId);
   });
 }

@@ -32,6 +32,14 @@ export const datosComanda = z.object({
   estacionId: id('Estación no válida'),
 });
 
+/** Una línea de un pedido de la cuenta (HU-22). */
+export const datosLinea = z.object({
+  cuenta: id('Cuenta no válida'),
+  pedido: id('Pedido no válido'),
+  linea: id('Línea no válida'),
+});
+export type DatosLinea = z.output<typeof datosLinea>;
+
 export const tipoEstacion = z.enum(['barra', 'cocina'], 'Estación no válida');
 
 export const datosPedido = z.object({

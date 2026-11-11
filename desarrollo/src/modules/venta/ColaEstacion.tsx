@@ -21,7 +21,7 @@ import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import {
   minutos,
   nivelDeEspera,
-  pedidosNuevos,
+  nuevos,
   type ComandaEnCola,
   type NivelDeEspera,
   type TipoEstacion,
@@ -62,7 +62,7 @@ export function ColaEstacion({ inicial }: Readonly<{ inicial: ColaDeEstacion }>)
   useEffect(() => {
     const actuales = datos.pendientes.map((c) => c.pedido);
     const mismaEstacion = vistas.current.estacion === datos.estacion?.id;
-    if (mismaEstacion && pedidosNuevos(vistas.current.pedidos, actuales).length > 0) avisar(660);
+    if (mismaEstacion && nuevos(vistas.current.pedidos, actuales).length > 0) avisar(660);
     vistas.current = { estacion: datos.estacion?.id, pedidos: actuales };
   }, [datos.estacion?.id, datos.pendientes]);
 

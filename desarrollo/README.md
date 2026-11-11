@@ -26,9 +26,10 @@ npm run db:semilla            # local de demostración
 npm run dev                   # http://localhost:3000
 ```
 
-Las cuentas de demostración son `admin`, `garzon`, `garzon2`, `barra`, `cocina`, `guardia` y
-`sinturno`, todas `@gesnoc.test`, con la contraseña definida en `CLAVE_DEMO`. Las noches quedan
-programadas: para que cada persona opere su rol, la administración debe abrir la noche.
+Las cuentas de demostración son `admin`, `garzon` (Salón), `garzon2` (Terraza), `barra` (Salón),
+`barra2` (Terraza), `cocina`, `guardia`, `sinturno` y `apoyo` (las dos últimas sin turno), todas
+`@gesnoc.test`, con la contraseña definida en `CLAVE_DEMO`. Las noches quedan programadas: para que
+cada persona opere su rol, la administración debe abrir la noche.
 
 `GET /api/salud` responde `{"estado":"ok"}` cuando la aplicación llega a la base.
 

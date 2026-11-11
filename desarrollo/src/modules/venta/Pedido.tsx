@@ -24,7 +24,6 @@ import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { enviarJson, nuevaClaveDeEnvio } from '@/shared/red';
 import { paraBuscar } from '@/shared/utilidades/buscar';
 import { formatearPesos } from '@/shared/utilidades/dinero';
-import { formatearHora } from '@/shared/utilidades/fechas';
 import {
   agregar,
   BORRADOR_VACIO,
@@ -34,6 +33,7 @@ import {
   llaveDeBorrador,
   type Borrador,
 } from './borrador';
+import { EncabezadoCuenta } from './EncabezadoCuenta';
 import type { PantallaPedido } from './servicios/cuentas';
 import type { PedidoEnviado } from './servicios/pedidos';
 
@@ -169,17 +169,7 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
 
   return (
     <Stack gap="sm">
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <div>
-          <Title order={2}>{titulo}</Title>
-          <Text c="dimmed" size="sm">
-            Cuenta {cuenta.numero} · {cuenta.ambiente} · desde {formatearHora(cuenta.abiertaEn)}
-          </Text>
-        </div>
-        <Button component={Link} href="/garzon" variant="subtle" size="sm" mih={44}>
-          Mesas
-        </Button>
-      </Group>
+      <EncabezadoCuenta cuenta={cuenta} activa="pedir" />
 
       {error && (
         <Alert color={borrador.clave ? 'yellow' : 'red'} variant="light" role="alert">

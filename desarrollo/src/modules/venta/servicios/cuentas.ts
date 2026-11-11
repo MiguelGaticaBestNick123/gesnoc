@@ -6,6 +6,7 @@ import { ErrorDeNegocio, traducir } from '@/shared/errores';
 import type { UbicacionCuenta } from '../esquemas';
 import * as cuentas from '../repositorios/cuentas';
 import { estaciones, productosActivos } from '../repositorios/pedidos';
+import { agruparPedidos, resumenCuenta } from '../cuenta';
 import { estacionDestino } from '../ruteo';
 
 export async function nocheEnCurso(): Promise<string> {
@@ -116,3 +117,27 @@ export async function pantallaPedido(actor: Actor, numero: number) {
 }
 
 export type PantallaPedido = NonNullable<Awaited<ReturnType<typeof pantallaPedido>>>;
+
+/** HU-23: los pedidos de la cuenta con el estado de cada comanda, el total, lo pagado y el saldo. */
+export async function detalleCuenta(actor: Actor, numero: number) {
+  exigir(actor, 'garzon');
+  const fecha = await nocheEnCurso();
+  const cuenta = await cuentas.encabezadoCuenta(fecha, numero);
+  if (!cuenta) return null;
+  exigir(actor, 'garzon', { ambienteId: cuenta.ambienteId });
+
+  const [lineas, pagos] = await Promise.all([
+    cuentas.lineasDeCuenta(fecha, numero),
+    cuentas.pagosDeCuenta(fecha, numero),
+  ]);
+  return {
+    cuenta,
+    pedidos: agruparPedidos(lineas),
+    pagos,
+    ...resumenCuenta(lineas, pagos),
+    // RN-15: con pagos ya no se anula nada.
+    seAnula: cuenta.cerradaEn === null && pagos.length === 0,
+  };
+}
+
+export type DetalleCuenta = NonNullable<Awaited<ReturnType<typeof detalleCuenta>>>;

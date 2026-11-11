@@ -2,6 +2,7 @@ import 'server-only';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { bloquearCorrelativo, db, type Transaccion } from '@/shared/db/cliente';
 import { ambiente, cuenta, mesa, usuario } from '@/shared/db/esquema/schema';
+import type { FilaDetalle, PagoDeCuenta } from '../cuenta';
 import type { UbicacionCuenta } from '../esquemas';
 
 /** Ambiente de una cuenta: el de su mesa o, si el cliente está de pie, el suyo propio. */
@@ -156,3 +157,77 @@ export const cerrarCuenta = (tx: Transaccion, fecha: string, numero: number, cer
     .update(cuenta)
     .set({ cerradaPor, cerradaEn: sql`now()` })
     .where(and(eq(cuenta.fecha, fecha), eq(cuenta.numero, numero), isNull(cuenta.cerradaEn)));
+
+/** HU-23: todas las líneas de la cuenta, con el estado de su comanda y quién anuló cada una. */
+export async function lineasDeCuenta(fecha: string, numero: number): Promise<FilaDetalle[]> {
+  const filas = await db().execute<{
+    pedido: number;
+    enviado_en: string;
+    tomado_por: string;
+    linea: number;
+    producto: string;
+    cantidad: number;
+    precio_unitario: number;
+    nota: string | null;
+    estacion: string;
+    lista: boolean;
+    entregada: boolean;
+    anulado_en: string | null;
+    anulado_por: string | null;
+  }>(sql`
+    select p.numero as pedido, p.enviado_en::text, u.nombre as tomado_por, d.linea,
+           pr.nombre as producto, d.cantidad, d.precio_unitario, d.nota, e.nombre as estacion,
+           c.lista_en is not null as lista, c.entregada_en is not null as entregada,
+           d.anulado_en::text, ua.nombre as anulado_por
+    from gesnoc.pedido p
+    join gesnoc.usuario u on u.id = p.tomado_por
+    join gesnoc.detalle_pedido d on d.fecha = p.fecha and d.pedido_numero = p.numero
+    join gesnoc.producto pr on pr.id = d.producto_id
+    join gesnoc.comanda c
+      on c.fecha = d.fecha and c.pedido_numero = d.pedido_numero and c.estacion_id = d.estacion_id
+    join gesnoc.estacion e on e.id = d.estacion_id
+    left join gesnoc.usuario ua on ua.id = d.anulado_por
+    where p.fecha = ${fecha} and p.cuenta_numero = ${numero}`);
+  return filas.map((f) => ({
+    pedido: f.pedido,
+    enviadoEn: f.enviado_en,
+    tomadoPor: f.tomado_por,
+    linea: f.linea,
+    producto: f.producto,
+    cantidad: f.cantidad,
+    precioUnitario: f.precio_unitario,
+    nota: f.nota,
+    estacion: f.estacion,
+    lista: f.lista,
+    entregada: f.entregada,
+    anuladoEn: f.anulado_en,
+    anuladoPor: f.anulado_por,
+  }));
+}
+
+export async function pagosDeCuenta(fecha: string, numero: number): Promise<PagoDeCuenta[]> {
+  const filas = await db().execute<{
+    numero: number;
+    medio: PagoDeCuenta['medio'];
+    monto: number;
+    propina: number;
+    registrado_en: string;
+    registrado_por: string;
+    confirmado: boolean;
+  }>(sql`
+    select p.numero, p.medio, p.monto, p.propina, p.registrado_en::text,
+           u.nombre as registrado_por, p.confirmado_en is not null as confirmado
+    from gesnoc.pago p
+    join gesnoc.usuario u on u.id = p.registrado_por
+    where p.fecha = ${fecha} and p.cuenta_numero = ${numero}
+    order by p.numero`);
+  return filas.map((f) => ({
+    numero: f.numero,
+    medio: f.medio,
+    monto: f.monto,
+    propina: f.propina,
+    registradoEn: f.registrado_en,
+    registradoPor: f.registrado_por,
+    confirmado: f.confirmado,
+  }));
+}

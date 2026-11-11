@@ -3,6 +3,7 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { db, type Transaccion } from '@/shared/db/cliente';
 import { ambiente, estacion } from '@/shared/db/esquema/schema';
 import type { FilaComanda, FilaLinea, TipoEstacion } from '../cola';
+import type { FilaMiComanda } from '../cuenta';
 
 const columnasDeEstacion = {
   id: estacion.id,
@@ -119,4 +120,79 @@ export async function marcarLista(
   const [existente] = await tx.execute<{ lista_en: string }>(sql`
     select lista_en::text from gesnoc.comanda where ${donde}`);
   return { listaEn: existente!.lista_en, yaEstaba: true };
+}
+
+/**
+ * HU-20: las comandas sin entregar de los pedidos que tomó esta persona. Las listas son su aviso; una
+ * comanda anulada completa no se prepara ni se retira, así que no aparece.
+ */
+export async function comandasDelGarzon(fecha: string, usuarioId: number) {
+  const filas = await db().execute<{
+    pedido: number;
+    estacion_id: number;
+    estacion: string;
+    cuenta: number;
+    mesa: number | null;
+    referencia: string | null;
+    resumen: string;
+    espera: number;
+    lista_hace: number | null;
+  }>(sql`
+    select c.pedido_numero as pedido, c.estacion_id, e.nombre as estacion, p.cuenta_numero as cuenta,
+           m.numero as mesa, cu.referencia, v.resumen,
+           extract(epoch from now() - p.enviado_en)::int as espera,
+           extract(epoch from now() - c.lista_en)::int as lista_hace
+    from gesnoc.comanda c
+    join gesnoc.pedido p on p.fecha = c.fecha and p.numero = c.pedido_numero
+    join gesnoc.cuenta cu on cu.fecha = p.fecha and cu.numero = p.cuenta_numero
+    left join gesnoc.mesa m on m.id = cu.mesa_id
+    join gesnoc.estacion e on e.id = c.estacion_id
+    join lateral (
+      select string_agg(d.cantidad || ' × ' || pr.nombre, ', ' order by d.linea) as resumen
+      from gesnoc.detalle_pedido d
+      join gesnoc.producto pr on pr.id = d.producto_id
+      where d.fecha = c.fecha and d.pedido_numero = c.pedido_numero
+        and d.estacion_id = c.estacion_id and d.anulado_en is null
+    ) v on v.resumen is not null
+    where c.fecha = ${fecha} and p.tomado_por = ${usuarioId} and c.entregada_en is null`);
+  return filas.map(({ estacion_id, lista_hace, ...fila }): FilaMiComanda => ({
+    ...fila,
+    estacionId: estacion_id,
+    listaHace: lista_hace,
+  }));
+}
+
+/** La comanda con el ambiente de su cuenta, para decidir quién puede entregarla (RN-14). */
+export async function comandaParaEntregar(
+  tx: Transaccion,
+  fecha: string,
+  pedido: number,
+  estacionId: number,
+) {
+  const [fila] = await tx.execute<{ ambiente_id: number; lista: boolean }>(sql`
+    select coalesce(cu.ambiente_id, m.ambiente_id) as ambiente_id, c.lista_en is not null as lista
+    from gesnoc.comanda c
+    join gesnoc.pedido p on p.fecha = c.fecha and p.numero = c.pedido_numero
+    join gesnoc.cuenta cu on cu.fecha = p.fecha and cu.numero = p.cuenta_numero
+    left join gesnoc.mesa m on m.id = cu.mesa_id
+    where c.fecha = ${fecha} and c.pedido_numero = ${pedido} and c.estacion_id = ${estacionId}`);
+  return fila && { ambienteId: fila.ambiente_id, lista: fila.lista };
+}
+
+/** HU-21: registra la entrega una sola vez; si ya estaba entregada, devuelve la hora que quedó. */
+export async function marcarEntregada(
+  tx: Transaccion,
+  fecha: string,
+  pedido: number,
+  estacionId: number,
+) {
+  const donde = sql`fecha = ${fecha} and pedido_numero = ${pedido} and estacion_id = ${estacionId}`;
+  const [marcada] = await tx.execute<{ entregada_en: string }>(sql`
+    update gesnoc.comanda set entregada_en = now()
+    where ${donde} and lista_en is not null and entregada_en is null
+    returning entregada_en::text`);
+  if (marcada) return { entregadaEn: marcada.entregada_en, yaEstaba: false };
+  const [existente] = await tx.execute<{ entregada_en: string }>(sql`
+    select entregada_en::text from gesnoc.comanda where ${donde}`);
+  return { entregadaEn: existente!.entregada_en, yaEstaba: true };
 }

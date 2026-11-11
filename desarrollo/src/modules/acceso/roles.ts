@@ -234,6 +234,7 @@ export const roles: Rol[] = [
         icono: IconListCheck,
         descripcion: 'Avisos de pedidos listos para retirar y marcar como entregados.',
         historias: ['HU-20', 'HU-21'],
+        construida: true,
       },
       {
         ruta: 'llamados',

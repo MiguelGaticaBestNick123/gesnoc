@@ -112,8 +112,8 @@ export function armarCola(comandas: FilaComanda[], lineas: FilaLinea[]): Cola {
   };
 }
 
-/** Pedidos que no estaban en la cola anterior: hacen sonar el aviso de comanda nueva. */
-export function pedidosNuevos(anteriores: number[], actuales: number[]): number[] {
+/** Lo que no estaba en la consulta anterior: hace sonar el aviso de comanda nueva o lista. */
+export function nuevos<T>(anteriores: readonly T[], actuales: readonly T[]): T[] {
   const vistos = new Set(anteriores);
-  return actuales.filter((pedido) => !vistos.has(pedido));
+  return actuales.filter((elemento) => !vistos.has(elemento));
 }

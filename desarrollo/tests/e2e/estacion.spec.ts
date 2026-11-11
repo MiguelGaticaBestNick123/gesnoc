@@ -52,5 +52,18 @@ test('HU-17 a HU-19: cada estación recibe su parte en 5 s o menos y la barra la
   await expect(enBarra).toHaveCount(0);
   await expect(enCocina).toBeVisible();
 
+  // HU-20: el aviso llega al garzón que tomó el pedido en 5 s o menos (CA3), con el número y la mesa.
+  const aviso = page.getByRole('region', { name: 'Comanda lista para retirar' });
+  await expect(aviso).toBeVisible({ timeout: 5000 });
+  await expect(aviso.getByText(`Pedido ${numero} listo · Mesa 6`)).toBeVisible();
+  await expect(aviso.getByText('Barra Salón: 1 × Mojito')).toBeVisible();
+
+  // HU-21: entregarla apaga el aviso y la saca de la barra.
+  await aviso.getByRole('button', { name: 'Entregada' }).click();
+  await expect(aviso).toHaveCount(0);
+  await expect(
+    barra!.getByRole('article', { name: `Pedido ${numero}, lista`, exact: true }),
+  ).toHaveCount(0, { timeout: 5000 });
+
   await Promise.all(contextos.map((c) => c.close()));
 });

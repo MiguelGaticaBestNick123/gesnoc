@@ -117,3 +117,31 @@ export async function insertarPedido(tx: Transaccion, { lineas, ...datos }: Nuev
       lineas.map((linea, indice) => ({ fecha, pedidoNumero: numero, linea: indice + 1, ...linea })),
     );
 }
+
+/**
+ * HU-22: anula una línea de un pedido de la cuenta, con autor y hora (RN-15). Si ya estaba anulada no
+ * la toca; si la línea no es de esa cuenta, devuelve nulo.
+ */
+export async function anularLinea(
+  tx: Transaccion,
+  fecha: string,
+  { cuenta, pedido: numero, linea }: { cuenta: number; pedido: number; linea: number },
+  anuladoPor: number,
+) {
+  const [anulada] = await tx.execute<{ anulado_en: string }>(sql`
+    update gesnoc.detalle_pedido d
+    set anulado_por = ${anuladoPor}, anulado_en = now()
+    from gesnoc.pedido p
+    where p.fecha = d.fecha and p.numero = d.pedido_numero and p.cuenta_numero = ${cuenta}
+      and d.fecha = ${fecha} and d.pedido_numero = ${numero} and d.linea = ${linea}
+      and d.anulado_en is null
+    returning d.anulado_en::text`);
+  if (anulada) return { anuladoEn: anulada.anulado_en, yaEstaba: false };
+  const [existente] = await tx.execute<{ anulado_en: string | null }>(sql`
+    select d.anulado_en::text
+    from gesnoc.detalle_pedido d
+    join gesnoc.pedido p on p.fecha = d.fecha and p.numero = d.pedido_numero
+    where d.fecha = ${fecha} and d.pedido_numero = ${numero} and d.linea = ${linea}
+      and p.cuenta_numero = ${cuenta}`);
+  return existente?.anulado_en ? { anuladoEn: existente.anulado_en, yaEstaba: true } : null;
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   armarCola,
   nivelDeEspera,
-  pedidosNuevos,
+  nuevos,
   type FilaComanda,
   type FilaLinea,
 } from '@/modules/venta/cola';
@@ -104,7 +104,7 @@ describe('cola de una estación', () => {
 
 describe('aviso de comanda nueva', () => {
   it('solo cuenta los pedidos que no estaban', () => {
-    expect(pedidosNuevos([1, 2], [1, 2, 3])).toEqual([3]);
-    expect(pedidosNuevos([1, 2, 3], [2, 3])).toEqual([]);
+    expect(nuevos([1, 2], [1, 2, 3])).toEqual([3]);
+    expect(nuevos([1, 2, 3], [2, 3])).toEqual([]);
   });
 });

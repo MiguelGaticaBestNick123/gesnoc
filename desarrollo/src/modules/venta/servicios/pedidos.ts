@@ -3,8 +3,8 @@ import { enLaNoche } from '@/modules/noche/servicios/noches';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { bloquearCorrelativo } from '@/shared/db/cliente';
 import { ErrorDeNegocio } from '@/shared/errores';
-import type { DatosPedido } from '../esquemas';
-import { bloquearCuenta } from '../repositorios/cuentas';
+import type { DatosLinea, DatosPedido } from '../esquemas';
+import { bloquearCuenta, consumoYPagos } from '../repositorios/cuentas';
 import * as pedidos from '../repositorios/pedidos';
 import { estacionDestino } from '../ruteo';
 
@@ -73,5 +73,26 @@ export async function enviar(actor: Actor, datos: DatosPedido): Promise<PedidoEn
       lineas,
     });
     return { numero, estaciones: destinos.map((d) => d.nombre), repetido: false };
+  });
+}
+
+/**
+ * HU-22: anula un ítem mal ingresado para que no se prepare ni se cobre. Bloquea la cuenta como el
+ * cobro, así una anulación no puede colarse mientras otro garzón está cobrando (RN-15).
+ */
+export async function anular(actor: Actor, datos: DatosLinea) {
+  exigir(actor, 'garzon');
+  return enLaNoche(async (tx, fecha) => {
+    const cuenta = await bloquearCuenta(tx, fecha, datos.cuenta);
+    if (!cuenta) throw new ErrorDeNegocio('Esa cuenta no existe');
+    exigir(actor, 'garzon', { ambienteId: cuenta.ambienteId });
+    if (cuenta.cerrada) throw new ErrorDeNegocio('La cuenta ya está cerrada');
+    const { pagos } = await consumoYPagos(tx, fecha, datos.cuenta);
+    if (pagos > 0) {
+      throw new ErrorDeNegocio('La cuenta ya tiene pagos: no se pueden anular ítems (RN-15)');
+    }
+    const anulada = await pedidos.anularLinea(tx, fecha, datos, actor.id);
+    if (!anulada) throw new ErrorDeNegocio('Ese ítem no está en la cuenta');
+    return anulada;
   });
 }
