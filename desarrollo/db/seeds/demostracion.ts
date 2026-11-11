@@ -14,6 +14,7 @@ const personas = [
   { clave: 'cocina', nombre: 'Inés Castro' },
   { clave: 'guardia', nombre: 'Bruno Pérez' },
   { clave: 'sinturno', nombre: 'Lucía Díaz' },
+  { clave: 'apoyo', nombre: 'Rocío Paredes' },
 ];
 
 export const correoDe = (clave: string) => `${clave}@gesnoc.test`;

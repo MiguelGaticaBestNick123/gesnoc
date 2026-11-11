@@ -53,8 +53,9 @@ test('no existe registro público (HU-01 CA3)', async ({ page }) => {
   await expect(page.getByRole('link')).toHaveCount(0);
 });
 
+// Usa una cuenta que ninguna otra prueba ocupa: queda bloqueada 15 minutos.
 test('tras cinco intentos fallidos la cuenta se bloquea (HU-01 CA2)', async ({ page }) => {
-  const correo = correoDe('garzon2');
+  const correo = correoDe('apoyo');
   await page.goto('/ingresar');
   await page.getByLabel('Correo').fill(correo);
   await page.getByLabel('Contraseña').fill('contraseña-equivocada');
