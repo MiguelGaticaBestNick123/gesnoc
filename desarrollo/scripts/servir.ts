@@ -21,6 +21,13 @@ console.log(`GesNoc en http://localhost:${puerto} (y en la red local con la IP d
 const servidor = spawn(process.execPath, ['server.js'], {
   cwd: destino,
   stdio: 'inherit',
-  env: { ...process.env, NODE_ENV: 'production', PORT: puerto, HOSTNAME: '0.0.0.0' },
+  // Se sirve por http en la red del local: la cookie de sesión no puede exigir HTTPS.
+  env: {
+    ...process.env,
+    NODE_ENV: 'production',
+    PORT: puerto,
+    HOSTNAME: '0.0.0.0',
+    SESION_SIN_HTTPS: '1',
+  },
 });
 servidor.on('exit', (codigo) => process.exit(codigo ?? 0));

@@ -14,11 +14,12 @@ export default defineConfig({
   testDir: 'tests/e2e',
   globalSetup: './tests/e2e/global.ts',
   forbidOnly: enCI,
-  retries: enCI ? 1 : 0,
-  reporter: enCI ? 'github' : 'list',
+  // Sin reintentos: las pruebas comparten la noche, y un reintento falla por otra razón.
+  retries: 0,
+  reporter: enCI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: url,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
   projects: [
     { name: 'apertura', testMatch: 'apertura.setup.ts', use: telefono },
@@ -30,6 +31,7 @@ export default defineConfig({
     command: enCI ? 'npm run start' : 'npm run dev',
     url,
     reuseExistingServer: false,
+    timeout: 180_000,
     env: { PORT: puerto, DATABASE_URL: urlDePruebas(process.env.DATABASE_URL) },
   },
 });

@@ -12,6 +12,9 @@ on:
       - 'desarrollo/**'
       - '.github/workflows/ci.yml'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -91,5 +94,7 @@ jobs:
         if: failure()
         with:
           name: playwright-report
-          path: desarrollo/playwright-report/
+          path: |
+            desarrollo/playwright-report/
+            desarrollo/test-results/
           retention-days: 7

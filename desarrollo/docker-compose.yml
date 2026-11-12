@@ -14,7 +14,8 @@ services:
       CLAVE_MIGRADOR: ${CLAVE_MIGRADOR:?Falta CLAVE_MIGRADOR en .env}
       CLAVE_APP: ${CLAVE_APP:?Falta CLAVE_APP en .env}
     ports:
-      - '5432:5432'
+      # Solo este equipo: el teléfono entra a la app, no a la base.
+      - '127.0.0.1:5432:5432'
     volumes:
       - datos:/var/lib/postgresql/data
       - ./db/roles.sql:/gesnoc/roles.sql:ro
