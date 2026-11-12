@@ -74,8 +74,8 @@ La carta del cliente (`/carta/[token]`) es pública.
 
 Los permisos se deciden en un solo lugar, `src/shared/autorizacion/`: cada servicio llama a `exigir`
 y cada página a `exigirVista`. Los menús están en `src/modules/acceso/roles.ts`; las secciones que
-aún no se construyen se muestran en construcción, y la pantalla de la puerta usa datos de
-demostración hasta que llegue HU-30.
+aún no se construyen se muestran en construcción. Garzón y barra trabajan en un ambiente; cocina y
+guardia, para todo el local: la cocina es una estación sin ambiente que recibe la comida de todos.
 
 ## Ambiente publicado
 
@@ -110,6 +110,20 @@ lo cubre cierra la cuenta y libera la mesa. La división en partes está en
 `src/modules/venta/cobro.ts`: cada parte sale del saldo y de las personas que faltan, y la última
 calza exacto. El efectivo queda pendiente hasta que la administración lo confirme (RN-17); cada
 garzón lo ve en `/garzon/efectivo`.
+
+La puerta (`/guardia`, HU-30 a HU-33) busca a cada persona por su documento, normalizado con
+`src/shared/utilidades/rut.ts` (RN-21), y registra su entrada como EF (efectivo), RC (tarjeta), PN
+(pendiente: la paga después a la administración) o gratis. Solo las pagadas reciben ticket, y los
+ingresos de la noche se serializan con un bloqueo, así que nadie entra dos veces y los tickets no se
+repiten ni saltan (RN-22). Quien viene en una lista o invitado ya trae su nombre. El guardia ve
+quién entró, pero no lo recaudado. Las listas, los invitados, los eventos y el premio del sorteo se
+preparan en la página de cada noche (`/admin/calendario/[fecha]`).
+
+La caja (`src/modules/caja/`, HU-26 a HU-29 y HU-12) confirma el efectivo de cada garzón, cierra
+cuentas con saldo, calcula el esperado con una sola función (RN-19) y exige una nota si el conteo no
+cuadra (RN-20). El cierre de la noche corre en una transacción con la noche bloqueada: si queda
+algo pendiente no cambia nada; si no, anonimiza a los clientes sin visitas en 12 meses (RN-25) y
+desde ahí la noche no admite operaciones (RN-26).
 
 El plano de mesas es un SVG (`src/modules/local/PlanoMesas.tsx`, ADR-013) que comparten el mapa del
 garzón y el editor de la administración (`/admin/mapa`, HU-05). Se ajusta al ancho del teléfono, se

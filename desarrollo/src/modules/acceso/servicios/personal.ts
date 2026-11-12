@@ -1,4 +1,6 @@
 import 'server-only';
+import { rolPrincipal } from '@/modules/noche/recomendacion';
+import { trayectoriaDelPersonal } from '@/modules/noche/repositorios/turnos';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { ErrorDeNegocio, traducir } from '@/shared/errores';
 import { hashearClave } from '@/shared/sesion/clave';
@@ -7,10 +9,36 @@ import * as usuarios from '../repositorios/usuarios';
 
 const correoRepetido = { usuario_correo_uq: 'Ya existe una cuenta con ese correo' };
 
-export function listar(actor: Actor) {
+/**
+ * HU-03: las cuentas del personal con su trayectoria, que sale de los turnos y no se guarda: el rol
+ * que suele hacer, cuántas noches trabajó, la última y su próximo turno.
+ */
+export async function listar(actor: Actor) {
   exigir(actor, 'admin');
-  return usuarios.listarPersonal();
+  const [personas, { roles, proximos }] = await Promise.all([
+    usuarios.listarPersonal(),
+    trayectoriaDelPersonal(),
+  ]);
+  return personas.map((persona) => {
+    const propios = roles.filter((r) => r.usuarioId === persona.id);
+    const proximo = proximos.find((p) => p.usuarioId === persona.id);
+    return {
+      ...persona,
+      principal: rolPrincipal(propios),
+      noches: propios.reduce((suma, r) => suma + r.veces, 0),
+      ultima:
+        propios
+          .map((r) => r.ultima)
+          .sort()
+          .at(-1) ?? null,
+      proximo: proximo
+        ? { fecha: proximo.fecha, rol: proximo.rol, ambiente: proximo.ambiente }
+        : null,
+    };
+  });
 }
+
+export type PersonaDelLocal = Awaited<ReturnType<typeof listar>>[number];
 
 export async function crear(actor: Actor, { clave, ...datos }: DatosPersonaNueva) {
   exigir(actor, 'admin');

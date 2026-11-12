@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { listar as listarPersonal } from '@/modules/acceso/servicios/personal';
 import { calendarioDelMes } from '@/modules/noche/servicios/noches';
 import { miCalendario, pantallaAsignacion } from '@/modules/noche/servicios/turnos';
 import { NoAutorizado } from '@/shared/errores';
@@ -83,5 +84,29 @@ describe('HU-10 recomendación al asignar', () => {
     // Paula rota, pero lo suyo es garzón.
     expect(de('Paula Vera').principal).toBe('garzon');
     expect(de('Rocío Paredes').principal).toBeNull();
+  });
+});
+
+describe('HU-03 trayectoria en la pantalla de personal', () => {
+  it('el rol habitual, las noches trabajadas, la última y el próximo turno salen de los turnos', async () => {
+    await sembrar(consultar, CLAVE, hoy);
+    const personas = await listarPersonal(administracion);
+    const de = (nombre: string) => personas.find((p) => p.nombre === nombre)!;
+
+    // Diego trabajó de garzón las cuatro noches cerradas; la de hoy no se ha abierto.
+    expect(de('Diego Soto')).toMatchObject({
+      principal: 'garzon',
+      noches: 4,
+      ultima: '2026-11-01',
+      proximo: { fecha: hoy, rol: 'garzon', ambiente: 'Salón' },
+    });
+    // Quien cocina no lleva ambiente: la cocina es de todo el local.
+    expect(de('Inés Castro').proximo).toEqual({ fecha: hoy, rol: 'cocinero', ambiente: null });
+    expect(de('Rocío Paredes')).toMatchObject({
+      principal: null,
+      noches: 0,
+      ultima: null,
+      proximo: null,
+    });
   });
 });

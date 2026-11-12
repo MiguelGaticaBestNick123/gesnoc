@@ -20,7 +20,6 @@ import {
   IconReceipt2,
   IconSettings,
   IconShieldCheck,
-  IconStar,
   IconTicket,
   IconToolsKitchen2,
   IconUserCheck,
@@ -101,8 +100,10 @@ export const roles: Rol[] = [
         etiqueta: 'Calendario de noches',
         icono: IconCalendarEvent,
         grupo: 'Noche',
-        descripcion: 'Programar las noches de apertura con una nota y el precio de entrada.',
-        historias: ['HU-08'],
+        descripcion:
+          'Programar cada noche: entrada, premio del sorteo, eventos, listas e invitados.',
+        // Las listas y los invitados son de cada noche (decisión del Product Owner, 12 nov).
+        historias: ['HU-08', 'HU-34'],
         construida: true,
       },
       {
@@ -121,6 +122,7 @@ export const roles: Rol[] = [
         grupo: 'Caja',
         descripcion: 'Confirmar el efectivo que entregan los garzones.',
         historias: ['HU-26'],
+        construida: true,
       },
       {
         ruta: 'saldos',
@@ -129,6 +131,7 @@ export const roles: Rol[] = [
         grupo: 'Caja',
         descripcion: 'Cerrar una cuenta con saldo pendiente, dejando registro de quién lo hizo.',
         historias: ['HU-27'],
+        construida: true,
       },
       {
         ruta: 'arqueo',
@@ -137,6 +140,7 @@ export const roles: Rol[] = [
         grupo: 'Caja',
         descripcion: 'Efectivo esperado, conteo final y nota obligatoria si hay diferencia.',
         historias: ['HU-28'],
+        construida: true,
       },
       {
         ruta: 'ventas',
@@ -145,6 +149,7 @@ export const roles: Rol[] = [
         grupo: 'Caja',
         descripcion: 'Lo vendido, lo cobrado por medio de pago y las propinas por ambiente.',
         historias: ['HU-29'],
+        construida: true,
       },
       {
         ruta: 'ambientes',
@@ -189,14 +194,6 @@ export const roles: Rol[] = [
         descripcion: 'Crear, editar, restablecer y desactivar las cuentas del personal.',
         historias: ['HU-03'],
         construida: true,
-      },
-      {
-        ruta: 'invitados',
-        etiqueta: 'Invitados',
-        icono: IconStar,
-        grupo: 'Personas',
-        descripcion: 'Lista de invitados que portería reconoce al registrar el ingreso.',
-        historias: ['HU-34'],
       },
       {
         ruta: 'clientes',
@@ -302,8 +299,10 @@ export const roles: Rol[] = [
         ruta: 'puerta',
         etiqueta: 'Estado de la puerta',
         icono: IconUsersGroup,
-        descripcion: 'Personas registradas, lo recaudado por medio de pago y el último ticket.',
+        // Sin lo recaudado, que es de la administración (pedido del Product Owner, 12 nov).
+        descripcion: 'Quién entró, con hora, ticket, nombre, RUT y forma de entrada.',
         historias: ['HU-32'],
+        construida: true,
       },
       {
         ruta: 'clientes',
@@ -316,8 +315,9 @@ export const roles: Rol[] = [
         ruta: 'sorteo',
         etiqueta: 'Sorteo',
         icono: IconTicket,
-        descripcion: 'Sorteo del premio de cada ambiente entre los tickets pagados de la noche.',
+        descripcion: 'Sorteo del premio de cada ambiente entre los tickets de la noche.',
         historias: ['HU-37'],
+        construida: true,
       },
       misTurnos,
     ],

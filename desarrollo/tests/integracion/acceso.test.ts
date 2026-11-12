@@ -225,7 +225,7 @@ describe('HU-03 administrar el personal', () => {
   it('solo la administración administra el personal (RNF-01)', async () => {
     const id = await crearPersona(correo);
     for (const actor of [sinTurno(), conTurno('garzon'), conTurno('guardia')]) {
-      expect(() => personal.listar(actor)).toThrow(NoAutorizado);
+      await expect(personal.listar(actor)).rejects.toThrow(NoAutorizado);
       await expect(personal.crear(actor, nueva)).rejects.toThrow(NoAutorizado);
       await expect(personal.cambiarActivo(actor, id, false)).rejects.toThrow(NoAutorizado);
       await expect(personal.restablecerClave(actor, id, 'clave-nueva-1')).rejects.toThrow(

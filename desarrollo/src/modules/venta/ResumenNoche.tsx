@@ -11,7 +11,6 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  ThemeIcon,
   Title,
 } from '@mantine/core';
 import {
@@ -29,41 +28,13 @@ import {
 import Link from 'next/link';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
+import { Cifra } from '@/shared/ui/Cifra';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { fechaCorta, formatearHora } from '@/shared/utilidades/fechas';
 import { nombreDelMedio } from './cobro';
 import { iconoDelMedio } from './iconos';
 import type { ResumenDeLaNoche } from './servicios/resumen';
-
-function Cifra({
-  icono: Icono,
-  color,
-  etiqueta,
-  valor,
-  detalle,
-}: Readonly<{ icono: Icon; color: string; etiqueta: string; valor: string; detalle: string }>) {
-  return (
-    <Card withBorder padding="md" role="group" aria-label={`${etiqueta}: ${valor}`}>
-      <Group gap="md" wrap="nowrap" align="flex-start">
-        <ThemeIcon size={48} radius="xl" variant="light" color={color}>
-          <Icono size={26} stroke={1.7} />
-        </ThemeIcon>
-        <div style={{ minWidth: 0 }}>
-          <Text size="sm" c="dimmed">
-            {etiqueta}
-          </Text>
-          <Text fw={700} fz={26} lh={1.15}>
-            {valor}
-          </Text>
-          <Text size="xs" c="dimmed">
-            {detalle}
-          </Text>
-        </div>
-      </Group>
-    </Card>
-  );
-}
 
 function Titulo({ icono: Icono, children }: Readonly<{ icono: Icon; children: React.ReactNode }>) {
   return (
