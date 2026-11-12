@@ -36,6 +36,7 @@ import {
   PASO,
   redimensionar,
   siguienteNumero,
+  sillasSegunTamano,
   type FormaMesa,
   type Mesa,
 } from './geometria';
@@ -117,6 +118,7 @@ export function EditorPlano({
       ancho: 80,
       alto: 80,
       rotacion: 0,
+      sillas: null,
       nueva: true,
       ...lugar,
     };
@@ -336,6 +338,27 @@ export function EditorPlano({
                     }}
                   />
                 </SimpleGrid>
+                <NumberInput
+                  key={`${elegida.id}-sillas-${elegida.sillas ?? 'auto'}`}
+                  label="Sillas"
+                  description="Vacío: las que caben según el tamaño"
+                  placeholder={`${sillasSegunTamano(elegida)} según el tamaño`}
+                  defaultValue={elegida.sillas ?? ''}
+                  min={0}
+                  max={20}
+                  allowDecimal={false}
+                  onBlur={(evento) => {
+                    const texto = evento.currentTarget.value.trim();
+                    if (texto === '') {
+                      cambiar(elegida.id, (m) => ({ ...m, sillas: null }));
+                      return;
+                    }
+                    const sillas = numero(texto);
+                    if (Number.isInteger(sillas) && sillas >= 0 && sillas <= 20) {
+                      cambiar(elegida.id, (m) => ({ ...m, sillas }));
+                    }
+                  }}
+                />
                 <Group justify="space-between">
                   <Text size="sm">Rotación: {elegida.rotacion}°</Text>
                   <Group gap="xs">

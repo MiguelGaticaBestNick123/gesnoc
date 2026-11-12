@@ -8,8 +8,10 @@ import {
   mover,
   numerosRepetidos,
   redimensionar,
+  repartirSillas,
   siguienteNumero,
   sillasDe,
+  sillasSegunTamano,
   type Mesa,
 } from '@/modules/local/geometria';
 import { duracion, fechaCorta } from '@/shared/utilidades/fechas';
@@ -110,5 +112,31 @@ describe('mesa nueva en el editor', () => {
   it('si el plano está lleno, queda en la esquina', () => {
     const llena = [mesa({ posX: 0, posY: 0, ancho: 400, alto: 400 })];
     expect(lugarLibre(llena, { ancho: 420, alto: 420 }, 80, 80)).toEqual({ posX: 0, posY: 0 });
+  });
+});
+
+describe('sillas fijas por mesa', () => {
+  it('reparte las sillas según el largo de cada lado', () => {
+    expect(repartirSillas(4, 80, 80)).toEqual({ arriba: 1, abajo: 1, izquierda: 1, derecha: 1 });
+    expect(repartirSillas(4, 160, 80)).toEqual({ arriba: 2, abajo: 2, izquierda: 0, derecha: 0 });
+    expect(repartirSillas(6, 110, 80)).toEqual({ arriba: 2, abajo: 2, izquierda: 1, derecha: 1 });
+  });
+
+  it('la cantidad fija no cambia aunque la mesa se agrande o se achique', () => {
+    for (const lado of [60, 120, 300]) {
+      expect(
+        sillasDe(mesa({ forma: 'cuadrada', ancho: lado, alto: lado, sillas: 4 })),
+      ).toHaveLength(4);
+      expect(sillasDe(mesa({ forma: 'redonda', ancho: lado, alto: lado, sillas: 6 }))).toHaveLength(
+        6,
+      );
+    }
+  });
+
+  it('cero sillas dibuja la mesa sola; sin cantidad fija, las que caben', () => {
+    expect(sillasDe(mesa({ sillas: 0 }))).toHaveLength(0);
+    expect(sillasDe(mesa({ ancho: 110, alto: 80, sillas: null }))).toHaveLength(
+      sillasSegunTamano(mesa({ ancho: 110, alto: 80 })),
+    );
   });
 });

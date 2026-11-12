@@ -12,6 +12,8 @@ export interface Mesa {
   ancho: number;
   alto: number;
   rotacion: number;
+  /** Sillas fijas; nulo o ausente: las que caben según el tamaño. */
+  sillas?: number | null;
 }
 
 export interface Rectangulo {
@@ -39,18 +41,51 @@ const SEPARACION = 5;
 const repartir = (largo: number, cantidad: number) =>
   Array.from({ length: cantidad }, (_, i) => -largo / 2 + (i + 0.5) * (largo / cantidad));
 
+/** Sillas que caben según el tamaño, cuando la mesa no tiene una cantidad fija. */
+export function sillasSegunTamano({ forma, ancho, alto }: Pick<Mesa, 'forma' | 'ancho' | 'alto'>) {
+  if (forma === 'redonda') {
+    return Math.min(10, Math.max(4, Math.round((2 * Math.PI * (ancho / 2)) / 42)));
+  }
+  const porLadoLargo = Math.max(1, Math.floor(ancho / 48));
+  const porLadoCorto = alto >= 40 ? Math.max(1, Math.floor(alto / 56)) : 0;
+  return 2 * porLadoLargo + 2 * porLadoCorto;
+}
+
+export interface Lados {
+  arriba: number;
+  abajo: number;
+  izquierda: number;
+  derecha: number;
+}
+
 /**
- * Sillas alrededor de una mesa, con el centro de la mesa en el origen. Una mesa larga lleva más sillas
- * por lado; una redonda, sillas repartidas en el círculo según su tamaño.
+ * Reparte las sillas en los cuatro lados de una mesa rectangular o cuadrada: cada silla va al lado
+ * que tiene más espacio libre por silla, así una mesa larga lleva más sillas en sus lados largos.
  */
-export function sillasDe({
-  forma,
-  ancho,
-  alto,
-}: Pick<Mesa, 'forma' | 'ancho' | 'alto'>): Rectangulo[] {
+export function repartirSillas(cantidad: number, ancho: number, alto: number): Lados {
+  const lados: Lados = { arriba: 0, abajo: 0, izquierda: 0, derecha: 0 };
+  const largo: Lados = { arriba: ancho, abajo: ancho, izquierda: alto, derecha: alto };
+  const orden: (keyof Lados)[] = ['arriba', 'abajo', 'izquierda', 'derecha'];
+  for (let i = 0; i < cantidad; i++) {
+    const lado = orden.reduce((mejor, actual) =>
+      largo[actual] / (lados[actual] + 1) > largo[mejor] / (lados[mejor] + 1) ? actual : mejor,
+    );
+    lados[lado] += 1;
+  }
+  return lados;
+}
+
+/**
+ * Sillas alrededor de una mesa, con el centro de la mesa en el origen. Con sillas fijas se dibuja esa
+ * cantidad aunque cambie el tamaño; si no, las que caben según el tamaño.
+ */
+export function sillasDe(mesa: Pick<Mesa, 'forma' | 'ancho' | 'alto' | 'sillas'>): Rectangulo[] {
+  const { forma, ancho, alto } = mesa;
+  const cantidad = mesa.sillas ?? sillasSegunTamano(mesa);
+  if (cantidad <= 0) return [];
+
   if (forma === 'redonda') {
     const radio = ancho / 2 + SEPARACION + SILLA_ANCHO / 2;
-    const cantidad = Math.min(10, Math.max(4, Math.round((2 * Math.PI * (ancho / 2)) / 42)));
     return Array.from({ length: cantidad }, (_, i) => {
       const angulo = (2 * Math.PI * i) / cantidad - Math.PI / 2;
       return {
@@ -63,20 +98,39 @@ export function sillasDe({
     });
   }
 
-  const porLadoLargo = Math.max(1, Math.floor(ancho / 48));
-  const porLadoCorto = alto >= 40 ? Math.max(1, Math.floor(alto / 56)) : 0;
-  const sillas: Rectangulo[] = [];
-  for (const x of repartir(ancho, porLadoLargo)) {
-    const base = { x: x - SILLA_LARGO / 2, ancho: SILLA_LARGO, alto: SILLA_ANCHO, rotacion: 0 };
-    sillas.push({ ...base, y: -alto / 2 - SEPARACION - SILLA_ANCHO });
-    sillas.push({ ...base, y: alto / 2 + SEPARACION });
-  }
-  for (const y of repartir(alto, porLadoCorto)) {
-    const base = { y: y - SILLA_LARGO / 2, ancho: SILLA_ANCHO, alto: SILLA_LARGO, rotacion: 0 };
-    sillas.push({ ...base, x: -ancho / 2 - SEPARACION - SILLA_ANCHO });
-    sillas.push({ ...base, x: ancho / 2 + SEPARACION });
-  }
-  return sillas;
+  const lados =
+    mesa.sillas == null
+      ? (() => {
+          const largo = Math.max(1, Math.floor(ancho / 48));
+          const corto = alto >= 40 ? Math.max(1, Math.floor(alto / 56)) : 0;
+          return { arriba: largo, abajo: largo, izquierda: corto, derecha: corto };
+        })()
+      : repartirSillas(cantidad, ancho, alto);
+
+  const horizontal = { ancho: SILLA_LARGO, alto: SILLA_ANCHO, rotacion: 0 };
+  const vertical = { ancho: SILLA_ANCHO, alto: SILLA_LARGO, rotacion: 0 };
+  return [
+    ...repartir(ancho, lados.arriba).map((x) => ({
+      ...horizontal,
+      x: x - SILLA_LARGO / 2,
+      y: -alto / 2 - SEPARACION - SILLA_ANCHO,
+    })),
+    ...repartir(ancho, lados.abajo).map((x) => ({
+      ...horizontal,
+      x: x - SILLA_LARGO / 2,
+      y: alto / 2 + SEPARACION,
+    })),
+    ...repartir(alto, lados.izquierda).map((y) => ({
+      ...vertical,
+      x: -ancho / 2 - SEPARACION - SILLA_ANCHO,
+      y: y - SILLA_LARGO / 2,
+    })),
+    ...repartir(alto, lados.derecha).map((y) => ({
+      ...vertical,
+      x: ancho / 2 + SEPARACION,
+      y: y - SILLA_LARGO / 2,
+    })),
+  ];
 }
 
 /**

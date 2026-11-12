@@ -81,9 +81,10 @@ export async function mesasDe(fecha: string | undefined, ambienteId: number) {
       ancho: number;
       alto: number;
       rotacion: number;
+      sillas: number | null;
     }
   >(sql`
-    select m.id, m.numero, m.forma, m.pos_x, m.pos_y, m.ancho, m.alto, m.rotacion,
+    select m.id, m.numero, m.forma, m.pos_x, m.pos_y, m.ancho, m.alto, m.rotacion, m.sillas,
            c.numero as cuenta, c.abierta_en::text,
            extract(epoch from now() - c.abierta_en)::int as abierta_hace,
            u.nombre as garzon, t.total, k.listas, k.espera_maxima
@@ -103,6 +104,7 @@ export async function mesasDe(fecha: string | undefined, ambienteId: number) {
     ancho: f.ancho,
     alto: f.alto,
     rotacion: f.rotacion,
+    sillas: f.sillas,
     ...resumen(f),
   }));
 }

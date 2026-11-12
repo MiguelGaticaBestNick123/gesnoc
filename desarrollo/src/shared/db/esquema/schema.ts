@@ -124,6 +124,7 @@ export const mesa = gesnoc.table(
     rotacion: smallint().default(0).notNull(),
     activa: boolean().default(true).notNull(),
     tokenQr: text('token_qr').notNull(),
+    sillas: smallint(),
   },
   (table) => [
     uniqueIndex('mesa_numero_uq')
@@ -150,6 +151,7 @@ export const mesa = gesnoc.table(
     check('mesa_alto_check', sql`(alto >= 20) AND (alto <= 400)`),
     check('mesa_rotacion_check', sql`(rotacion >= 0) AND (rotacion <= 359)`),
     check('mesa_token_qr_check', sql`token_qr ~ '^[A-Za-z0-9_-]{22,64}$'::text`),
+    check('mesa_sillas_ck', sql`(sillas >= 0) AND (sillas <= 20)`),
     check('mesa_proporcion_ck', sql`(forma = 'rectangular'::text) OR (ancho = alto)`),
   ],
 );

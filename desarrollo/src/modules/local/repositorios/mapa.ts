@@ -15,6 +15,7 @@ const columnas = {
   ancho: mesa.ancho,
   alto: mesa.alto,
   rotacion: mesa.rotacion,
+  sillas: mesa.sillas,
 };
 
 export const mesasActivas = (ambienteId: number) =>
@@ -88,6 +89,7 @@ export async function guardarPlano(tx: Transaccion, { ambienteId, mesas, retirad
         ancho: datos.ancho,
         alto: datos.alto,
         rotacion: datos.rotacion,
+        sillas: datos.sillas,
         ambienteId,
         // Código opaco del QR de la mesa (RF-33); se podrá regenerar con HU-07.
         tokenQr: randomBytes(16).toString('base64url'),

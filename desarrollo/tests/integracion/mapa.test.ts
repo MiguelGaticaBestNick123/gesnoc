@@ -42,16 +42,41 @@ describe('HU-05 editar el mapa de mesas', () => {
           rotacion: 90,
         },
         ...resto,
-        { numero: 4, forma: 'redonda', posX: 700, posY: 50, ancho: 90, alto: 90, rotacion: 0 },
+        {
+          numero: 4,
+          forma: 'redonda',
+          posX: 700,
+          posY: 50,
+          ancho: 90,
+          alto: 90,
+          rotacion: 0,
+          sillas: 6,
+        },
       ],
     };
 
     const mesas = await guardarPlano(administracion, datos);
     expect(mesas.map((m) => m.numero)).toEqual([1, 2, 3, 4]);
     expect(mesas[0]).toMatchObject({ posX: 200, posY: 150, forma: 'rectangular', rotacion: 90 });
-    const [nueva] = await consultar<{ token_qr: string }[]>`
-      select token_qr from gesnoc.mesa where ambiente_id = ${local.terraza} and numero = 4`;
+    const [nueva] = await consultar<{ token_qr: string; sillas: number | null }[]>`
+      select token_qr, sillas from gesnoc.mesa where ambiente_id = ${local.terraza} and numero = 4`;
     expect(nueva?.token_qr).toMatch(/^[A-Za-z0-9_-]{22}$/);
+    // Sillas fijas: se guardan y no dependen del tamaño.
+    expect(nueva?.sillas).toBe(6);
+    expect(mesas[0]?.sillas).toBeNull();
+  });
+
+  it('una mesa admite de 0 a 20 sillas fijas', async () => {
+    const plano = await terraza();
+    const [primera, ...resto] = plano.mesas;
+    expect(() =>
+      datosPlano.parse({ ...plano, mesas: [{ ...primera!, sillas: 21 }, ...resto] }),
+    ).toThrow('de 0 a 20 sillas');
+    const mesas = await guardarPlano(
+      administracion,
+      datosPlano.parse({ ...plano, mesas: [{ ...primera!, sillas: 0 }, ...resto] }),
+    );
+    expect(mesas[0]?.sillas).toBe(0);
   });
 
   it('una mesa cuadrada o redonda queda con ancho y alto iguales', async () => {
@@ -103,7 +128,16 @@ describe('HU-05 editar el mapa de mesas', () => {
       ...plano,
       mesas: [
         ...plano.mesas.filter((m) => m.id !== mesaTres),
-        { numero: 3, forma: 'cuadrada', posX: 700, posY: 150, ancho: 80, alto: 80, rotacion: 0 },
+        {
+          numero: 3,
+          forma: 'cuadrada',
+          posX: 700,
+          posY: 150,
+          ancho: 80,
+          alto: 80,
+          rotacion: 0,
+          sillas: null,
+        },
       ],
       retiradas: [mesaTres],
     });

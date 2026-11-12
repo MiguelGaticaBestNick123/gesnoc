@@ -75,6 +75,11 @@ const mesaDelPlano = z
     ancho: enteroEntre(20, 400, 'El tamaño de una mesa va de 20 a 400'),
     alto: enteroEntre(20, 400, 'El tamaño de una mesa va de 20 a 400'),
     rotacion: enteroEntre(0, 359, 'La rotación va de 0 a 359 grados'),
+    // Sillas fijas; sin valor, el plano dibuja las que caben según el tamaño.
+    sillas: enteroEntre(0, 20, 'Una mesa admite de 0 a 20 sillas')
+      .nullable()
+      .optional()
+      .transform((sillas) => sillas ?? null),
   })
   // Una mesa cuadrada o redonda tiene ancho y alto iguales (mesa_proporcion_ck).
   .transform((mesa) => (mesa.forma === 'rectangular' ? mesa : { ...mesa, alto: mesa.ancho }));
