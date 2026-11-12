@@ -60,3 +60,29 @@ export type DatosProducto = z.output<typeof datosProducto>;
 export const conId = z.object({ id: identificador });
 
 export const datosActivacion = z.object({ id: identificador, activo: marcado });
+
+const enteroEntre = (minimo: number, maximo: number, mensaje: string) =>
+  z.number(mensaje).int(mensaje).min(minimo, mensaje).max(maximo, mensaje);
+
+/** Una mesa tal como la deja el editor; sin `id` es una mesa nueva (HU-05). */
+const mesaDelPlano = z
+  .object({
+    id: z.number().int().positive().optional(),
+    numero: enteroEntre(1, 999, 'El número de mesa va de 1 a 999'),
+    forma: z.enum(['cuadrada', 'redonda', 'rectangular'], 'Forma de mesa no válida'),
+    posX: enteroEntre(0, 5000, 'La mesa quedó fuera del plano'),
+    posY: enteroEntre(0, 5000, 'La mesa quedó fuera del plano'),
+    ancho: enteroEntre(20, 400, 'El tamaño de una mesa va de 20 a 400'),
+    alto: enteroEntre(20, 400, 'El tamaño de una mesa va de 20 a 400'),
+    rotacion: enteroEntre(0, 359, 'La rotación va de 0 a 359 grados'),
+  })
+  // Una mesa cuadrada o redonda tiene ancho y alto iguales (mesa_proporcion_ck).
+  .transform((mesa) => (mesa.forma === 'rectangular' ? mesa : { ...mesa, alto: mesa.ancho }));
+
+export const datosPlano = z.object({
+  ambienteId: z.number().int().positive(),
+  mesas: z.array(mesaDelPlano).max(200, 'Un ambiente admite hasta 200 mesas'),
+  retiradas: z.array(z.number().int().positive()).max(200),
+});
+export type DatosPlano = z.output<typeof datosPlano>;
+export type MesaDelPlano = DatosPlano['mesas'][number];

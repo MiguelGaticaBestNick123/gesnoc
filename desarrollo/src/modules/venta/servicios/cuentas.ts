@@ -62,7 +62,12 @@ export async function abrir(actor: Actor, datos: UbicacionCuenta) {
   }
   exigir(actor, 'garzon', { ambienteId }); // RN-14
   return traducir(
-    enLaNoche((tx, fecha) => cuentas.abrirCuenta(tx, fecha, actor.id, datos)),
+    enLaNoche(async (tx, fecha) => {
+      if ('mesaId' in datos && !(await cuentas.mesaActiva(tx, datos.mesaId))) {
+        throw new ErrorDeNegocio('Esa mesa ya no está en el plano');
+      }
+      return cuentas.abrirCuenta(tx, fecha, actor.id, datos);
+    }),
     { cuenta_mesa_abierta_uq: 'La mesa tiene una cuenta abierta de otra noche' },
   );
 }

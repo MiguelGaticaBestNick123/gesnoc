@@ -162,6 +162,7 @@ export const roles: Rol[] = [
         grupo: 'Local',
         descripcion: 'Crear, mover, redimensionar, rotar, renumerar y retirar mesas.',
         historias: ['HU-05'],
+        construida: true,
       },
       {
         ruta: 'qr',
