@@ -14,15 +14,18 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconTrash } from '@tabler/icons-react';
+import { IconCash, IconTrash } from '@tabler/icons-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora } from '@/shared/utilidades/fechas';
+import { nombreDelMedio } from './cobro';
 import type { EstadoComanda, LineaDeCuenta } from './cuenta';
 import { EncabezadoCuenta } from './EncabezadoCuenta';
+import { iconoDelMedio } from './iconos';
 import type { DetalleCuenta as Detalle } from './servicios/cuentas';
 
 const colorDe: Record<EstadoComanda, string> = {
@@ -30,8 +33,6 @@ const colorDe: Record<EstadoComanda, string> = {
   lista: 'green',
   entregada: 'violet',
 };
-
-const medioDe = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' };
 
 interface PorAnular {
   pedido: number;
@@ -68,7 +69,7 @@ export function DetalleCuenta({ inicial }: Readonly<{ inicial: Detalle }>) {
   }
 
   return (
-    <Stack gap="sm">
+    <Stack gap="sm" maw={720} mx="auto" w="100%">
       <EncabezadoCuenta cuenta={cuenta} activa="cuenta" />
       <AvisoConexion sinConexion={sinConexion} />
       {error && (
@@ -89,6 +90,16 @@ export function DetalleCuenta({ inicial }: Readonly<{ inicial: Detalle }>) {
           <Cifra etiqueta="Saldo" valor={saldo} destacada />
         </SimpleGrid>
       </Paper>
+      {cuenta.cerradaEn === null && saldo > 0 && (
+        <Button
+          component={Link}
+          href={`/garzon/cuenta/${numero}/cobrar`}
+          leftSection={<IconCash size={20} />}
+          fullWidth
+        >
+          Cobrar {formatearPesos(saldo)}
+        </Button>
+      )}
 
       {pedidos.length === 0 && <Text c="dimmed">Todavía no hay pedidos en esta cuenta.</Text>}
       {pedidos.map((pedido) => (
@@ -162,20 +173,41 @@ export function DetalleCuenta({ inicial }: Readonly<{ inicial: Detalle }>) {
           <Title order={3} size="h5">
             Pagos
           </Title>
-          {pagos.map((pago) => (
-            <Paper key={pago.numero} withBorder p="xs">
-              <Group justify="space-between" wrap="nowrap">
-                <Text size="sm">
-                  {medioDe[pago.medio]} · {formatearHora(pago.registradoEn)} · {pago.registradoPor}
-                  {pago.medio === 'efectivo' && !pago.confirmado && ' · por entregar a caja'}
-                </Text>
-                <Text size="sm" fw={600}>
-                  {formatearPesos(pago.monto)}
-                  {pago.propina > 0 && ` + ${formatearPesos(pago.propina)}`}
-                </Text>
-              </Group>
-            </Paper>
-          ))}
+          {pagos.map((pago) => {
+            const Icono = iconoDelMedio[pago.medio];
+            return (
+              <Paper key={pago.numero} withBorder p="xs">
+                <Group justify="space-between" wrap="nowrap" gap="xs">
+                  <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                    <Icono size={20} color="var(--mantine-color-dimmed)" />
+                    <div style={{ minWidth: 0 }}>
+                      <Text size="sm" fw={600}>
+                        {nombreDelMedio(pago.medio)}
+                      </Text>
+                      <Text size="xs" c="dimmed" truncate>
+                        {formatearHora(pago.registradoEn)} · {pago.registradoPor}
+                      </Text>
+                    </div>
+                  </Group>
+                  <div style={{ textAlign: 'right' }}>
+                    <Text size="sm" fw={700}>
+                      {formatearPesos(pago.monto)}
+                    </Text>
+                    {pago.propina > 0 && (
+                      <Text size="xs" c="dimmed">
+                        + {formatearPesos(pago.propina)} propina
+                      </Text>
+                    )}
+                    {pago.medio === 'efectivo' && (
+                      <Badge size="xs" variant="light" color={pago.confirmado ? 'green' : 'yellow'}>
+                        {pago.confirmado ? 'Entregado' : 'Por entregar'}
+                      </Badge>
+                    )}
+                  </div>
+                </Group>
+              </Paper>
+            );
+          })}
           {cuenta.cerradaEn === null && (
             <Text size="xs" c="dimmed">
               Con pagos registrados ya no se anulan ítems (RN-15).

@@ -5,6 +5,7 @@ import {
   Anchor,
   Box,
   Card,
+  Divider,
   Group,
   Progress,
   SimpleGrid,
@@ -14,6 +15,7 @@ import {
   Title,
 } from '@mantine/core';
 import {
+  IconAlertTriangle,
   IconArmchair,
   IconCash,
   IconChefHat,
@@ -30,6 +32,8 @@ import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { fechaCorta, formatearHora } from '@/shared/utilidades/fechas';
+import { nombreDelMedio } from './cobro';
+import { iconoDelMedio } from './iconos';
 import type { ResumenDeLaNoche } from './servicios/resumen';
 
 function Cifra({
@@ -75,7 +79,7 @@ function Titulo({ icono: Icono, children }: Readonly<{ icono: Icon; children: Re
 // Portada de la administración: la noche en cifras reales, al día cada pocos segundos.
 export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }>) {
   const { datos, sinConexion } = useTiempoReal('/api/vivo/resumen', inicial);
-  const { noche, cifras, ambientes, ultimos, masPedidos } = datos;
+  const { noche, cifras, cobros, ambientes, ultimos, masPedidos } = datos;
 
   return (
     <Stack gap="md">
@@ -128,7 +132,7 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
         </SimpleGrid>
       )}
 
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+      <SimpleGrid cols={{ base: 1, md: 2, lg: cobros ? 3 : 2 }} spacing="md">
         <Card withBorder padding="md">
           <Titulo icono={IconArmchair}>Mesas en tiempo real</Titulo>
           <Stack gap="md">
@@ -155,6 +159,8 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
             })}
           </Stack>
         </Card>
+
+        {cobros && <Cobros cobros={cobros} />}
 
         <Card withBorder padding="md">
           <Titulo icono={IconStar}>Lo más pedido</Titulo>
@@ -209,6 +215,108 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
         )}
       </Card>
     </Stack>
+  );
+}
+
+/**
+ * HU-24: lo cobrado por medio de pago, de mayor a menor y en un solo color, porque se comparan los
+ * montos y cada fila ya dice su nombre. Abajo, las propinas y el efectivo que falta entregar.
+ */
+function Cobros({ cobros }: Readonly<{ cobros: NonNullable<ResumenDeLaNoche['cobros']> }>) {
+  const total = cobros.porMedio.reduce((suma, medio) => suma + medio.monto, 0);
+  const ordenados = cobros.porMedio.toSorted((a, b) => b.monto - a.monto);
+  const { porConfirmar } = cobros;
+
+  return (
+    <Card withBorder padding="md">
+      <Titulo icono={IconWallet}>Cobros por medio de pago</Titulo>
+      {total === 0 ? (
+        <Text size="sm" c="dimmed">
+          Todavía no hay cobros esta noche.
+        </Text>
+      ) : (
+        <Stack gap="sm">
+          {ordenados.map(({ medio, monto, pagos }) => {
+            const Icono = iconoDelMedio[medio];
+            const parte = monto / total;
+            const porcentaje = `${Math.round(parte * 100)} %`;
+            return (
+              <div
+                key={medio}
+                role="group"
+                aria-label={`${nombreDelMedio(medio)}: ${formatearPesos(monto)}, ${porcentaje}`}
+              >
+                <Group justify="space-between" wrap="nowrap" mb={6} gap="xs">
+                  <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+                    <Icono size={18} stroke={1.7} color="var(--mantine-color-dimmed)" />
+                    <Text fw={600} truncate>
+                      {nombreDelMedio(medio)}
+                    </Text>
+                    <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+                      {pagos} {pagos === 1 ? 'pago' : 'pagos'}
+                    </Text>
+                  </Group>
+                  <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap' }}>
+                    {formatearPesos(monto)}{' '}
+                    <Text span size="xs" c="dimmed">
+                      · {porcentaje}
+                    </Text>
+                  </Text>
+                </Group>
+                <Barra parte={parte} />
+              </div>
+            );
+          })}
+        </Stack>
+      )}
+      <Divider my="sm" />
+      <Stack gap={6}>
+        <Group justify="space-between" wrap="nowrap">
+          <Text size="sm" c="dimmed">
+            Propinas
+          </Text>
+          <Text size="sm" fw={700}>
+            {formatearPesos(cobros.propinas)}
+          </Text>
+        </Group>
+        <Group justify="space-between" wrap="nowrap">
+          <Group gap={6} wrap="nowrap">
+            {porConfirmar.monto > 0 && (
+              <IconAlertTriangle size={16} color="var(--mantine-color-yellow-4)" />
+            )}
+            <Text size="sm" c="dimmed">
+              Efectivo por confirmar
+            </Text>
+          </Group>
+          <Text size="sm" fw={700} style={{ whiteSpace: 'nowrap' }}>
+            {formatearPesos(porConfirmar.monto)}
+            {porConfirmar.pagos > 0 && (
+              <Text span size="xs" c="dimmed">
+                {' '}
+                · {porConfirmar.pagos} {porConfirmar.pagos === 1 ? 'pago' : 'pagos'}
+              </Text>
+            )}
+          </Text>
+        </Group>
+      </Stack>
+    </Card>
+  );
+}
+
+/**
+ * Barra de 8 px: cuadrada en la base y redondeada 4 px en el extremo del dato; el riel es un tono
+ * suave del mismo violeta, para leer cada parte contra el total.
+ */
+function Barra({ parte }: Readonly<{ parte: number }>) {
+  const forma = { borderRadius: '0 4px 4px 0' };
+  return (
+    <Box h={8} style={{ ...forma, background: 'var(--mantine-color-violeta-light)' }}>
+      <Box
+        h="100%"
+        w={`${Math.round(parte * 1000) / 10}%`}
+        style={{ ...forma, background: 'var(--mantine-color-violeta-5)' }}
+      />
+    </Box>
   );
 }
 

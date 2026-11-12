@@ -238,6 +238,15 @@ export const roles: Rol[] = [
         construida: true,
       },
       {
+        ruta: 'efectivo',
+        etiqueta: 'Efectivo por entregar',
+        icono: IconCash,
+        descripcion:
+          'El efectivo cobrado, con sus propinas, que falta entregar a la administración.',
+        historias: ['HU-24'],
+        construida: true,
+      },
+      {
         ruta: 'llamados',
         etiqueta: 'Llamados',
         icono: IconBell,

@@ -168,7 +168,7 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
   }
 
   return (
-    <Stack gap="sm">
+    <Stack gap="sm" maw={720} mx="auto" w="100%">
       <EncabezadoCuenta cuenta={cuenta} activa="pedir" />
 
       {error && (
@@ -213,7 +213,7 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
         </Group>
       </ScrollArea>
 
-      <SimpleGrid cols={2} spacing="xs">
+      <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs">
         {visibles.map((producto) => {
           const cantidad = cantidadDe(producto.id);
           return (

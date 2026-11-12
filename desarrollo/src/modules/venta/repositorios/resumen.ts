@@ -1,6 +1,7 @@
 import 'server-only';
 import { sql } from 'drizzle-orm';
 import { db } from '@/shared/db/cliente';
+import type { MedioDePago } from '../cuenta';
 
 // Cifras de la noche para la portada de la administración. Todo se deriva de pedidos y pagos al
 // consultar: nada se guarda, así que las cifras no se pueden contradecir entre sí (ADR-011).
@@ -116,4 +117,44 @@ export async function masPedidos(fecha: string) {
     order by unidades desc, monto desc
     limit 5`);
   return filas.map((f) => ({ ...f }));
+}
+
+const MEDIOS: MedioDePago[] = ['efectivo', 'tarjeta', 'transferencia'];
+
+/**
+ * Lo cobrado en la noche por medio de pago (sin propinas), las propinas y el efectivo que los
+ * garzones aún no entregan (RN-17). Usa el índice parcial `pago_efectivo_pendiente_ix`.
+ */
+export async function cobros(fecha: string) {
+  const filas = await db().execute<{
+    medio: MedioDePago;
+    monto: number;
+    propina: number;
+    pagos: number;
+    por_confirmar: number;
+    pagos_por_confirmar: number;
+  }>(sql`
+    select p.medio, sum(p.monto)::int as monto, sum(p.propina)::int as propina,
+           count(*)::int as pagos,
+           coalesce(sum(p.monto + p.propina) filter (where p.confirmado_en is null
+                                                     and p.medio = 'efectivo'), 0)::int
+             as por_confirmar,
+           count(*) filter (where p.confirmado_en is null and p.medio = 'efectivo')::int
+             as pagos_por_confirmar
+    from gesnoc.pago p
+    where p.fecha = ${fecha}
+    group by p.medio`);
+  const de = (medio: MedioDePago) => filas.find((f) => f.medio === medio);
+  return {
+    porMedio: MEDIOS.map((medio) => ({
+      medio,
+      monto: de(medio)?.monto ?? 0,
+      pagos: de(medio)?.pagos ?? 0,
+    })),
+    propinas: filas.reduce((suma, f) => suma + f.propina, 0),
+    porConfirmar: {
+      monto: de('efectivo')?.por_confirmar ?? 0,
+      pagos: de('efectivo')?.pagos_por_confirmar ?? 0,
+    },
+  };
 }

@@ -12,14 +12,15 @@ export async function resumenDeLaNoche(actor: Actor) {
   const fecha = (await fechaAbierta()) ?? null;
   const ambientes = await resumen.porAmbiente(fecha);
   if (!fecha) {
-    return { noche: null, cifras: null, ambientes, ultimos: [], masPedidos: [] };
+    return { noche: null, cifras: null, cobros: null, ambientes, ultimos: [], masPedidos: [] };
   }
-  const [cifras, ultimos, masPedidos] = await Promise.all([
+  const [cifras, cobros, ultimos, masPedidos] = await Promise.all([
     resumen.cifras(fecha),
+    resumen.cobros(fecha),
     resumen.ultimosPedidos(fecha),
     resumen.masPedidos(fecha),
   ]);
-  return { noche: fecha, cifras, ambientes, ultimos, masPedidos };
+  return { noche: fecha, cifras, cobros, ambientes, ultimos, masPedidos };
 }
 
 export type ResumenDeLaNoche = Awaited<ReturnType<typeof resumenDeLaNoche>>;

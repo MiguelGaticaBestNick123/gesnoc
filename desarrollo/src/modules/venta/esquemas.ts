@@ -42,6 +42,23 @@ export type DatosLinea = z.output<typeof datosLinea>;
 
 export const tipoEstacion = z.enum(['barra', 'cocina'], 'Estación no válida');
 
+/** Pesos enteros: el teléfono los envía como número, nunca como texto con puntos (lección 3.4). */
+const pesos = (mensaje: string) =>
+  z.number(mensaje).int(mensaje).max(999_999_999, 'El monto es demasiado grande');
+
+/** HU-24 y HU-25: un abono a la cuenta, con su medio (RN-16) y su propina. */
+export const datosPago = z.object({
+  cuenta: id('Cuenta no válida'),
+  claveEnvio: z.uuid('La clave de envío no es válida'),
+  medio: z.enum(
+    ['efectivo', 'tarjeta', 'transferencia'],
+    'Elige efectivo, tarjeta o transferencia',
+  ),
+  monto: pesos('Monto no válido').positive('El monto debe ser mayor que cero'),
+  propina: pesos('Propina no válida').min(0, 'La propina no puede ser negativa'),
+});
+export type DatosPago = z.output<typeof datosPago>;
+
 export const datosPedido = z.object({
   cuenta: id('Cuenta no válida'),
   claveEnvio: z.uuid('La clave de envío no es válida'),

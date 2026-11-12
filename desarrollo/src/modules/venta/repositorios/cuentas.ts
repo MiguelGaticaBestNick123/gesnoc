@@ -44,7 +44,12 @@ const resumenDeCuenta = sql`
     from gesnoc.pedido p
     join gesnoc.comanda co on co.fecha = p.fecha and co.pedido_numero = p.numero
     where p.fecha = c.fecha and p.cuenta_numero = c.numero and co.entregada_en is null
-  ) k on true`;
+  ) k on true
+  left join lateral (
+    select coalesce(sum(pg.monto), 0)::int as pagado
+    from gesnoc.pago pg
+    where pg.fecha = c.fecha and pg.cuenta_numero = c.numero
+  ) g on true`;
 
 type FilaResumen = {
   cuenta: number | null;
@@ -52,6 +57,7 @@ type FilaResumen = {
   abierta_hace: number | null;
   garzon: string | null;
   total: number | null;
+  pagado: number | null;
   listas: number | null;
   espera_maxima: number | null;
 };
@@ -63,6 +69,8 @@ const resumen = (f: FilaResumen) => ({
   abiertaHace: f.abierta_hace,
   garzon: f.garzon,
   total: f.total ?? 0,
+  /** Lo abonado: el saldo es total menos pagado (la propina no cuenta). */
+  pagado: f.pagado ?? 0,
   /** Comandas listas sin entregar: la mesa se pinta verde. */
   listas: f.listas ?? 0,
   /** Segundos que lleva esperando lo más antiguo que aún se prepara. */
@@ -87,7 +95,7 @@ export async function mesasDe(fecha: string | undefined, ambienteId: number) {
     select m.id, m.numero, m.forma, m.pos_x, m.pos_y, m.ancho, m.alto, m.rotacion, m.sillas,
            c.numero as cuenta, c.abierta_en::text,
            extract(epoch from now() - c.abierta_en)::int as abierta_hace,
-           u.nombre as garzon, t.total, k.listas, k.espera_maxima
+           u.nombre as garzon, t.total, g.pagado, k.listas, k.espera_maxima
     from gesnoc.mesa m
     left join gesnoc.cuenta c
       on c.mesa_id = m.id and c.fecha = ${fecha ?? null}::date and c.cerrada_en is null
@@ -113,7 +121,7 @@ export async function cuentasDePie(fecha: string, ambienteId: number) {
   const filas = await db().execute<FilaResumen & { referencia: string }>(sql`
     select c.numero as cuenta, c.referencia, c.abierta_en::text,
            extract(epoch from now() - c.abierta_en)::int as abierta_hace,
-           u.nombre as garzon, t.total, k.listas, k.espera_maxima
+           u.nombre as garzon, t.total, g.pagado, k.listas, k.espera_maxima
     from gesnoc.cuenta c
     join gesnoc.usuario u on u.id = c.abierta_por
     ${resumenDeCuenta}
@@ -198,18 +206,22 @@ export async function bloquearCuenta(tx: Transaccion, fecha: string, numero: num
   return fila && { cerrada: fila.cerrada, ambienteId: fila.ambiente_id };
 }
 
-/** Consumo vigente (sin anulados) y cantidad de pagos de una cuenta. */
+/**
+ * Consumo vigente (sin anulados), cantidad de pagos y lo pagado de una cuenta. El saldo es consumo
+ * menos pagado: la propina no descuenta (ADR-011).
+ */
 export async function consumoYPagos(tx: Transaccion, fecha: string, numero: number) {
-  const [fila] = await tx.execute<{ consumo: number; pagos: number }>(sql`
+  const [fila] = await tx.execute<{ consumo: number; pagos: number; pagado: number }>(sql`
     select
       coalesce((select sum(d.cantidad * d.precio_unitario)::int
                 from gesnoc.detalle_pedido d
                 join gesnoc.pedido p on p.fecha = d.fecha and p.numero = d.pedido_numero
                 where p.fecha = ${fecha} and p.cuenta_numero = ${numero}
                   and d.anulado_en is null), 0) as consumo,
-      (select count(*)::int from gesnoc.pago
-       where fecha = ${fecha} and cuenta_numero = ${numero}) as pagos`);
-  return fila ?? { consumo: 0, pagos: 0 };
+      g.pagos, g.pagado
+    from (select count(*)::int as pagos, coalesce(sum(monto), 0)::int as pagado
+          from gesnoc.pago where fecha = ${fecha} and cuenta_numero = ${numero}) g`);
+  return fila ?? { consumo: 0, pagos: 0, pagado: 0 };
 }
 
 export const cerrarCuenta = (tx: Transaccion, fecha: string, numero: number, cerradaPor: number) =>

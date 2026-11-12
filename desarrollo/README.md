@@ -104,6 +104,13 @@ las operaciones en curso y las que llegan después se rechazan (RN-26).
 Barra y cocina ven su cola en `/barra` y `/cocina`, con aviso sonoro al entrar una comanda (se
 activa con el primer toque) y la pantalla siempre encendida, que requiere HTTPS.
 
+El cobro (`/garzon/cuenta/[numero]/cobrar`, HU-24 y HU-25) registra cada pago con su clave de envío,
+igual que el pedido. Bloquea la cuenta, así que ningún pago supera el saldo (RN-18), y el pago que
+lo cubre cierra la cuenta y libera la mesa. La división en partes está en
+`src/modules/venta/cobro.ts`: cada parte sale del saldo y de las personas que faltan, y la última
+calza exacto. El efectivo queda pendiente hasta que la administración lo confirme (RN-17); cada
+garzón lo ve en `/garzon/efectivo`.
+
 El plano de mesas es un SVG (`src/modules/local/PlanoMesas.tsx`, ADR-013) que comparten el mapa del
 garzón y el editor de la administración (`/admin/mapa`, HU-05). Se ajusta al ancho del teléfono, se
 acerca y se abre a pantalla completa. La portada de la administración (`/admin`) muestra las cifras

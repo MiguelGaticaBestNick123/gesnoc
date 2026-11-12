@@ -30,6 +30,7 @@ import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
+import { hojaInferior } from '@/shared/ui/hoja';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { duracion, formatearHora } from '@/shared/utilidades/fechas';
 import { NuevaCuentaDePie } from './NuevaCuentaDePie';
@@ -180,9 +181,7 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
         radius="lg"
         closeButtonProps={{ 'aria-label': 'Cerrar' }}
         // En el teléfono es una hoja que sube solo lo que necesita su contenido.
-        styles={
-          ancha ? undefined : { content: { height: 'auto', maxHeight: '85dvh', flex: '0 0 auto' } }
-        }
+        styles={ancha ? undefined : hojaInferior}
         title={
           seleccionada && (
             <Group gap="sm">
@@ -269,11 +268,40 @@ function PanelMesa({
           {formatearPesos(mesa.total)}
         </Text>
       </Group>
-      <SimpleGrid cols={2} spacing="xs">
-        <Button component={Link} href={`${rutaDeCuenta(mesa.cuenta)}/detalle`} variant="default">
-          Ver cuenta
+      {mesa.pagado > 0 && (
+        <Group justify="space-between">
+          <Text size="sm" c="dimmed">
+            Pagado {formatearPesos(mesa.pagado)}
+          </Text>
+          <Text fw={700} c="yellow.4">
+            Saldo {formatearPesos(mesa.total - mesa.pagado)}
+          </Text>
+        </Group>
+      )}
+      {/* Tres acciones en una hoja de 360 px: con el tamaño grande «Cuenta» y «Cobrar» no cabían. */}
+      <SimpleGrid cols={3} spacing="xs">
+        <Button
+          component={Link}
+          href={`${rutaDeCuenta(mesa.cuenta)}/detalle`}
+          variant="default"
+          size="md"
+          px="xs"
+          mih={48}
+        >
+          Cuenta
         </Button>
-        <Button component={Link} href={rutaDeCuenta(mesa.cuenta)}>
+        <Button
+          component={Link}
+          href={`${rutaDeCuenta(mesa.cuenta)}/cobrar`}
+          variant="light"
+          size="md"
+          px="xs"
+          mih={48}
+          disabled={mesa.total === 0}
+        >
+          Cobrar
+        </Button>
+        <Button component={Link} href={rutaDeCuenta(mesa.cuenta)} size="md" px="xs" mih={48}>
           Pedir
         </Button>
       </SimpleGrid>

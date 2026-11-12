@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { anular, enviar } from '@/modules/venta/servicios/pedidos';
 import { abrir } from '@/modules/venta/servicios/cuentas';
+import { cobrar } from '@/modules/venta/servicios/pagos';
 import { resumenDeLaNoche } from '@/modules/venta/servicios/resumen';
 import { NoAutorizado } from '@/shared/errores';
 import { administracion, conBaseVacia, consultar } from './apoyo';
@@ -48,11 +49,44 @@ describe('resumen de la noche en la portada de la administración', () => {
     expect(resumen.masPedidos[0]).toEqual({ producto: 'Schop', unidades: 3, monto: 10500 });
   });
 
+  it('HU-24: lo cobrado por medio de pago, las propinas y el efectivo por confirmar', async () => {
+    const local = await prepararNoche();
+    const garzon = local.persona('garzon');
+    const { numero: cuenta } = await abrir(garzon, { mesaId: local.mesa(local.salon, 1) });
+    await enviar(garzon, pedido(cuenta, [linea(local.producto('Mojito'), 2)]));
+    const pago = (medio: 'efectivo' | 'tarjeta', monto: number, propina: number) =>
+      cobrar(garzon, { cuenta, claveEnvio: randomUUID(), medio, monto, propina });
+    await pago('efectivo', 5000, 500);
+    await pago('tarjeta', 8000, 800);
+
+    const { cifras, cobros } = await resumenDeLaNoche(administracion);
+    expect(cifras).toMatchObject({ vendido: 13000, cobrado: 13000, porCobrar: 0 });
+    expect(cobros).toEqual({
+      porMedio: [
+        { medio: 'efectivo', monto: 5000, pagos: 1 },
+        { medio: 'tarjeta', monto: 8000, pagos: 1 },
+        { medio: 'transferencia', monto: 0, pagos: 0 },
+      ],
+      propinas: 1300,
+      // RN-17: el efectivo, con su propina, espera a que la administración lo confirme.
+      porConfirmar: { monto: 5500, pagos: 1 },
+    });
+
+    await consultar`
+      update gesnoc.pago set confirmado_por = ${local.persona('admin').id}, confirmado_en = now()
+      where medio = 'efectivo'`;
+    expect((await resumenDeLaNoche(administracion)).cobros?.porConfirmar).toEqual({
+      monto: 0,
+      pagos: 0,
+    });
+  });
+
   it('sin noche abierta no hay cifras, y solo la administración la ve', async () => {
     const local = await prepararNoche({ abrirNoche: false });
     const resumen = await resumenDeLaNoche(administracion);
     expect(resumen.noche).toBeNull();
     expect(resumen.cifras).toBeNull();
+    expect(resumen.cobros).toBeNull();
     await expect(resumenDeLaNoche(local.persona('garzon'))).rejects.toThrow(NoAutorizado);
   });
 });

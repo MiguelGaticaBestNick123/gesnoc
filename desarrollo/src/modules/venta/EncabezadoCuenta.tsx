@@ -8,9 +8,10 @@ import type { EncabezadoCuenta as Cuenta } from './repositorios/cuentas';
 const pestanas = [
   { clave: 'pedir', etiqueta: 'Pedir', ruta: '' },
   { clave: 'cuenta', etiqueta: 'Cuenta', ruta: '/detalle' },
+  { clave: 'cobrar', etiqueta: 'Cobrar', ruta: '/cobrar' },
 ] as const;
 
-/** Título de la cuenta y sus dos pestañas: tomar pedidos y ver el detalle con el saldo. */
+/** Título de la cuenta y sus pestañas: tomar pedidos, ver el detalle con el saldo y cobrar. */
 export function EncabezadoCuenta({
   cuenta,
   activa,
@@ -38,6 +39,9 @@ export function EncabezadoCuenta({
             href={`/garzon/cuenta/${cuenta.numero}${pestana.ruta}`}
             variant={activa === pestana.clave ? 'filled' : 'default'}
             aria-current={activa === pestana.clave ? 'page' : undefined}
+            // Tres pestañas en 360 px: con el tamaño grande «Cobrar» no cabía.
+            size="md"
+            px="xs"
             mih={44}
           >
             {pestana.etiqueta}

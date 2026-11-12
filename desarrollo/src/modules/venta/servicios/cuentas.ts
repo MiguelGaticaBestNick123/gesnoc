@@ -136,6 +136,8 @@ export async function detalleCuenta(actor: Actor, numero: number) {
     cuentas.pagosDeCuenta(fecha, numero),
   ]);
   return {
+    /** La noche de la cuenta: el cobro sin confirmar se guarda en el teléfono con ella. */
+    fecha,
     cuenta,
     pedidos: agruparPedidos(lineas),
     pagos,

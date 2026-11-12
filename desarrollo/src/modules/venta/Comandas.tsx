@@ -10,7 +10,7 @@ import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
-import { minutos, nuevos } from './cola';
+import { minutos, nivelDeEspera, nuevos, type NivelDeEspera } from './cola';
 import { claveDeComanda, type MiComanda } from './cuenta';
 import type { MisComandas } from './servicios/colas';
 
@@ -18,6 +18,13 @@ const URL_COMANDAS = '/api/vivo/comandas';
 const RUTA_COMANDAS = '/garzon/comandas';
 /** El aviso abierto se achica solo a la campana de la barra superior pasado este tiempo. */
 const ACHICAR_SOLO_MS = 12_000;
+
+/** Los mismos colores de espera que ve la estación en su cola (HU-17 CA2). */
+const colorDeEspera: Record<NivelDeEspera, string> = {
+  normal: 'gray',
+  atrasada: 'yellow',
+  critica: 'red',
+};
 
 const haceCuanto = (segundos: number) =>
   minutos(segundos) === 0 ? 'recién lista' : `lista hace ${minutos(segundos)} min`;
@@ -225,21 +232,37 @@ export function MisComandasVista({ inicial }: Readonly<{ inicial: MisComandas }>
           <Title order={3} size="h5">
             En preparación
           </Title>
-          {datos.enPreparacion.map((comanda) => (
-            <Paper key={claveDeComanda(comanda)} withBorder p="xs">
-              <Group justify="space-between" wrap="nowrap">
-                <Text size="sm">
-                  Pedido {comanda.pedido} · {comanda.ubicacion} · {comanda.estacion}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {minutos(comanda.espera)} min
-                </Text>
-              </Group>
-              <Text size="xs" c="dimmed">
-                {comanda.resumen}
-              </Text>
-            </Paper>
-          ))}
+          {datos.enPreparacion.map((comanda) => {
+            const color = colorDeEspera[nivelDeEspera(comanda.espera)];
+            return (
+              <Paper
+                key={claveDeComanda(comanda)}
+                withBorder
+                p="xs"
+                pl="sm"
+                style={{ borderLeft: `3px solid var(--mantine-color-${color}-6)` }}
+              >
+                <Group justify="space-between" wrap="nowrap" gap="xs">
+                  <div style={{ minWidth: 0 }}>
+                    <Text size="sm" fw={600} truncate>
+                      Pedido {comanda.pedido} · {comanda.ubicacion}
+                    </Text>
+                    <Text size="xs" c="dimmed" truncate>
+                      {comanda.estacion}: {comanda.resumen}
+                    </Text>
+                  </div>
+                  <Badge
+                    color={color}
+                    variant={color === 'gray' ? 'light' : 'filled'}
+                    size="lg"
+                    style={{ flexShrink: 0 }}
+                  >
+                    {minutos(comanda.espera)} min
+                  </Badge>
+                </Group>
+              </Paper>
+            );
+          })}
         </Stack>
       )}
     </Stack>

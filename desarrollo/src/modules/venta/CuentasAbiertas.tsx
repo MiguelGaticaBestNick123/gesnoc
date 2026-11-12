@@ -26,14 +26,14 @@ export function CuentasAbiertas({ inicial }: Readonly<{ inicial: Mapa }>) {
     ),
     ...datos.dePie.map((cuenta) => ({ ...cuenta, lugar: cuenta.referencia ?? 'De pie' })),
   ].toSorted((a, b) => a.numero - b.numero);
-  const total = cuentas.reduce((suma, cuenta) => suma + cuenta.total, 0);
+  const porCobrar = cuentas.reduce((suma, cuenta) => suma + cuenta.total - cuenta.pagado, 0);
 
   return (
     <Stack gap="md">
       <EncabezadoPagina
         icono={IconReceipt2}
         titulo="Cuentas abiertas"
-        descripcion={`${datos.ambiente.nombre} · ${cuentas.length} abiertas · ${formatearPesos(total)} en mesa`}
+        descripcion={`${datos.ambiente.nombre} · ${cuentas.length} abiertas · ${formatearPesos(porCobrar)} por cobrar`}
       >
         <Button
           size="sm"
@@ -69,7 +69,14 @@ export function CuentasAbiertas({ inicial }: Readonly<{ inicial: Mapa }>) {
             </div>
             <Group gap="xs" wrap="nowrap">
               {cuenta.listas > 0 && <Badge color="green">Lista</Badge>}
-              <Text fw={700}>{formatearPesos(cuenta.total)}</Text>
+              <div style={{ textAlign: 'right' }}>
+                <Text fw={700}>{formatearPesos(cuenta.total)}</Text>
+                {cuenta.pagado > 0 && (
+                  <Text size="xs" c="yellow.4">
+                    Saldo {formatearPesos(cuenta.total - cuenta.pagado)}
+                  </Text>
+                )}
+              </div>
               <IconChevronRight size={18} color="var(--mantine-color-dimmed)" />
             </Group>
           </Group>

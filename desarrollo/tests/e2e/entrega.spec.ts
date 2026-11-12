@@ -59,7 +59,8 @@ test('HU-20 y HU-21: el garzón ve sus comandas listas y las marca entregadas', 
   const numero = (await enviado.textContent())!.match(/\d+/)![0];
 
   await page.goto('/garzon/comandas');
-  await expect(page.getByText(`Pedido ${numero} · Mesa 3 · Barra Terraza`)).toBeVisible();
+  await expect(page.getByText(`Pedido ${numero} · Mesa 3`, { exact: true })).toBeVisible();
+  await expect(page.getByText('Barra Terraza: 1 × Cerveza en botella')).toBeVisible();
 
   await barra
     .getByRole('button', { name: `Marcar lista el pedido ${numero}`, exact: true })
