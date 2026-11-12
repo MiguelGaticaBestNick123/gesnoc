@@ -3,16 +3,16 @@ import { entrarComo } from './apoyo';
 
 test('el menú del rol abre una sección en construcción', async ({ page }) => {
   await entrarComo(page, 'guardia');
-  await page.goto('/guardia/sorteo');
-  await expect(page.getByRole('heading', { name: 'Sorteo' })).toBeVisible();
-  await expect(page.getByText('HU-37')).toBeVisible();
+  await page.goto('/guardia/clientes');
+  await expect(page.getByRole('heading', { name: 'Clientes' })).toBeVisible();
+  await expect(page.getByText(/HU-35/)).toBeVisible();
 });
 
 test('la administración llega a la caja y a las pantallas de los otros roles', async ({ page }) => {
   await entrarComo(page, 'admin');
   await page.goto('/admin/arqueo');
   await expect(page.getByRole('heading', { name: 'Arqueo' })).toBeVisible();
-  await expect(page.getByText('HU-28')).toBeVisible();
+  await expect(page.getByText('Efectivo esperado')).toBeVisible();
 
   await page.goto('/guardia');
   await expect(page.getByRole('heading', { name: 'Entrada', exact: true })).toBeVisible();
