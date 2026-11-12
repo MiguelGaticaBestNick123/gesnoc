@@ -87,10 +87,11 @@ export async function historialDeRoles(salvoFecha: string) {
     veces: number;
     ultima: string;
   }>(sql`
-    select usuario_id, rol, count(*)::int as veces, max(fecha)::text as ultima
-    from gesnoc.asignacion
-    where fecha <> ${salvoFecha}
-    group by usuario_id, rol`);
+    select a.usuario_id, a.rol, count(*)::int as veces, max(a.fecha)::text as ultima
+    from gesnoc.asignacion a
+    join gesnoc.noche n on n.fecha = a.fecha and n.abierta_en is not null
+    where a.fecha <> ${salvoFecha}
+    group by a.usuario_id, a.rol`);
   return filas.map((f) => ({
     usuarioId: f.usuario_id,
     rol: f.rol,

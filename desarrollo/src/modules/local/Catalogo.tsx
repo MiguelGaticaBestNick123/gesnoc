@@ -27,7 +27,7 @@ import {
 } from './acciones';
 import type { Estacion } from './repositorios/ambientes';
 import type { Categoria, Producto } from './repositorios/catalogo';
-import { IconClipboardList } from '@tabler/icons-react';
+import { IconBook2 } from '@tabler/icons-react';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 interface Props {
@@ -117,7 +117,7 @@ export function Catalogo({ categorias, productos, estaciones }: Readonly<Props>)
   return (
     <Stack gap="md">
       <EncabezadoPagina
-        icono={IconClipboardList}
+        icono={IconBook2}
         titulo="Catálogo"
         descripcion="Categorías, productos, precios y dónde se prepara cada cosa."
       />

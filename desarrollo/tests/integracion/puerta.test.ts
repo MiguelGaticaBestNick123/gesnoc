@@ -197,6 +197,17 @@ describe('HU-32 estado de la puerta, sin montos', () => {
     expect(JSON.stringify(estado)).not.toMatch(/monto|recaudado|total/);
   });
 
+  it('quien viene en una lista gratis entra sin ticket, sin medio y sin monto', async () => {
+    const bailarina = await registrar(
+      guardia(),
+      entrada('19876543-0', 'gratis', { nombre: 'Javiera', apellido: 'Soto' }),
+    );
+    expect(bailarina).toMatchObject({ ticket: null, forma: 'gratis' });
+    const [fila] = await consultar<{ monto: number; medio_pago: string | null; ticket: null }[]>`
+      select monto, medio_pago, ticket from gesnoc.entrada`;
+    expect(fila).toEqual({ monto: 0, medio_pago: null, ticket: null });
+  });
+
   it('cuenta las visitas de las noches anteriores', async () => {
     await registrar(guardia(), entrada('12345678-5', 'efectivo'));
     const [cliente] = await consultar<{ id: number }[]>`select id from gesnoc.cliente`;

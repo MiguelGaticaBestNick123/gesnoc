@@ -81,6 +81,7 @@ test('HU-37: el guardia sortea el premio del Salón entre los tickets de la noch
   page,
 }) => {
   await entrarComo(page, 'guardia');
+  page.on('dialog', (dialogo) => dialogo.accept());
   await page.goto('/guardia/sorteo');
   await expect(page.getByText('Participan 2 tickets')).toBeVisible();
   await expect(page.getByText('1 × Botella de ron añejo')).toBeVisible();

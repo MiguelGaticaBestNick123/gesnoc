@@ -21,7 +21,7 @@ export function EncabezadoPagina({ icono: Icono, titulo, descripcion, children }
           <Icono size={24} stroke={1.7} />
         </ThemeIcon>
         <div style={{ minWidth: 0 }}>
-          <Title order={2} lh={1.15}>
+          <Title order={1} size="h2" lh={1.15}>
             {titulo}
           </Title>
           {descripcion && (

@@ -7,7 +7,7 @@ import { declararDisponibilidad } from './acciones';
 import { nombreDelRol } from './nombres';
 import { CalendarioPersonal } from './CalendarioPersonal';
 import { miCalendario, misTurnos } from './servicios/turnos';
-import { IconCalendarEvent } from '@tabler/icons-react';
+import { IconCalendarUser } from '@tabler/icons-react';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 /** HU-09: el calendario propio del mes y, debajo, las próximas noches para postular. */
@@ -25,7 +25,7 @@ export async function PantallaTurnos({
   return (
     <Stack gap="md">
       <EncabezadoPagina
-        icono={IconCalendarEvent}
+        icono={IconCalendarUser}
         titulo="Mis turnos"
         descripcion="Avisa qué noches puedes trabajar y revisa los turnos que te asignaron."
       />
@@ -49,7 +49,7 @@ export async function PantallaTurnos({
               </Badge>
             )}
             {noche.disponible && (
-              <Badge color="violet" variant="light">
+              <Badge color="violeta" variant="light">
                 Disponible
               </Badge>
             )}

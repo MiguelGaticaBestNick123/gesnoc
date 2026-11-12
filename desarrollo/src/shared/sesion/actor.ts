@@ -5,6 +5,9 @@ import type { Actor, RolTurno } from '@/shared/autorizacion';
 import { db } from '@/shared/db/cliente';
 import { asignacion, noche, sesion, usuario } from '@/shared/db/esquema/schema';
 
+/** Vigencia de una sesión: la misma para la cookie y para la fila en la base. */
+export const HORAS_DE_SESION = 12;
+
 export const nuevoToken = () => randomBytes(32).toString('base64url');
 
 // En la base solo queda el SHA-256 del token: si se filtra, los tokens no sirven.

@@ -222,6 +222,7 @@ function TarjetaPersona({
             etiqueta="Quitar"
             color="red"
             aria-label={`Quitar el turno de ${persona.nombre}`}
+            confirmar={`¿Quitar el turno de ${persona.nombre} esta noche?`}
           />
         )}
       </Group>

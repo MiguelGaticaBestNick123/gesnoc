@@ -1,6 +1,6 @@
 'use client';
 
-import { Anchor, Card, Group, Stack, Text, ThemeIcon } from '@mantine/core';
+import { Card, Group, Stack, Text, ThemeIcon, Button } from '@mantine/core';
 import { IconCheck, IconX } from '@tabler/icons-react';
 import Link from 'next/link';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
@@ -32,9 +32,9 @@ function Pendiente({
         </div>
       </Group>
       {!listo && (
-        <Anchor component={Link} href={enlace} size="sm" fw={600}>
+        <Button component={Link} href={enlace} size="sm" mih={44} variant="subtle">
           Resolver
-        </Anchor>
+        </Button>
       )}
     </Group>
   );

@@ -31,7 +31,7 @@ import type { DetalleCuenta as Detalle } from './servicios/cuentas';
 const colorDe: Record<EstadoComanda, string> = {
   'en preparación': 'gray',
   lista: 'green',
-  entregada: 'violet',
+  entregada: 'violeta',
 };
 
 interface PorAnular {
@@ -210,7 +210,7 @@ export function DetalleCuenta({ inicial }: Readonly<{ inicial: Detalle }>) {
           })}
           {cuenta.cerradaEn === null && (
             <Text size="xs" c="dimmed">
-              Con pagos registrados ya no se anulan ítems (RN-15).
+              Con pagos registrados ya no se anulan ítems.
             </Text>
           )}
         </Stack>

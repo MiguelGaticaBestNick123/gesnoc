@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Anchor, Card, Group, Paper, Stack, Text } from '@mantine/core';
+import { Anchor, Card, Group, Paper, Stack, Text } from '@mantine/core';
 import { IconCash, IconChevronRight } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
@@ -9,6 +9,7 @@ import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora } from '@/shared/utilidades/fechas';
 import type { MiEfectivo } from './servicios/pagos';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 // CU-18 paso 6: el efectivo que cobró la persona y aún no entrega. Cada pago sale de la lista cuando
 // la administración lo confirma (HU-26), así que se consulta en vivo.
@@ -24,11 +25,7 @@ export function EfectivoPorEntregar({ inicial }: Readonly<{ inicial: MiEfectivo 
         descripcion="Lo que cobraste en efectivo y la administración aún no confirma."
       />
       <AvisoConexion sinConexion={sinConexion} />
-      {!datos.noche && (
-        <Alert color="yellow" variant="light">
-          No hay una noche abierta.
-        </Alert>
-      )}
+      {!datos.noche && <SinNocheAbierta />}
 
       <Paper withBorder p="md" bg="dark.6">
         <Text size="sm" c="dimmed">

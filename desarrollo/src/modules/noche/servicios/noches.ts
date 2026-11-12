@@ -23,6 +23,20 @@ export function enLaNoche<T>(
   });
 }
 
+/** RN-26 para lo que prepara la administración: la noche existe y no se cerró. */
+export async function exigirNocheVigente(fecha: string) {
+  const noche = await repositorio.buscarNoche(fecha);
+  if (!noche) throw new ErrorDeNegocio('Esa noche no existe');
+  if (noche.cerradaEn) throw new ErrorDeNegocio('Una noche cerrada no admite cambios');
+}
+
+/** La fecha de la noche abierta; sin noche abierta no hay operación. */
+export async function nocheEnCurso(): Promise<string> {
+  const fecha = await repositorio.fechaAbierta();
+  if (!fecha) throw new ErrorDeNegocio('No hay una noche abierta');
+  return fecha;
+}
+
 export function listar(actor: Actor) {
   exigir(actor, 'admin');
   return repositorio.listarNoches();
@@ -40,7 +54,9 @@ export async function editar(actor: Actor, datos: DatosNoche) {
   const noche = await repositorio.buscarNoche(datos.fecha);
   if (!noche) throw new ErrorDeNegocio('Esa noche no existe');
   if (noche.cerradaEn) throw new ErrorDeNegocio('Una noche cerrada no admite cambios'); // RN-26
-  await repositorio.actualizarNoche(datos);
+  if ((await repositorio.actualizarNoche(datos)).length === 0) {
+    throw new ErrorDeNegocio('Una noche cerrada no admite cambios');
+  }
 }
 
 export async function eliminar(actor: Actor, fecha: string) {
@@ -58,7 +74,16 @@ export async function estado(actor: Actor) {
     repositorio.nocheAbierta(),
     repositorio.listarNoches(),
   ]);
-  return { abierta, programadas: noches.filter((noche) => !noche.abiertaEn) };
+  // La de hoy o la próxima va primero (es la que se propone); las pasadas sin abrir, al final.
+  const hoy = hoyEnChile();
+  const sinAbrir = noches.filter((noche) => !noche.abiertaEn);
+  return {
+    abierta,
+    programadas: [
+      ...sinAbrir.filter((noche) => noche.fecha >= hoy),
+      ...sinAbrir.filter((noche) => noche.fecha < hoy).toReversed(),
+    ].map((noche) => ({ ...noche, pasada: noche.fecha < hoy })),
+  };
 }
 
 export async function abrir(actor: Actor, fecha: string, fondo: number) {

@@ -3,7 +3,6 @@
 import {
   ActionIcon,
   Alert,
-  Anchor,
   Avatar,
   Badge,
   Button,
@@ -26,7 +25,7 @@ import {
   IconWifiOff,
 } from '@tabler/icons-react';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
@@ -37,6 +36,8 @@ import { formatearDocumento, normalizarRut, type TipoDocumento } from '@/shared/
 import { FORMAS_DE_ENTRADA, formas, type FormaDeEntrada } from './formas';
 import { ListaDeIngresos, TarjetaIngresos } from './Ingresos';
 import type { Busqueda, IngresoRegistrado, IngresosDeLaNoche } from './servicios/puerta';
+import { iniciales } from '@/shared/utilidades/texto';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 interface Envio {
   tipoDocumento: TipoDocumento;
@@ -53,9 +54,6 @@ type Paso =
   | { tipo: 'registrando'; busqueda: Busqueda; forma: FormaDeEntrada }
   | { tipo: 'incierto'; busqueda: Busqueda; envio: Envio; error: string }
   | { tipo: 'listo'; ingreso: IngresoRegistrado };
-
-const iniciales = (nombre: string, apellido: string) =>
-  `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
 
 /** Lo que dice la lista o la invitación de la persona, para que el guardia la deje pasar bien. */
 function AvisoInvitacion({
@@ -151,8 +149,13 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
     setApellido('');
     setError(null);
     setPaso({ tipo: 'documento' });
-    campo.current?.focus();
   };
+
+  // Con el campo a la vista, el teclado sale solo para la siguiente persona: en la fila de la
+  // puerta no hay que tocar el campo cada vez.
+  useEffect(() => {
+    if (paso.tipo === 'documento') campo.current?.focus();
+  }, [paso.tipo]);
 
   async function buscar() {
     if (!documento.trim() || buscando) return;
@@ -213,9 +216,7 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
     return (
       <Stack gap="md">
         <EncabezadoPagina icono={IconDoorEnter} titulo="Entrada" />
-        <Alert color="gray" variant="light">
-          No hay una noche abierta. La puerta se habilita cuando la administración abre la noche.
-        </Alert>
+        <SinNocheAbierta />
       </Stack>
     );
   }
@@ -272,7 +273,7 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
                 {formatearHora(paso.ingreso.registradaEn)}
               </Text>
             </Group>
-            <Button mt="sm" fullWidth onClick={reiniciar} data-autofocus>
+            <Button mt="sm" fullWidth onClick={reiniciar}>
               Siguiente persona
             </Button>
           </Stack>
@@ -374,7 +375,9 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
               <Stack gap="sm">
                 <Group gap="sm" wrap="nowrap">
                   <Avatar size={48} radius="xl" color="violeta" variant="light">
-                    {busqueda.cliente || busqueda.invitacion ? iniciales(nombre, apellido) : '?'}
+                    {busqueda.cliente || busqueda.invitacion
+                      ? iniciales(`${nombre} ${apellido}`)
+                      : '?'}
                   </Avatar>
                   <div style={{ minWidth: 0 }}>
                     <Text fw={700} size="lg" truncate>
@@ -446,9 +449,16 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
       <TarjetaIngresos datos={datos}>
         <ListaDeIngresos ingresos={datos.ingresos} limite={8} />
         {datos.ingresos.length > 8 && (
-          <Anchor component={Link} href="/guardia/puerta" size="sm" mt="xs" display="block">
+          <Button
+            component={Link}
+            href="/guardia/puerta"
+            size="sm"
+            mih={44}
+            mt="xs"
+            variant="subtle"
+          >
             Ver los {datos.ingresos.length} ingresos
-          </Anchor>
+          </Button>
         )}
       </TarjetaIngresos>
     </Stack>

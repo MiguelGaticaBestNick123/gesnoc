@@ -15,7 +15,7 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core';
-import { IconCircleCheck, type Icon } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCircleCheck, type Icon } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useEffect, useEffectEvent, useState } from 'react';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
@@ -61,11 +61,6 @@ const opcionesDePropina = [
 
 /** En escritorio el cobro no se estira: una columna como la del teléfono, al centro. */
 const COLUMNA = { maw: 720, mx: 'auto', w: '100%' } as const;
-
-/** Cada opción mide al menos 44 px de alto, como los botones (RNF-09). */
-const segmento = {
-  label: { minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-} as const;
 
 const leerForma = (valor: string): FormaDelMonto =>
   valor === 'saldo' || valor === 'libre' ? valor : (Number(valor) as FormaDelMonto);
@@ -180,6 +175,8 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
           hecho={hecho}
           lugar={datos.cuenta.mesa !== null ? `La mesa ${datos.cuenta.mesa}` : null}
           cerradaEn={datos.cuenta.cerradaEn}
+          saldo={datos.saldo}
+          total={datos.total}
         />
         <PagosDeLaCuenta pagos={datos.pagos} />
       </Stack>
@@ -246,7 +243,6 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
             <SegmentedControl
               fullWidth
               size="md"
-              styles={segmento}
               aria-label="Cuánto paga"
               value={String(forma)}
               onChange={(valor) => {
@@ -276,7 +272,6 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
             <SegmentedControl
               fullWidth
               size="md"
-              styles={segmento}
               aria-label="Propina"
               value={String(formaPropina)}
               onChange={(valor) => setFormaPropina(leerPropina(valor))}
@@ -466,14 +461,30 @@ function CuentaCerrada({
   hecho,
   lugar,
   cerradaEn,
-}: Readonly<{ hecho: PagoHecho | null; lugar: string | null; cerradaEn: string | null }>) {
+  saldo,
+  total,
+}: Readonly<{
+  hecho: PagoHecho | null;
+  lugar: string | null;
+  cerradaEn: string | null;
+  saldo: number;
+  total: number;
+}>) {
+  // La administración puede cerrar una cuenta con saldo (HU-27): no se le dice al cliente que pagó.
+  const conSaldo = !hecho && saldo > 0;
+  const titulo = conSaldo
+    ? `Cerrada con saldo de ${formatearPesos(saldo)}`
+    : total === 0
+      ? 'Cuenta cerrada sin consumo'
+      : 'Cuenta pagada';
   return (
     <Paper withBorder p="lg" ta="center">
       <Stack gap="sm" align="center">
-        <ThemeIcon size={64} radius="xl" color="green" variant="light">
-          <IconCircleCheck size={40} />
+        <ThemeIcon size={64} radius="xl" color={conSaldo ? 'yellow' : 'green'} variant="light">
+          {conSaldo ? <IconAlertTriangle size={40} /> : <IconCircleCheck size={40} />}
         </ThemeIcon>
-        <Title order={3}>Cuenta pagada</Title>
+        <Title order={3}>{titulo}</Title>
+        {conSaldo && <Text c="dimmed">La cerró la administración sin cobrar ese saldo.</Text>}
         {hecho ? (
           <Text>
             Pago {hecho.numero}: {describir(hecho)}.

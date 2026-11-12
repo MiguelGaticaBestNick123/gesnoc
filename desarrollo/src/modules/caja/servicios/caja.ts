@@ -47,6 +47,7 @@ export async function confirmarEfectivo(actor: Actor, pagos: { cuenta: number; n
   exigir(actor, 'admin');
   return enLaNoche(async (tx, fecha) => {
     const confirmados = await caja.confirmarPagos(tx, fecha, pagos, actor.id);
+    if (confirmados.length > 0) await caja.anularConteo(tx, fecha);
     return {
       confirmados: confirmados.length,
       monto: suma(confirmados.map((p) => p.monto + p.propina)),
@@ -120,12 +121,14 @@ export async function estadoDelCierre(actor: Actor) {
   exigir(actor, 'admin');
   const fecha = await fechaAbierta();
   if (!fecha) return null;
-  const [pendientes, esperado, conteo] = await db().transaction(async (tx) =>
-    Promise.all([
-      caja.pendientesDelCierre(tx, fecha),
-      caja.esperado(tx, fecha),
-      caja.conteoDe(tx, fecha),
-    ]),
+  const [pendientes, esperado, conteo] = await db().transaction(
+    async (tx) =>
+      Promise.all([
+        caja.pendientesDelCierre(tx, fecha),
+        caja.esperado(tx, fecha),
+        caja.conteoDe(tx, fecha),
+      ]),
+    { isolationLevel: 'repeatable read', accessMode: 'read only' },
   );
   return { fecha, pendientes, esperado, conteo: conteo ?? null };
 }

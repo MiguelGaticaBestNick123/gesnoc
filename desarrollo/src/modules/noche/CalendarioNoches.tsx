@@ -10,7 +10,6 @@ import {
   Modal,
   Stack,
   Text,
-  Textarea,
   TextInput,
   ThemeIcon,
   Title,
@@ -30,7 +29,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { CalendarioMes, type DiaDelCalendario } from '@/shared/ui/CalendarioMes';
-import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { hojaInferior } from '@/shared/ui/hoja';
@@ -38,22 +36,13 @@ import { mesDe } from '@/shared/utilidades/calendario';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearFecha, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { editarNoche, eliminarNoche, programarNoche } from './acciones';
-import { colorDelRol, nombreDelRol } from './nombres';
+import { CamposNoche } from './CamposNoche';
+import { colorDelRol, estadosDeNoche, nombreDelRol } from './nombres';
 import type { EstadoNoche } from './repositorios/noches';
 import type { CalendarioDelMes, NocheDelCalendario } from './servicios/noches';
+import { iniciales, plural } from '@/shared/utilidades/texto';
 
-const estados: Record<EstadoNoche, { texto: string; color: string }> = {
-  programada: { texto: 'Programada', color: 'violeta' },
-  abierta: { texto: 'Abierta', color: 'green' },
-  cerrada: { texto: 'Cerrada', color: 'gray' },
-};
-
-const iniciales = (nombre: string) =>
-  nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join('');
+const estados: Record<EstadoNoche, { texto: string; color: string }> = estadosDeNoche;
 
 const ruta = (mes: string, dia?: string) =>
   `/admin/calendario?mes=${mes}${dia ? `&dia=${dia}` : ''}`;
@@ -98,7 +87,7 @@ function PersonasDelDia({ noche }: Readonly<{ noche: NocheDelCalendario }>) {
       </Group>
       {noche.estado === 'programada' && noche.postulantes.length > 0 && (
         <Text size="xs" c="dimmed" lh={1.1} visibleFrom="sm">
-          {noche.postulantes.length} postulan
+          {plural(noche.postulantes.length, 'postula', 'postulan')}
         </Text>
       )}
     </>
@@ -126,29 +115,6 @@ function DatoDeLaNoche({
         </Text>
       </div>
     </Group>
-  );
-}
-
-function CamposNoche({ precio, nota }: Readonly<{ precio?: number; nota?: string | null }>) {
-  return (
-    <>
-      <CampoPesos
-        name="precioEntrada"
-        label="Precio de entrada"
-        valorInicial={precio}
-        size="md"
-        required
-      />
-      <Textarea
-        name="nota"
-        label="Nota para el equipo"
-        defaultValue={nota ?? ''}
-        maxLength={280}
-        autosize
-        minRows={2}
-        size="md"
-      />
-    </>
   );
 }
 
@@ -205,7 +171,7 @@ function DetalleDia({
               : 'Sin eventos'}
           </DatoDeLaNoche>
           <DatoDeLaNoche icono={IconListDetails} color="violeta" titulo="Listas e invitados">
-            {`${detalles.listas} ${detalles.listas === 1 ? 'lista' : 'listas'} (${detalles.enListas} personas) · ${detalles.invitados} ${detalles.invitados === 1 ? 'invitado' : 'invitados'}`}
+            {`${plural(detalles.listas, 'lista', 'listas')} (${plural(detalles.enListas, 'persona', 'personas')}) · ${plural(detalles.invitados, 'invitado', 'invitados')}`}
           </DatoDeLaNoche>
         </Stack>
       )}
@@ -320,7 +286,7 @@ export function CalendarioNoches({
     Object.entries(datos.noches).map(([fecha, noche]) => [
       fecha,
       {
-        etiqueta: `${formatearFecha(fecha)}, noche ${estados[noche.estado].texto.toLowerCase()}, ${noche.turnos.length} con turno, ${noche.postulantes.length} postulan`,
+        etiqueta: `${formatearFecha(fecha)}, noche ${estados[noche.estado].texto.toLowerCase()}, ${noche.turnos.length} con turno, ${plural(noche.postulantes.length, 'postula', 'postulan')}`,
         color: estados[noche.estado].color,
         contenido: <PersonasDelDia noche={noche} />,
       },
@@ -388,7 +354,6 @@ export function CalendarioNoches({
         size={ancha ? 420 : '85%'}
         radius="lg"
         zIndex={400}
-        closeButtonProps={{ 'aria-label': 'Cerrar' }}
         styles={ancha ? undefined : hojaInferior}
         title={
           dia && (
@@ -440,6 +405,8 @@ export function CalendarioNoches({
       <Modal
         opened={editando && Boolean(noche)}
         onClose={() => setEditando(false)}
+        // Se abre desde la hoja del día (zIndex 400): por encima de ella, para poder tocarlo.
+        zIndex={450}
         title="Editar noche"
       >
         {dia && noche && (

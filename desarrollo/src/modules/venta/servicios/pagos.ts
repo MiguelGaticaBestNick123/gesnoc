@@ -2,11 +2,17 @@ import 'server-only';
 import { fechaAbierta } from '@/modules/noche/repositorios/noches';
 import { enLaNoche } from '@/modules/noche/servicios/noches';
 import { exigir, type Actor } from '@/shared/autorizacion';
+import { db } from '@/shared/db/cliente';
 import { ErrorDeNegocio } from '@/shared/errores';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import type { MedioDePago } from '../cuenta';
 import type { DatosPago } from '../esquemas';
-import { bloquearCuenta, cerrarCuenta, consumoYPagos } from '../repositorios/cuentas';
+import {
+  bloquearCuenta,
+  cerrarCuenta,
+  consumoYPagos,
+  encabezadoCuenta,
+} from '../repositorios/cuentas';
 import * as pagos from '../repositorios/pagos';
 
 /** `pago_numero_check`: una cuenta admite hasta 50 abonos. */
@@ -32,6 +38,29 @@ export interface PagoHecho {
  * devuelva el pago original aunque ese mismo pago la haya cerrado (RN-13).
  */
 export async function cobrar(actor: Actor, datos: DatosPago): Promise<PagoHecho> {
+  // Un reintento de un cobro que ya quedó registrado recibe lo registrado aunque entretanto se haya
+  // cerrado la noche y su turno ya no exista: un 4xx le diría al teléfono que no se cobró (RN-13).
+  // Solo quien lo registró (o la administración) lo recibe.
+  const yaCobrado = await pagos.pagoPorClave(db(), datos.claveEnvio);
+  if (
+    yaCobrado?.cuenta === datos.cuenta &&
+    (yaCobrado.registradoPor === actor.id || actor.esAdministrador)
+  ) {
+    const [{ consumo, pagado }, cuenta] = await Promise.all([
+      consumoYPagos(db(), yaCobrado.fecha, datos.cuenta),
+      encabezadoCuenta(yaCobrado.fecha, datos.cuenta),
+    ]);
+    const { numero, medio, monto, propina } = yaCobrado;
+    return {
+      numero,
+      medio,
+      monto,
+      propina,
+      saldo: consumo - pagado,
+      cerrada: Boolean(cuenta?.cerradaEn),
+      repetido: true,
+    };
+  }
   exigir(actor, 'garzon');
 
   return enLaNoche(async (tx, fecha) => {

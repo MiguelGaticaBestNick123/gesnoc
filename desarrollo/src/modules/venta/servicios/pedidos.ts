@@ -89,7 +89,7 @@ export async function anular(actor: Actor, datos: DatosLinea) {
     if (cuenta.cerrada) throw new ErrorDeNegocio('La cuenta ya está cerrada');
     const { pagos } = await consumoYPagos(tx, fecha, datos.cuenta);
     if (pagos > 0) {
-      throw new ErrorDeNegocio('La cuenta ya tiene pagos: no se pueden anular ítems (RN-15)');
+      throw new ErrorDeNegocio('La cuenta ya tiene pagos: no se pueden anular ítems');
     }
     const anulada = await pedidos.anularLinea(tx, fecha, datos, actor.id);
     if (!anulada) throw new ErrorDeNegocio('Ese ítem no está en la cuenta');

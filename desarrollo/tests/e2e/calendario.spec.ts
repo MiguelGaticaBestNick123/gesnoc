@@ -35,7 +35,7 @@ test('HU-08 y HU-09: la administración habilita un día en el calendario y la p
   await page.reload();
   await expect(
     page.getByRole('button', {
-      name: /^lunes, 15 de abril, noche programada, 0 con turno, 1 postulan/,
+      name: /^lunes, 15 de abril, noche programada, 0 con turno, 1 postula/,
     }),
   ).toBeVisible();
 });

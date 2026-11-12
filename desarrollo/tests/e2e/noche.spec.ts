@@ -30,7 +30,7 @@ test('la noche muestra su premio y sus listas, y acepta eventos y listas pegadas
 
   // La lista del cumpleaños se completa pegando lo que mandó la organizadora.
   await page.getByRole('button', { name: 'Lista Cumpleaños de Camila' }).click();
-  await page.getByRole('button', { name: 'Pegar personas en Cumpleaños de Camila' }).click();
+  await page.getByRole('button', { name: 'Pegar lista en Cumpleaños de Camila' }).click();
   await page
     .getByRole('dialog')
     .getByRole('textbox')
@@ -46,7 +46,7 @@ test('una línea que no se entiende no carga la lista y dice cuál corregir', as
   await entrarComo(page, 'admin');
   await page.goto(`/admin/calendario/${hoy()}`);
   await page.getByRole('button', { name: 'Lista Bailarines' }).click();
-  await page.getByRole('button', { name: 'Pegar personas en Bailarines' }).click();
+  await page.getByRole('button', { name: 'Pegar lista en Bailarines' }).click();
   await page.getByRole('dialog').getByRole('textbox').fill('Sin RUT Ninguno');
   await page.getByRole('dialog').getByRole('button', { name: 'Agregar a la lista' }).click();
   await expect(page.getByRole('dialog').getByRole('alert')).toHaveText(

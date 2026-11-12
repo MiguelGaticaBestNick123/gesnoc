@@ -22,8 +22,6 @@ export const estacionesDelTipo = (tipo: TipoEstacion) =>
     .where(and(eq(estacion.tipo, tipo), or(isNull(estacion.ambienteId), eq(ambiente.activo, true))))
     .orderBy(asc(estacion.nombre));
 
-export type Estacion = Awaited<ReturnType<typeof estacionesDelTipo>>[number];
-
 export async function buscarEstacion(tx: Transaccion, id: number) {
   const [fila] = await tx
     .select(columnasDeEstacion)

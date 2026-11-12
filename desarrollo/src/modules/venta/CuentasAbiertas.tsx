@@ -11,6 +11,7 @@ import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora } from '@/shared/utilidades/fechas';
 import { NuevaCuentaDePie } from './NuevaCuentaDePie';
 import type { Mapa } from './servicios/cuentas';
+import { plural } from '@/shared/utilidades/texto';
 
 // Todas las cuentas abiertas del ambiente, con mesa o de pie, para llegar a una sin buscar en el mapa.
 export function CuentasAbiertas({ inicial }: Readonly<{ inicial: Mapa }>) {
@@ -33,7 +34,7 @@ export function CuentasAbiertas({ inicial }: Readonly<{ inicial: Mapa }>) {
       <EncabezadoPagina
         icono={IconReceipt2}
         titulo="Cuentas abiertas"
-        descripcion={`${datos.ambiente.nombre} · ${cuentas.length} abiertas · ${formatearPesos(porCobrar)} por cobrar`}
+        descripcion={`${datos.ambiente.nombre} · ${plural(cuentas.length, 'abierta', 'abiertas')} · ${formatearPesos(porCobrar)} por cobrar`}
       >
         <Button
           size="sm"

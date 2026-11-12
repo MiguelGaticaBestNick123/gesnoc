@@ -1,6 +1,7 @@
 import 'server-only';
+import { anularConteo } from '@/modules/caja/repositorios/caja';
 import { fechaAbierta } from '@/modules/noche/repositorios/noches';
-import { enLaNoche } from '@/modules/noche/servicios/noches';
+import { enLaNoche, nocheEnCurso } from '@/modules/noche/servicios/noches';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { db } from '@/shared/db/cliente';
 import { ErrorDeNegocio } from '@/shared/errores';
@@ -13,12 +14,6 @@ import * as puerta from '../repositorios/puerta';
 // entró, con su ticket, documento y forma de entrada, pero no lo recaudado: eso es de la
 // administración. Los datos de los clientes solo los ven el guardia y la administración (RN-25).
 
-async function nocheAbierta(): Promise<string> {
-  const fecha = await fechaAbierta();
-  if (!fecha) throw new ErrorDeNegocio('No hay una noche abierta');
-  return fecha;
-}
-
 /**
  * HU-30 CA2: lo que sabe la puerta de un documento. Si ya entró esta noche, a qué hora y con qué
  * ticket; si ya vino antes, su nombre y cuántas veces; si está invitado o en una lista, quién lo
@@ -26,7 +21,7 @@ async function nocheAbierta(): Promise<string> {
  */
 export async function buscar(actor: Actor, documento: string) {
   exigir(actor, 'guardia');
-  const fecha = await nocheAbierta();
+  const fecha = await nocheEnCurso();
   const [cliente, invitacion, precio] = await Promise.all([
     puerta.clientePorDocumento(db(), documento),
     puerta.invitacionDe(fecha, documento),
@@ -118,6 +113,8 @@ export async function registrar(actor: Actor, datos: DatosEntrada): Promise<Ingr
       ticket,
       registradaPor: actor.id,
     });
+    // Una entrada en efectivo cambia el esperado de la caja: un conteo anterior deja de valer.
+    if (datos.forma === 'efectivo') await anularConteo(tx, fecha);
     return {
       documento: datos.documento,
       nombre: persona.nombre,

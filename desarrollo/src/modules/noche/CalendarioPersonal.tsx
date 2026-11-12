@@ -104,7 +104,6 @@ export function CalendarioPersonal({
         size={ancha ? 380 : '85%'}
         radius="lg"
         zIndex={400}
-        closeButtonProps={{ 'aria-label': 'Cerrar' }}
         styles={ancha ? undefined : hojaInferior}
         title={
           dia && (

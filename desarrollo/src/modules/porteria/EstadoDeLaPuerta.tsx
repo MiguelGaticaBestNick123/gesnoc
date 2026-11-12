@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Stack } from '@mantine/core';
+import { Stack } from '@mantine/core';
 import { IconUsersGroup } from '@tabler/icons-react';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
@@ -8,6 +8,7 @@ import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { tituloDeFecha } from '@/shared/utilidades/fechas';
 import { ListaDeIngresos, TarjetaIngresos } from './Ingresos';
 import type { IngresosDeLaNoche } from './servicios/puerta';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 // HU-32 como la pidió el Product Owner: quién entró, a qué hora, con qué ticket, su nombre, su RUT y
 // cómo entró (EF, RC, PN o gratis). Sin lo recaudado, que es de la administración.
@@ -30,9 +31,7 @@ export function EstadoDeLaPuerta({ inicial }: Readonly<{ inicial: IngresosDeLaNo
           <ListaDeIngresos ingresos={datos.ingresos} />
         </TarjetaIngresos>
       ) : (
-        <Alert color="gray" variant="light">
-          No hay una noche abierta.
-        </Alert>
+        <SinNocheAbierta />
       )}
     </Stack>
   );

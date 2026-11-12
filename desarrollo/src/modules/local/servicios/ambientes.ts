@@ -1,6 +1,6 @@
 import 'server-only';
 import { exigir, type Actor } from '@/shared/autorizacion';
-import { CLAVE_FORANEA, traducir } from '@/shared/errores';
+import { CLAVE_FORANEA, ErrorDeNegocio, traducir } from '@/shared/errores';
 import type { DatosAmbiente, DatosEstacion } from '../esquemas';
 import * as repositorio from '../repositorios/ambientes';
 
@@ -47,6 +47,12 @@ export async function editar(actor: Actor, id: number, datos: DatosAmbiente) {
 
 export async function cambiarActivo(actor: Actor, id: number, activo: boolean) {
   exigir(actor, 'admin');
+  // Sus garzones y su barra dejarían de verlo con cuentas y comandas en curso.
+  if (!activo && (await repositorio.ocupadoEstaNoche(id))) {
+    throw new ErrorDeNegocio(
+      'Este ambiente tiene cuentas abiertas o comandas sin entregar esta noche: ciérralas antes de desactivarlo',
+    );
+  }
   await repositorio.fijarAmbienteActivo(id, activo);
 }
 

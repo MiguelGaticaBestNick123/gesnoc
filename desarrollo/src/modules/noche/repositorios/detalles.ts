@@ -28,8 +28,6 @@ export async function premiosDe(fecha: string) {
   }));
 }
 
-export type ItemDelPremio = Awaited<ReturnType<typeof premiosDe>>[number];
-
 /** Reemplaza el premio de un ambiente en una transacción: nunca queda a medias. */
 export function reemplazarPremio(
   fecha: string,

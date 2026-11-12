@@ -1,9 +1,7 @@
 import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
-import { bloquearCorrelativo, db, type Transaccion } from '@/shared/db/cliente';
+import { bloquearCorrelativo, db, type Conexion, type Transaccion } from '@/shared/db/cliente';
 import { cliente, entrada, noche } from '@/shared/db/esquema/schema';
-
-type Conexion = Transaccion | ReturnType<typeof db>;
 
 export async function clientePorDocumento(conexion: Conexion, documento: string) {
   const [fila] = await conexion

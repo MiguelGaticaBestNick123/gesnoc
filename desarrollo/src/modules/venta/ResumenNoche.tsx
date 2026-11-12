@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  Alert,
-  Anchor,
   Box,
   Card,
   Divider,
@@ -11,7 +9,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  Title,
+  Button,
 } from '@mantine/core';
 import {
   IconAlertTriangle,
@@ -19,13 +17,14 @@ import {
   IconCash,
   IconChefHat,
   IconClipboardList,
+  IconDoorEnter,
   IconLayoutDashboard,
   IconReceipt2,
   IconStar,
   IconWallet,
-  type Icon,
 } from '@tabler/icons-react';
 import Link from 'next/link';
+import { FORMAS_DE_ENTRADA, formaDe } from '@/modules/porteria/formas';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import { Cifra } from '@/shared/ui/Cifra';
@@ -35,22 +34,15 @@ import { fechaCorta, formatearHora } from '@/shared/utilidades/fechas';
 import { nombreDelMedio } from './cobro';
 import { iconoDelMedio } from './iconos';
 import type { ResumenDeLaNoche } from './servicios/resumen';
-
-function Titulo({ icono: Icono, children }: Readonly<{ icono: Icon; children: React.ReactNode }>) {
-  return (
-    <Group gap="xs" mb="sm">
-      <Icono size={20} stroke={1.7} color="var(--mantine-color-violeta-3)" />
-      <Title order={3} size="h5">
-        {children}
-      </Title>
-    </Group>
-  );
-}
+import { plural } from '@/shared/utilidades/texto';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
+import { TituloTarjeta } from '@/shared/ui/TituloTarjeta';
+import { FilasDeEntradas } from '@/modules/porteria/FilasDeEntradas';
 
 // Portada de la administración: la noche en cifras reales, al día cada pocos segundos.
 export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }>) {
   const { datos, sinConexion } = useTiempoReal('/api/vivo/resumen', inicial);
-  const { noche, cifras, cobros, ambientes, ultimos, masPedidos } = datos;
+  const { noche, cifras, cobros, puerta, ambientes, ultimos, masPedidos } = datos;
 
   return (
     <Stack gap="md">
@@ -64,12 +56,7 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
       <AvisoConexion sinConexion={sinConexion} />
 
       {!noche || !cifras ? (
-        <Alert color="yellow" variant="light">
-          No hay una noche abierta: las cifras aparecen al abrirla.{' '}
-          <Anchor component={Link} href="/admin/noche">
-            Ir a la noche en curso
-          </Anchor>
-        </Alert>
+        <SinNocheAbierta detalle="Las cifras aparecen al abrirla." />
       ) : (
         <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="md">
           <Cifra
@@ -91,7 +78,7 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
             color="yellow"
             etiqueta="Por cobrar"
             valor={formatearPesos(cifras.porCobrar)}
-            detalle={`Saldo de ${cifras.cuentasAbiertas} cuentas abiertas`}
+            detalle={`Saldo de ${plural(cifras.cuentasAbiertas, 'cuenta abierta', 'cuentas abiertas')}${cifras.cerradoConSaldo > 0 ? ` · ${formatearPesos(cifras.cerradoConSaldo)} cerrado con saldo` : ''}`}
           />
           <Cifra
             icono={IconChefHat}
@@ -105,7 +92,7 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
 
       <SimpleGrid cols={{ base: 1, md: 2, lg: cobros ? 3 : 2 }} spacing="md">
         <Card withBorder padding="md">
-          <Titulo icono={IconArmchair}>Mesas en tiempo real</Titulo>
+          <TituloTarjeta icono={IconArmchair}>Mesas en tiempo real</TituloTarjeta>
           <Stack gap="md">
             {ambientes.map((ambiente) => {
               const libres = ambiente.mesas - ambiente.ocupadas;
@@ -121,9 +108,11 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
                   <Progress value={porcentaje} color="violeta" size="md" radius="xl" />
                   <Group gap="md" mt={6}>
                     <Punto color="var(--mantine-color-violeta-4)">
-                      {ambiente.ocupadas} ocupadas
+                      {plural(ambiente.ocupadas, 'ocupada', 'ocupadas')}
                     </Punto>
-                    <Punto color="var(--mantine-color-dark-3)">{libres} libres</Punto>
+                    <Punto color="var(--mantine-color-dark-3)">
+                      {plural(libres, 'libre', 'libres')}
+                    </Punto>
                   </Group>
                 </div>
               );
@@ -134,7 +123,7 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
         {cobros && <Cobros cobros={cobros} />}
 
         <Card withBorder padding="md">
-          <Titulo icono={IconStar}>Lo más pedido</Titulo>
+          <TituloTarjeta icono={IconStar}>Lo más pedido</TituloTarjeta>
           {masPedidos.length === 0 ? (
             <Text size="sm" c="dimmed">
               Todavía no hay pedidos esta noche.
@@ -159,33 +148,86 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
         </Card>
       </SimpleGrid>
 
-      <Card withBorder padding="md">
-        <Titulo icono={IconClipboardList}>Últimos pedidos</Titulo>
-        {ultimos.length === 0 ? (
-          <Text size="sm" c="dimmed">
-            Todavía no hay pedidos esta noche.
-          </Text>
-        ) : (
-          <Stack gap="xs">
-            {ultimos.map((pedido) => (
-              <Group key={pedido.numero} justify="space-between" wrap="nowrap" align="flex-start">
-                <div style={{ minWidth: 0 }}>
-                  <Text fw={600} truncate>
-                    Pedido {pedido.numero} · {pedido.ubicacion} · {pedido.ambiente}
+      <SimpleGrid cols={{ base: 1, md: puerta ? 2 : 1 }} spacing="md">
+        {puerta && <Puerta entradas={puerta} />}
+        <Card withBorder padding="md">
+          <TituloTarjeta icono={IconClipboardList}>Últimos pedidos</TituloTarjeta>
+          {ultimos.length === 0 ? (
+            <Text size="sm" c="dimmed">
+              Todavía no hay pedidos esta noche.
+            </Text>
+          ) : (
+            <Stack gap="xs">
+              {ultimos.map((pedido) => (
+                <Group key={pedido.numero} justify="space-between" wrap="nowrap" align="flex-start">
+                  <div style={{ minWidth: 0 }}>
+                    <Text fw={600} truncate>
+                      Pedido {pedido.numero} · {pedido.ubicacion} · {pedido.ambiente}
+                    </Text>
+                    <Text size="xs" c="dimmed" truncate>
+                      {pedido.resumen} · {pedido.garzon}
+                    </Text>
+                  </div>
+                  <Text size="sm" c="dimmed">
+                    {formatearHora(pedido.enviadoEn)}
                   </Text>
-                  <Text size="xs" c="dimmed" truncate>
-                    {pedido.resumen} · {pedido.garzon}
-                  </Text>
-                </div>
-                <Text size="sm" c="dimmed">
-                  {formatearHora(pedido.enviadoEn)}
-                </Text>
-              </Group>
-            ))}
-          </Stack>
-        )}
-      </Card>
+                </Group>
+              ))}
+            </Stack>
+          )}
+        </Card>
+      </SimpleGrid>
     </Stack>
+  );
+}
+
+/**
+ * La puerta en la portada: cuántas personas entraron y cuánto dejó cada forma de entrada. Solo la
+ * administración ve los montos; el guardia ve quién entró, sin lo recaudado.
+ */
+function Puerta({ entradas }: Readonly<{ entradas: NonNullable<ResumenDeLaNoche['puerta']> }>) {
+  const de = (forma: (typeof FORMAS_DE_ENTRADA)[number]) =>
+    entradas.find((e) => formaDe(e.medio) === forma);
+  const personas = entradas.reduce((suma, e) => suma + e.personas, 0);
+  const recaudado = (de('efectivo')?.monto ?? 0) + (de('tarjeta')?.monto ?? 0);
+  return (
+    <Card withBorder padding="md">
+      <TituloTarjeta icono={IconDoorEnter}>Puerta</TituloTarjeta>
+      <Group justify="space-between" align="flex-end" mb="sm" wrap="nowrap">
+        <div>
+          <Text fz={28} fw={800} lh={1}>
+            {personas}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {personas === 1 ? 'persona entró' : 'personas entraron'}
+          </Text>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <Text fw={700}>{formatearPesos(recaudado)}</Text>
+          <Text size="xs" c="dimmed">
+            recaudado (EF y RC)
+          </Text>
+        </div>
+      </Group>
+      <FilasDeEntradas entradas={entradas} />
+      {(de('pendiente')?.personas ?? 0) > 0 && (
+        <Text size="xs" c="dimmed" mt="xs">
+          Las entradas PN se pagan después a la administración: el detalle está en «Ventas y
+          propinas».
+        </Text>
+      )}
+      <Button
+        component={Link}
+        href="/guardia/puerta"
+        size="sm"
+        mih={44}
+        mt="xs"
+        px={0}
+        variant="subtle"
+      >
+        Ver quién entró
+      </Button>
+    </Card>
   );
 }
 
@@ -200,7 +242,7 @@ function Cobros({ cobros }: Readonly<{ cobros: NonNullable<ResumenDeLaNoche['cob
 
   return (
     <Card withBorder padding="md">
-      <Titulo icono={IconWallet}>Cobros por medio de pago</Titulo>
+      <TituloTarjeta icono={IconWallet}>Cobros por medio de pago</TituloTarjeta>
       {total === 0 ? (
         <Text size="sm" c="dimmed">
           Todavía no hay cobros esta noche.

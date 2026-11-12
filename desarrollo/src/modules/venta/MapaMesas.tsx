@@ -2,7 +2,6 @@
 
 import {
   Alert,
-  Anchor,
   Badge,
   Button,
   Card,
@@ -35,6 +34,8 @@ import { formatearPesos } from '@/shared/utilidades/dinero';
 import { duracion, formatearHora } from '@/shared/utilidades/fechas';
 import { NuevaCuentaDePie } from './NuevaCuentaDePie';
 import type { DetalleCuenta, Mapa } from './servicios/cuentas';
+import { plural } from '@/shared/utilidades/texto';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 type Mesa = Mapa['mesas'][number];
 
@@ -92,7 +93,7 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
       <EncabezadoPagina
         icono={IconArmchair}
         titulo="Mesas"
-        descripcion={`${ambiente.nombre} · ${ocupadas} ocupadas · ${mesas.length - ocupadas} libres · ${datos.dePie.length} de pie`}
+        descripcion={`${ambiente.nombre} · ${plural(ocupadas, 'ocupada', 'ocupadas')} · ${plural(mesas.length - ocupadas, 'libre', 'libres')} · ${datos.dePie.length} de pie`}
       >
         <Button
           size="sm"
@@ -118,14 +119,7 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
       )}
 
       <AvisoConexion sinConexion={sinConexion} />
-      {!datos.noche && (
-        <Alert color="yellow" variant="light">
-          No hay una noche abierta: no se pueden abrir cuentas.{' '}
-          <Anchor component={Link} href="/admin/noche">
-            Ir a la noche en curso
-          </Anchor>
-        </Alert>
-      )}
+      {!datos.noche && <SinNocheAbierta detalle="Sin noche abierta no se pueden abrir cuentas." />}
 
       <VisorPlano ancho={ambiente.planoAncho} alto={ambiente.planoAlto} pie={<LeyendaPlano />}>
         {(escala) => (
@@ -179,7 +173,6 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
         size={ancha ? 400 : '85%'}
         zIndex={400}
         radius="lg"
-        closeButtonProps={{ 'aria-label': 'Cerrar' }}
         // En el teléfono es una hoja que sube solo lo que necesita su contenido.
         styles={ancha ? undefined : hojaInferior}
         title={
@@ -326,23 +319,45 @@ function Dato({ etiqueta, valor }: Readonly<{ etiqueta: string; valor: string }>
 function LoPedido({ cuenta }: Readonly<{ cuenta: number }>) {
   const [detalle, setDetalle] = useState<DetalleCuenta | null>(null);
   const [consultada, setConsultada] = useState<number | null>(null);
+  const [fallo, setFallo] = useState(false);
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     let vigente = true;
     fetch(`/api/vivo/cuenta?numero=${cuenta}`, { cache: 'no-store' })
-      .then((respuesta) => (respuesta.ok ? (respuesta.json() as Promise<DetalleCuenta>) : null))
+      .then((respuesta) => {
+        if (!respuesta.ok) throw new Error(`Respuesta ${respuesta.status}`);
+        return respuesta.json() as Promise<DetalleCuenta>;
+      })
       .then((datos) => {
         if (!vigente) return;
         setDetalle(datos);
+        setFallo(false);
         setConsultada(cuenta);
       })
-      .catch(() => vigente && setConsultada(cuenta));
+      .catch(() => {
+        if (!vigente) return;
+        setFallo(true);
+        setConsultada(cuenta);
+      });
     return () => {
       vigente = false;
     };
-  }, [cuenta]);
+  }, [cuenta, intento]);
 
   if (consultada !== cuenta) return <Loader size="sm" />;
+  if (fallo) {
+    return (
+      <Group gap="xs">
+        <Text size="sm" c="red.4">
+          No se pudo cargar lo pedido.
+        </Text>
+        <Button size="sm" mih={44} variant="subtle" onClick={() => setIntento((n) => n + 1)}>
+          Reintentar
+        </Button>
+      </Group>
+    );
+  }
   const lineas = (detalle?.pedidos ?? []).flatMap((p) => p.lineas).filter((l) => !l.anulada);
   if (lineas.length === 0) {
     return (

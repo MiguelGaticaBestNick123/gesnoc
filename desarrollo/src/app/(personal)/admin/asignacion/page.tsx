@@ -1,7 +1,7 @@
-import { Text } from '@mantine/core';
 import { Asignacion } from '@/modules/noche/Asignacion';
 import { pantallaAsignacion } from '@/modules/noche/servicios/turnos';
 import { exigirVista } from '@/shared/sesion';
+import { EstadoVacio } from '@/shared/ui/EstadoVacio';
 
 export const metadata = { title: 'Asignar turnos · GesNoc' };
 
@@ -13,6 +13,12 @@ export default async function PaginaAsignacion({
   const { elegida, ...datos } = await pantallaAsignacion(actor, fecha);
 
   if (!elegida)
-    return <Text c="dimmed">No hay noches programadas: crea una en el calendario.</Text>;
+    return (
+      <EstadoVacio
+        texto="No hay noches programadas para asignar turnos."
+        accion="Ir al calendario de noches"
+        href="/admin/calendario"
+      />
+    );
   return <Asignacion elegida={elegida} {...datos} />;
 }

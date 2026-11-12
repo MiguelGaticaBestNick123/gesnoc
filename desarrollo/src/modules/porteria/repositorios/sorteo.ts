@@ -1,8 +1,6 @@
 import 'server-only';
 import { sql } from 'drizzle-orm';
-import { db, type Transaccion } from '@/shared/db/cliente';
-
-type Conexion = Transaccion | ReturnType<typeof db>;
+import { db, type Conexion, type Transaccion } from '@/shared/db/cliente';
 
 /** El sorteo ya hecho de un ambiente, con el nombre del ganador para compararlo con su cédula. */
 export async function sorteoDe(conexion: Conexion, fecha: string, ambienteId: number) {

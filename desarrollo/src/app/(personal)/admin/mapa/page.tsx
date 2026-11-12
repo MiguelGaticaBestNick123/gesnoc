@@ -1,7 +1,7 @@
-import { Text } from '@mantine/core';
 import { EditorPlano } from '@/modules/local/EditorPlano';
 import { planoParaEditar } from '@/modules/local/servicios/mapa';
 import { exigirVista } from '@/shared/sesion';
+import { EstadoVacio } from '@/shared/ui/EstadoVacio';
 
 export const metadata = { title: 'Mapa de mesas · GesNoc' };
 
@@ -13,7 +13,13 @@ export default async function PaginaMapa({
   const { ambiente } = await searchParams;
   const datos = await planoParaEditar(actor, Number(ambiente) || undefined);
   if (!datos.ambiente) {
-    return <Text c="dimmed">Primero crea un ambiente en «Ambientes y estaciones».</Text>;
+    return (
+      <EstadoVacio
+        texto="Para dibujar el plano, primero crea un ambiente."
+        accion="Ir a ambientes y estaciones"
+        href="/admin/ambientes"
+      />
+    );
   }
   // Cambiar de ambiente vuelve a armar el editor desde lo guardado.
   return <EditorPlano key={datos.ambiente.id} inicial={datos} ambiente={datos.ambiente} />;

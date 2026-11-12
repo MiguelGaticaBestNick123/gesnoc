@@ -1,4 +1,5 @@
 import 'server-only';
+import { exigirNocheVigente } from './noches';
 import { listarAmbientes } from '@/modules/local/repositorios/ambientes';
 import { listarCategorias, listarProductos } from '@/modules/local/repositorios/catalogo';
 import { exigir, type Actor } from '@/shared/autorizacion';
@@ -18,12 +19,6 @@ const restricciones = {
   lista_nombre_uq: 'Ya hay una lista con ese nombre esta noche',
   invitacion_lista_fk: 'Esa lista ya no existe',
 };
-
-async function exigirNocheVigente(fecha: string) {
-  const noche = await buscarNoche(fecha);
-  if (!noche) throw new ErrorDeNegocio('Esa noche no existe');
-  if (noche.cerradaEn) throw new ErrorDeNegocio('Una noche cerrada no admite cambios'); // RN-26
-}
 
 const estadoDe = (noche: { abiertaEn: string | null; cerradaEn: string | null }): EstadoNoche => {
   if (noche.cerradaEn) return 'cerrada';

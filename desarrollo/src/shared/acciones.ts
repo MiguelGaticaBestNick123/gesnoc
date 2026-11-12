@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { Actor } from '@/shared/autorizacion';
-import { ErrorDeNegocio } from '@/shared/errores';
+import { ErrorDeNegocio, esDatoInvalido, sinDatosPersonales } from '@/shared/errores';
 import { actorActual } from '@/shared/sesion';
 
 /** Resultado de una acción de servidor, tal como lo recibe el formulario. */
@@ -22,7 +22,8 @@ export async function intentar(operacion: () => Promise<unknown>): Promise<Estad
     if (error instanceof z.ZodError) {
       return { error: error.issues[0]?.message ?? 'Datos no válidos' };
     }
-    throw error;
+    if (esDatoInvalido(error)) return { error: 'Datos no válidos' };
+    throw sinDatosPersonales(error);
   }
 }
 

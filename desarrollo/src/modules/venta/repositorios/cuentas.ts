@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
-import { bloquearCorrelativo, db, type Transaccion } from '@/shared/db/cliente';
+import { bloquearCorrelativo, db, type Conexion, type Transaccion } from '@/shared/db/cliente';
 import { ambiente, cuenta, mesa } from '@/shared/db/esquema/schema';
 import type { FilaDetalle, PagoDeCuenta } from '../cuenta';
 import type { UbicacionCuenta } from '../esquemas';
@@ -180,6 +180,14 @@ export async function encabezadoCuenta(fecha: string, numero: number) {
       ambiente: ambiente.nombre,
       abiertaEn: cuenta.abiertaEn,
       cerradaEn: cuenta.cerradaEn,
+      // Lo mismo que exige cerrar sin consumo: ni ítems vigentes ni pagos.
+      conMovimientos: sql<boolean>`(exists (
+          select 1 from gesnoc.detalle_pedido d
+          join gesnoc.pedido p on p.fecha = d.fecha and p.numero = d.pedido_numero
+          where p.fecha = ${cuenta.fecha} and p.cuenta_numero = ${cuenta.numero}
+            and d.anulado_en is null)
+        or exists (select 1 from gesnoc.pago pg
+                   where pg.fecha = ${cuenta.fecha} and pg.cuenta_numero = ${cuenta.numero}))`,
     })
     .from(cuenta)
     .leftJoin(mesa, eq(mesa.id, cuenta.mesaId))
@@ -210,8 +218,8 @@ export async function bloquearCuenta(tx: Transaccion, fecha: string, numero: num
  * Consumo vigente (sin anulados), cantidad de pagos y lo pagado de una cuenta. El saldo es consumo
  * menos pagado: la propina no descuenta (ADR-011).
  */
-export async function consumoYPagos(tx: Transaccion, fecha: string, numero: number) {
-  const [fila] = await tx.execute<{ consumo: number; pagos: number; pagado: number }>(sql`
+export async function consumoYPagos(conexion: Conexion, fecha: string, numero: number) {
+  const [fila] = await conexion.execute<{ consumo: number; pagos: number; pagado: number }>(sql`
     select
       coalesce((select sum(d.cantidad * d.precio_unitario)::int
                 from gesnoc.detalle_pedido d

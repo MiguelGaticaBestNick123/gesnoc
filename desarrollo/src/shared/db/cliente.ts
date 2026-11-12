@@ -8,13 +8,21 @@ import * as schema from './esquema/schema';
 function crear() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('Falta la variable DATABASE_URL');
-  return drizzle(postgres(url, { max: 10 }), { schema: { ...schema, ...relations } });
+  const conexion = postgres(url, {
+    max: Number(process.env.DB_CONEXIONES ?? 10),
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
+  return drizzle(conexion, { schema: { ...schema, ...relations } });
 }
 
 type BaseDeDatos = ReturnType<typeof crear>;
 
 /** La conexión dentro de una transacción de Drizzle. */
 export type Transaccion = Parameters<Parameters<BaseDeDatos['transaction']>[0]>[0];
+
+/** Una consulta que sirve dentro o fuera de una transacción. */
+export type Conexion = Transaccion | BaseDeDatos;
 
 // En desarrollo Next recarga los módulos en cada cambio; guardar la instancia en
 // globalThis evita abrir un pool nuevo de conexiones por cada recarga.

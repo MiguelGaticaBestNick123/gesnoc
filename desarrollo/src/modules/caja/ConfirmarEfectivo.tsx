@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Avatar, Card, Divider, Group, Stack, Text } from '@mantine/core';
+import { Avatar, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { IconCash, IconCircleCheck } from '@tabler/icons-react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
@@ -9,13 +9,8 @@ import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora } from '@/shared/utilidades/fechas';
 import { confirmarEfectivo } from './acciones';
 import type { PantallaEfectivo } from './servicios/caja';
-
-const iniciales = (nombre: string) =>
-  nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join('');
+import { iniciales } from '@/shared/utilidades/texto';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 // HU-26: la administración recibe el efectivo de cada garzón y lo confirma. Se confirman exactamente
 // los pagos que se ven: si mientras tanto el garzón cobró otro, ese queda para la próxima entrega.
@@ -29,11 +24,7 @@ export function ConfirmarEfectivo({ datos }: Readonly<{ datos: PantallaEfectivo 
         descripcion="El efectivo que cada garzón entrega, con sus propinas. Al confirmarlo entra al esperado de la caja."
       />
 
-      {!datos.noche && (
-        <Alert color="gray" variant="light">
-          No hay una noche abierta.
-        </Alert>
-      )}
+      {!datos.noche && <SinNocheAbierta />}
       {datos.noche && datos.garzones.length === 0 && (
         <Card withBorder padding="lg">
           <Group gap="sm">
@@ -113,7 +104,7 @@ export function ConfirmarEfectivo({ datos }: Readonly<{ datos: PantallaEfectivo 
                 variant="filled"
                 color="green"
                 fullWidth
-                aria-label={`Confirmar el efectivo de ${garzon.garzon}`}
+                aria-label={`Recibí ${formatearPesos(total)} de ${garzon.garzon}`}
                 confirmar={`¿Recibiste ${formatearPesos(total)} en efectivo de ${garzon.garzon}?`}
               />
             </Stack>

@@ -48,6 +48,14 @@ test('una contraseña errónea muestra el error y conserva el correo', async ({ 
   await expect(page.getByLabel('Correo')).toHaveValue(correoDe('barra'));
 });
 
+test('las respuestas llevan las cabeceras de seguridad', async ({ page }) => {
+  const respuesta = await page.goto('/ingresar');
+  const cabeceras = respuesta!.headers();
+  expect(cabeceras['content-security-policy']).toContain("frame-ancestors 'none'");
+  expect(cabeceras['x-content-type-options']).toBe('nosniff');
+  expect(cabeceras['x-powered-by']).toBeUndefined();
+});
+
 test('no existe registro público (HU-01 CA3)', async ({ page }) => {
   await page.goto('/ingresar');
   await expect(page.getByRole('link')).toHaveCount(0);

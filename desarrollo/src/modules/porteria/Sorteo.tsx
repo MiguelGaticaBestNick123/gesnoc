@@ -19,6 +19,7 @@ import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { formatearHora, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { formatearDocumento } from '@/shared/utilidades/rut';
 import type { Ganador, PantallaSorteo } from './servicios/sorteo';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
 
@@ -63,14 +64,17 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
     return (
       <Stack gap="md">
         <EncabezadoPagina icono={IconTrophy} titulo="Sorteo" />
-        <Alert color="gray" variant="light">
-          No hay una noche abierta.
-        </Alert>
+        <SinNocheAbierta />
       </Stack>
     );
   }
 
-  async function sortear(ambienteId: number) {
+  async function sortear(ambienteId: number, nombre: string) {
+    // Es irreversible (RN-23): un toque accidental no debe revelar al ganador antes de tiempo.
+    const confirmado = window.confirm(
+      `¿Sortear el premio de ${nombre} entre ${inicial.participantes} ${inicial.participantes === 1 ? 'ticket' : 'tickets'}? El sorteo no se repite.`,
+    );
+    if (!confirmado) return;
     setError(null);
     setRodando(ambienteId);
     const tope = Math.max(9, inicial.ultimoTicket);
@@ -150,7 +154,7 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
                     color="yellow"
                     leftSection={<IconConfetti size={20} />}
                     disabled={!ambiente.premio || inicial.participantes === 0 || rodando !== null}
-                    onClick={() => void sortear(ambiente.id)}
+                    onClick={() => void sortear(ambiente.id, ambiente.nombre)}
                     aria-label={`Sortear el premio de ${ambiente.nombre}`}
                   >
                     Sortear

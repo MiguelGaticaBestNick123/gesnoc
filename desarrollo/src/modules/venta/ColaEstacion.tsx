@@ -25,19 +25,12 @@ import {
   nivelDeEspera,
   nuevos,
   type ComandaEnCola,
-  type NivelDeEspera,
   type TipoEstacion,
+  colorDeEspera,
+  haceCuanto,
 } from './cola';
 import type { ColaDeEstacion } from './servicios/colas';
-
-const colorDe: Record<NivelDeEspera, string> = {
-  normal: 'gray',
-  atrasada: 'yellow',
-  critica: 'red',
-};
-
-const haceCuanto = (segundos: number) =>
-  minutos(segundos) === 0 ? 'recién lista' : `lista hace ${minutos(segundos)} min`;
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 const sinEstacion: Record<TipoEstacion, string> = {
   barra: 'Tu ambiente no tiene una barra configurada: avisa a la administración.',
@@ -121,11 +114,7 @@ export function ColaEstacion({ inicial }: Readonly<{ inicial: ColaDeEstacion }>)
           {error}
         </Alert>
       )}
-      {!datos.noche && (
-        <Alert color="yellow" variant="light">
-          No hay una noche abierta.
-        </Alert>
-      )}
+      {!datos.noche && <SinNocheAbierta />}
       {datos.noche && !datos.estacion && (
         <Alert color="yellow" variant="light">
           {sinEstacion[datos.tipo]}
@@ -196,7 +185,7 @@ function TarjetaComanda({
       component="article"
       aria-label={`Pedido ${comanda.pedido}`}
       style={{
-        borderColor: destacada ? `var(--mantine-color-${colorDe[nivel]}-6)` : undefined,
+        borderColor: destacada ? `var(--mantine-color-${colorDeEspera[nivel]}-6)` : undefined,
         borderWidth: destacada ? 2 : undefined,
         opacity: comanda.anulada ? 0.6 : 1,
       }}
@@ -209,7 +198,7 @@ function TarjetaComanda({
           {comanda.anulada ? (
             <Badge color="gray">Anulada</Badge>
           ) : (
-            <Badge color={colorDe[nivel]} variant={destacada ? 'filled' : 'light'} size="lg">
+            <Badge color={colorDeEspera[nivel]} variant={destacada ? 'filled' : 'light'} size="lg">
               {minutos(comanda.espera)} min
             </Badge>
           )}

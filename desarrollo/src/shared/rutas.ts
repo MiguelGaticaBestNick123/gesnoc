@@ -2,7 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { Actor } from '@/shared/autorizacion';
-import { ErrorDeNegocio, NoAutorizado } from '@/shared/errores';
+import { ErrorDeNegocio, esDatoInvalido, NoAutorizado, sinDatosPersonales } from '@/shared/errores';
 import { actorActual } from '@/shared/sesion';
 
 const sinCache = { 'cache-control': 'no-store' };
@@ -25,7 +25,9 @@ export async function operar(operacion: (actor: Actor) => Promise<unknown>) {
     if (falla instanceof ErrorDeNegocio) return error(falla.message, 409);
     if (falla instanceof z.ZodError)
       return error(falla.issues[0]?.message ?? 'Datos no válidos', 422);
-    throw falla;
+    // Un número o una fecha que la base no acepta: no se registró nada, así que no es un corte.
+    if (esDatoInvalido(falla)) return error('Datos no válidos', 422);
+    throw sinDatosPersonales(falla);
   }
 }
 

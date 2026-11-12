@@ -36,6 +36,7 @@ import {
 import { EncabezadoCuenta } from './EncabezadoCuenta';
 import type { PantallaPedido } from './servicios/cuentas';
 import type { PedidoEnviado } from './servicios/pedidos';
+import { hojaInferior } from '@/shared/ui/hoja';
 
 const SIN_CONFIRMAR = 'Este pedido quedó sin confirmar. Reintenta: no se duplica.';
 
@@ -230,8 +231,8 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
                 p="sm"
                 mih={68}
                 style={{
-                  opacity: producto.sinDestino ? 0.5 : 1,
-                  borderColor: cantidad ? 'var(--mantine-color-violet-6)' : undefined,
+                  borderStyle: producto.sinDestino ? 'dashed' : undefined,
+                  borderColor: cantidad ? 'var(--mantine-color-violeta-6)' : undefined,
                 }}
               >
                 <Group justify="space-between" wrap="nowrap" align="flex-start" gap={4}>
@@ -252,7 +253,8 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
       </SimpleGrid>
       {visibles.length === 0 && <Text c="dimmed">No hay productos que coincidan.</Text>}
 
-      {unidades === 0 && !congelado && (
+      {/* Solo una cuenta sin consumo ni pagos se cierra así; las demás se cierran al cobrar. */}
+      {unidades === 0 && !congelado && !cuenta.conMovimientos && (
         <Button variant="subtle" color="red" size="sm" mih={44} onClick={cerrarCuentaVacia}>
           Cerrar cuenta sin consumo
         </Button>
@@ -288,6 +290,7 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
         onClose={pedido.close}
         position="bottom"
         size="auto"
+        styles={hojaInferior}
         title={`Pedido · ${formatearPesos(total)}`}
       >
         <Stack gap="sm">
@@ -410,7 +413,15 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
             {borrador.clave ? 'Reintentar envío' : `Enviar pedido · ${formatearPesos(total)}`}
           </Button>
           {!congelado && unidades > 0 && (
-            <Button variant="subtle" color="red" onClick={() => setBorrador(BORRADOR_VACIO)}>
+            <Button
+              variant="subtle"
+              color="red"
+              onClick={() => {
+                if (window.confirm('¿Vaciar el pedido? Se quitan todos los productos elegidos.')) {
+                  setBorrador(BORRADOR_VACIO);
+                }
+              }}
+            >
               Vaciar pedido
             </Button>
           )}

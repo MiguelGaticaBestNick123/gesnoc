@@ -35,6 +35,8 @@ export function normalizarRut(texto: string): string | null {
 /** Pasaporte o documento extranjero: de 4 a 15 letras y números, en mayúsculas. */
 export function normalizarExtranjero(texto: string): string | null {
   const limpio = texto.toUpperCase().replace(/[^0-9A-Z]/g, '');
+  // «ANON» seguido de un número es el documento de un cliente anonimizado (RN-25).
+  if (limpio.startsWith('ANON')) return null;
   return /^[0-9A-Z]{4,15}$/.test(limpio) ? limpio : null;
 }
 
@@ -48,9 +50,6 @@ export function formatearDocumento(documento: string): string {
   if (!cuerpo || !verificador) return documento;
   return `${cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${verificador}`;
 }
-
-/** Un RUT se guarda con guion; un documento extranjero, nunca. */
-export const esRut = (documento: string) => documento.includes('-');
 
 export const MENSAJE_DOCUMENTO: Record<TipoDocumento, string> = {
   rut: 'RUT no válido: revisa los números y el dígito verificador',

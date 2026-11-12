@@ -37,7 +37,6 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
-import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { mesDe } from '@/shared/utilidades/calendario';
@@ -57,6 +56,8 @@ import {
 } from './acciones';
 import type { InvitacionDeLaNoche } from './repositorios/detalles';
 import type { DetalleDeNoche } from './servicios/detalles';
+import { CamposNoche } from './CamposNoche';
+import { estadosDeNoche } from './nombres';
 
 type Lista = DetalleDeNoche['listas'][number];
 
@@ -70,11 +71,7 @@ type Dialogo =
   | { tipo: 'invitado' }
   | null;
 
-const estados = {
-  programada: { texto: 'Programada', color: 'violeta' },
-  abierta: { texto: 'Abierta', color: 'green' },
-  cerrada: { texto: 'Cerrada', color: 'gray' },
-} as const;
+const estados = estadosDeNoche;
 
 function Seccion({
   icono: Icono,
@@ -172,6 +169,7 @@ function FilaPersona({
             color="red"
             px="xs"
             aria-label={`Quitar a ${nombre}`}
+            confirmar={`¿Quitar a ${nombre} de esta noche?`}
           />
         )}
       </Group>
@@ -345,7 +343,7 @@ function TarjetaLista({
                 variant="light"
                 leftSection={<IconClipboardText size={16} />}
                 onClick={() => abrir({ tipo: 'pegar', lista })}
-                aria-label={`Pegar personas en ${lista.nombre}`}
+                aria-label={`Pegar lista en ${lista.nombre}`}
               >
                 Pegar lista
               </Button>
@@ -366,7 +364,7 @@ function TarjetaLista({
                 variant="subtle"
                 color="red"
                 aria-label={`Eliminar ${lista.nombre}`}
-                confirmar={`¿Eliminar ${lista.nombre} con sus ${lista.personas.length} personas?`}
+                confirmar={`¿Eliminar ${lista.nombre} con ${lista.personas.length === 1 ? 'su persona' : `sus ${lista.personas.length} personas`}?`}
               />
             </Group>
           )}
@@ -481,7 +479,7 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
                         variant="light"
                         color="yellow"
                         onClick={() => setDialogo({ tipo: 'premio', ambiente })}
-                        aria-label={`Elegir el premio de ${ambiente.nombre}`}
+                        aria-label={`${premio ? 'Cambiar' : 'Elegir'} el premio de ${ambiente.nombre}`}
                       >
                         {premio ? 'Cambiar' : 'Elegir'}
                       </Button>
@@ -528,6 +526,7 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
                     color="red"
                     px="xs"
                     aria-label={`Quitar ${evento.nombre}`}
+                    confirmar={`¿Quitar «${evento.nombre}» de la noche?`}
                   />
                 )}
               </Group>
@@ -600,22 +599,7 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
       <Modal opened={dialogo?.tipo === 'noche'} onClose={cerrar} title="Entrada y nota">
         <FormularioAccion accion={editarNoche} textoEnviar="Guardar" alTerminar={cerrar}>
           <input type="hidden" name="fecha" value={noche.fecha} />
-          <CampoPesos
-            name="precioEntrada"
-            label="Precio de entrada"
-            valorInicial={noche.precioEntrada}
-            size="md"
-            required
-          />
-          <Textarea
-            name="nota"
-            label="Nota para el equipo"
-            defaultValue={noche.nota ?? ''}
-            maxLength={280}
-            autosize
-            minRows={2}
-            size="md"
-          />
+          <CamposNoche precio={noche.precioEntrada} nota={noche.nota} />
         </FormularioAccion>
       </Modal>
 

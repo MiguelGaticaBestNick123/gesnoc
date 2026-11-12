@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { DetalleNoche } from '@/modules/noche/DetalleNoche';
 import { detalleDeNoche } from '@/modules/noche/servicios/detalles';
+import { fecha as fechaValida } from '@/shared/esquemas';
 import { exigirVista } from '@/shared/sesion';
 
 export const metadata = { title: 'Noche · GesNoc' };
@@ -11,7 +12,7 @@ export default async function PaginaNoche({
 }: Readonly<{ params: Promise<{ fecha: string }> }>) {
   const actor = await exigirVista('admin');
   const { fecha } = await params;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) notFound();
+  if (!fechaValida.safeParse(fecha).success) notFound();
   const detalle = await detalleDeNoche(actor, fecha);
   if (!detalle) notFound();
   return <DetalleNoche detalle={detalle} />;

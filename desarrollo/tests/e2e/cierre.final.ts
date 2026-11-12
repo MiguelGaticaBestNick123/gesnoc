@@ -20,7 +20,7 @@ test('la noche se cierra con la caja explicada y el turno deja de dar acceso', a
 
   // HU-26: el efectivo de cada garzón, uno por uno.
   await page.goto('/admin/efectivo');
-  const confirmar = page.getByRole('button', { name: /^Confirmar el efectivo de / });
+  const confirmar = page.getByRole('button', { name: /^Recibí \$/ });
   for (let vuelta = 0; vuelta < 10 && (await confirmar.count()) > 0; vuelta++) {
     const antes = await confirmar.count();
     await confirmar.first().click();
@@ -30,7 +30,7 @@ test('la noche se cierra con la caja explicada y el turno deja de dar acceso', a
 
   // HU-27: las cuentas que quedaron abiertas en las otras pruebas.
   await page.goto('/admin/saldos');
-  const cerrar = page.getByRole('button', { name: /^Cerrar la cuenta / });
+  const cerrar = page.getByRole('button', { name: /^Cerrar (con saldo|cuenta)/ });
   for (let vuelta = 0; vuelta < 30 && (await cerrar.count()) > 0; vuelta++) {
     const antes = await cerrar.count();
     await cerrar.first().click();

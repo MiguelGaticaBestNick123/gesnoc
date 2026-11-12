@@ -12,23 +12,18 @@ import {
   Stack,
   Text,
   ThemeIcon,
-  Title,
 } from '@mantine/core';
 import {
   IconCalculator,
   IconChartBar,
-  IconCircleCheck,
   IconCoin,
   IconDoorEnter,
   IconReceipt2,
   IconWallet,
-  type Icon,
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { colorDelRol, nombreDelRol } from '@/modules/noche/nombres';
-import { formaDe, formas } from '@/modules/porteria/formas';
-import type { MedioDePago } from '@/modules/venta/cuenta';
-import { nombreDelMedio } from '@/modules/venta/cobro';
+import { MEDIOS, nombreDelMedio } from '@/modules/venta/cobro';
 import { iconoDelMedio } from '@/modules/venta/iconos';
 import { Cifra } from '@/shared/ui/Cifra';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
@@ -38,26 +33,9 @@ import { formatearDocumento } from '@/shared/utilidades/rut';
 import { DesgloseEsperado } from './Arqueo';
 import { describirDiferencia } from './calculos';
 import type { VentasYPropinas as Datos } from './servicios/caja';
-
-const MEDIOS: MedioDePago[] = ['efectivo', 'tarjeta', 'transferencia'];
-
-function Titulo({ icono: Icono, children }: Readonly<{ icono: Icon; children: React.ReactNode }>) {
-  return (
-    <Group gap="xs" mb="sm">
-      <Icono size={20} stroke={1.7} color="var(--mantine-color-violeta-3)" />
-      <Title order={3} size="h5">
-        {children}
-      </Title>
-    </Group>
-  );
-}
-
-const iniciales = (nombre: string) =>
-  nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join('');
+import { iniciales } from '@/shared/utilidades/texto';
+import { TituloTarjeta } from '@/shared/ui/TituloTarjeta';
+import { FilasDeEntradas } from '@/modules/porteria/FilasDeEntradas';
 
 // HU-29: lo vendido y lo cobrado por medio de pago, las propinas de cada ambiente con la parte de
 // cada persona, las entradas y la caja. Las cifras de la caja son las del arqueo (CA2) y se cumple
@@ -123,19 +101,16 @@ export function VentasYPropinas({ datos }: Readonly<{ datos: Datos }>) {
               valor={formatearPesos(detalle.totales.cerradoConSaldo)}
             />
           </SimpleGrid>
-          <Group gap="xs">
-            <IconCircleCheck size={18} color="var(--mantine-color-green-5)" />
-            <Text size="sm" c="dimmed">
-              Control: vendido = cobrado + por cobrar + cerrado con saldo (
-              {formatearPesos(detalle.totales.vendido)}).
-            </Text>
-          </Group>
+          <Text size="sm" c="dimmed">
+            Lo vendido se reparte en cobrado, por cobrar y cerrado con saldo. El control del
+            efectivo es el arqueo, en la tarjeta «Caja».
+          </Text>
 
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
             <Card withBorder padding="md">
-              <Titulo icono={IconWallet}>Cobrado por medio de pago</Titulo>
+              <TituloTarjeta icono={IconWallet}>Cobrado por medio de pago</TituloTarjeta>
               <Stack gap="sm">
-                {MEDIOS.map((medio) => {
+                {MEDIOS.map(({ valor: medio }) => {
                   const fila = detalle.medios.find((m) => m.medio === medio);
                   const Icono = iconoDelMedio[medio];
                   return (
@@ -161,7 +136,7 @@ export function VentasYPropinas({ datos }: Readonly<{ datos: Datos }>) {
             </Card>
 
             <Card withBorder padding="md">
-              <Titulo icono={IconCoin}>Propinas por ambiente</Titulo>
+              <TituloTarjeta icono={IconCoin}>Propinas por ambiente</TituloTarjeta>
               <Text size="xs" c="dimmed" mb="sm">
                 Se reparten entre los garzones y barman con turno en el ambiente. Cocina y guardia
                 no reciben.
@@ -207,27 +182,9 @@ export function VentasYPropinas({ datos }: Readonly<{ datos: Datos }>) {
             </Card>
 
             <Card withBorder padding="md">
-              <Titulo icono={IconDoorEnter}>Entradas</Titulo>
+              <TituloTarjeta icono={IconDoorEnter}>Entradas</TituloTarjeta>
               <Stack gap="sm">
-                {(['efectivo', 'tarjeta', 'pendiente', 'gratis'] as const).map((forma) => {
-                  const fila = detalle.entradas.find((e) => formaDe(e.medio) === forma);
-                  return (
-                    <Group key={forma} justify="space-between" wrap="nowrap">
-                      <Group gap="sm" wrap="nowrap">
-                        <Badge color={formas[forma].color} variant="light" w={64} tt="none">
-                          {formas[forma].codigo}
-                        </Badge>
-                        <Text size="sm">
-                          {fila?.personas ?? 0}{' '}
-                          {(fila?.personas ?? 0) === 1 ? 'persona' : 'personas'}
-                        </Text>
-                      </Group>
-                      <Text fw={700}>
-                        {forma === 'gratis' ? '—' : formatearPesos(fila?.monto ?? 0)}
-                      </Text>
-                    </Group>
-                  );
-                })}
+                <FilasDeEntradas entradas={detalle.entradas} />
                 {detalle.pendientes.length > 0 && (
                   <>
                     <Divider label="Deben su entrada (PN)" labelPosition="left" />
@@ -252,7 +209,7 @@ export function VentasYPropinas({ datos }: Readonly<{ datos: Datos }>) {
             </Card>
 
             <Card withBorder padding="md">
-              <Titulo icono={IconCalculator}>Caja</Titulo>
+              <TituloTarjeta icono={IconCalculator}>Caja</TituloTarjeta>
               {detalle.esperado ? (
                 <Stack gap="sm">
                   <DesgloseEsperado esperado={detalle.esperado} />

@@ -1,4 +1,5 @@
 import 'server-only';
+import { exigirNocheVigente } from './noches';
 import { listarAmbientes } from '@/modules/local/repositorios/ambientes';
 import { exigir, type Actor, type RolTurno } from '@/shared/autorizacion';
 import { ErrorDeNegocio, traducir } from '@/shared/errores';
@@ -18,8 +19,6 @@ export async function misTurnos(actor: Actor) {
     disponible: disponible !== null,
   }));
 }
-
-export type MiTurno = Awaited<ReturnType<typeof misTurnos>>[number];
 
 // RN-03: solo se declara disponibilidad en noches programadas que aún no se abren.
 export async function declararDisponibilidad(actor: Actor, fecha: string, disponible: boolean) {
@@ -65,12 +64,6 @@ export async function pantallaAsignacion(actor: Actor, fecha?: string) {
 }
 
 export type Dotacion = Awaited<ReturnType<typeof pantallaAsignacion>>['dotacion'];
-
-async function exigirNocheVigente(fecha: string) {
-  const noche = await buscarNoche(fecha);
-  if (!noche) throw new ErrorDeNegocio('Esa noche no existe');
-  if (noche.cerradaEn) throw new ErrorDeNegocio('Una noche cerrada no admite cambios'); // RN-26
-}
 
 export async function asignar(actor: Actor, datos: DatosAsignacion) {
   exigir(actor, 'admin');

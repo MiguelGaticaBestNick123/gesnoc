@@ -1,12 +1,12 @@
 import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
-import { db, type Transaccion } from '@/shared/db/cliente';
+import { db, type Conexion, type Transaccion } from '@/shared/db/cliente';
 import { pago } from '@/shared/db/esquema/schema';
 import type { MedioDePago } from '../cuenta';
 
 /** El pago que ya se registró con esta clave de envío (RN-13). */
-export async function pagoPorClave(tx: Transaccion, claveEnvio: string) {
-  const [fila] = await tx
+export async function pagoPorClave(conexion: Conexion, claveEnvio: string) {
+  const [fila] = await conexion
     .select({
       fecha: pago.fecha,
       cuenta: pago.cuentaNumero,
@@ -14,6 +14,7 @@ export async function pagoPorClave(tx: Transaccion, claveEnvio: string) {
       medio: pago.medio,
       monto: pago.monto,
       propina: pago.propina,
+      registradoPor: pago.registradoPor,
     })
     .from(pago)
     .where(eq(pago.claveEnvio, claveEnvio));

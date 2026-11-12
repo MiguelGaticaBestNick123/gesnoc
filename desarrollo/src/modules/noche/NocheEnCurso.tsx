@@ -11,10 +11,11 @@ import { abrirNoche } from './acciones';
 import type { nocheAbierta, Noche } from './repositorios/noches';
 import { IconMoon } from '@tabler/icons-react';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
+import { EstadoVacio } from '@/shared/ui/EstadoVacio';
 
 interface Props {
   abierta: Awaited<ReturnType<typeof nocheAbierta>>;
-  programadas: Noche[];
+  programadas: (Noche & { pasada: boolean })[];
   cierre: EstadoDelCierre | null;
 }
 
@@ -44,7 +45,11 @@ export function NocheEnCurso({ abierta, programadas, cierre }: Readonly<Props>) 
           {abierta.nota && <Text size="sm">{abierta.nota}</Text>}
         </Card>
       ) : programadas.length === 0 ? (
-        <Text c="dimmed">No hay noches programadas: crea una en el calendario.</Text>
+        <EstadoVacio
+          texto="No hay noches programadas para abrir."
+          accion="Ir al calendario de noches"
+          href="/admin/calendario"
+        />
       ) : (
         <Card withBorder padding="lg">
           <FormularioAccion accion={abrirNoche} textoEnviar="Abrir noche">
@@ -54,7 +59,7 @@ export function NocheEnCurso({ abierta, programadas, cierre }: Readonly<Props>) 
               size="md"
               data={programadas.map((noche) => ({
                 value: noche.fecha,
-                label: tituloDeFecha(noche.fecha),
+                label: `${tituloDeFecha(noche.fecha)}${noche.pasada ? ' (ya pasó)' : ''}`,
               }))}
             />
             <CampoPesos

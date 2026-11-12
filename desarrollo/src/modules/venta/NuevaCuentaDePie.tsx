@@ -31,8 +31,23 @@ export function NuevaCuentaDePie({ ambienteId, abierto, alCerrar }: Readonly<Pro
   }
 
   return (
-    <Modal opened={abierto} onClose={alCerrar} title="Cliente de pie">
-      <Stack gap="sm">
+    <Modal
+      opened={abierto}
+      onClose={() => {
+        setReferencia('');
+        setError(null);
+        alCerrar();
+      }}
+      title="Cliente de pie"
+    >
+      <Stack
+        gap="sm"
+        component="form"
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          if (referencia.trim()) void abrirCuenta();
+        }}
+      >
         {error && (
           <Alert color="red" variant="light" role="alert">
             {error}
@@ -47,7 +62,7 @@ export function NuevaCuentaDePie({ ambienteId, abierto, alCerrar }: Readonly<Pro
           size="md"
           data-autofocus
         />
-        <Button onClick={abrirCuenta} loading={enviando} disabled={!referencia.trim()}>
+        <Button type="submit" loading={enviando} disabled={!referencia.trim()}>
           Abrir cuenta
         </Button>
       </Stack>

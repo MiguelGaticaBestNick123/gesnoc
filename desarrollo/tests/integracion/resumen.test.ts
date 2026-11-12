@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { datosEntrada } from '@/modules/porteria/esquemas';
+import { registrar } from '@/modules/porteria/servicios/puerta';
 import { anular, enviar } from '@/modules/venta/servicios/pedidos';
 import { abrir } from '@/modules/venta/servicios/cuentas';
 import { cobrar } from '@/modules/venta/servicios/pagos';
@@ -36,6 +38,7 @@ describe('resumen de la noche en la portada de la administración', () => {
       cobrado: 5000,
       cuentasAbiertas: 2,
       porCobrar: 18500,
+      cerradoConSaldo: 0,
       enPreparacion: 2,
     });
     // Control: lo vendido es lo cobrado más lo que falta por cobrar.
@@ -87,6 +90,39 @@ describe('resumen de la noche en la portada de la administración', () => {
     expect(resumen.noche).toBeNull();
     expect(resumen.cifras).toBeNull();
     expect(resumen.cobros).toBeNull();
+    expect(resumen.puerta).toBeNull();
     await expect(resumenDeLaNoche(local.persona('garzon'))).rejects.toThrow(NoAutorizado);
+  });
+
+  it('la puerta: personas y monto por forma de entrada, solo para la administración', async () => {
+    const local = await prepararNoche();
+    const guardia = local.persona('guardia');
+    for (const [documento, forma] of [
+      ['12345678-5', 'efectivo'],
+      ['15678234-3', 'efectivo'],
+      ['17654321-3', 'pendiente'],
+      ['19876543-0', 'gratis'],
+    ] as const) {
+      await registrar(
+        guardia,
+        datosEntrada.parse({
+          tipoDocumento: 'rut',
+          documento,
+          nombre: 'Cliente',
+          apellido: 'Prueba',
+          forma,
+          monto: forma === 'gratis' ? 0 : 5000,
+        }),
+      );
+    }
+    const { puerta } = await resumenDeLaNoche(administracion);
+    expect(puerta).toHaveLength(3);
+    expect(puerta).toEqual(
+      expect.arrayContaining([
+        { medio: 'efectivo', personas: 2, monto: 10_000 },
+        { medio: 'pendiente', personas: 1, monto: 5000 },
+        { medio: null, personas: 1, monto: 0 },
+      ]),
+    );
   });
 });

@@ -10,9 +10,10 @@ import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
-import { minutos, nivelDeEspera, nuevos, type NivelDeEspera } from './cola';
+import { minutos, nivelDeEspera, nuevos, colorDeEspera, haceCuanto } from './cola';
 import { claveDeComanda, type MiComanda } from './cuenta';
 import type { MisComandas } from './servicios/colas';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 const URL_COMANDAS = '/api/vivo/comandas';
 const RUTA_COMANDAS = '/garzon/comandas';
@@ -20,15 +21,6 @@ const RUTA_COMANDAS = '/garzon/comandas';
 const ACHICAR_SOLO_MS = 12_000;
 
 /** Los mismos colores de espera que ve la estación en su cola (HU-17 CA2). */
-const colorDeEspera: Record<NivelDeEspera, string> = {
-  normal: 'gray',
-  atrasada: 'yellow',
-  critica: 'red',
-};
-
-const haceCuanto = (segundos: number) =>
-  minutos(segundos) === 0 ? 'recién lista' : `lista hace ${minutos(segundos)} min`;
-
 /** HU-21: entregar una comanda; mientras la consulta no lo confirma, ya no se muestra como lista. */
 function useEntregar(actualizar: () => Promise<void>) {
   const [entregando, setEntregando] = useState<string | null>(null);
@@ -183,11 +175,7 @@ export function MisComandasVista({ inicial }: Readonly<{ inicial: MisComandas }>
           {error}
         </Alert>
       )}
-      {!datos.noche && (
-        <Alert color="yellow" variant="light">
-          No hay una noche abierta.
-        </Alert>
-      )}
+      {!datos.noche && <SinNocheAbierta />}
 
       <Title order={3} size="h5">
         Listas para retirar

@@ -12,6 +12,7 @@ export async function cifras(fecha: string) {
     cobrado: number;
     abiertas: number;
     por_cobrar: number;
+    cerrado_con_saldo: number;
     en_preparacion: number;
   }>(sql`
     select
@@ -31,6 +32,17 @@ export async function cifras(fecha: string) {
          select coalesce(sum(pg.monto), 0) as pagado
          from gesnoc.pago pg where pg.fecha = c.fecha and pg.cuenta_numero = c.numero) g
        where c.fecha = ${fecha} and c.cerrada_en is null) as por_cobrar,
+      (select coalesce(sum(t.total - g.pagado), 0)::int
+       from gesnoc.cuenta c
+       cross join lateral (
+         select coalesce(sum(d.cantidad * d.precio_unitario), 0) as total
+         from gesnoc.pedido p
+         join gesnoc.detalle_pedido d on d.fecha = p.fecha and d.pedido_numero = p.numero
+         where p.fecha = c.fecha and p.cuenta_numero = c.numero and d.anulado_en is null) t
+       cross join lateral (
+         select coalesce(sum(pg.monto), 0) as pagado
+         from gesnoc.pago pg where pg.fecha = c.fecha and pg.cuenta_numero = c.numero) g
+       where c.fecha = ${fecha} and c.cerrada_en is not null) as cerrado_con_saldo,
       (select count(*)::int from gesnoc.comanda co
        where co.fecha = ${fecha} and co.lista_en is null and co.entregada_en is null
          and exists (select 1 from gesnoc.detalle_pedido d
@@ -41,6 +53,7 @@ export async function cifras(fecha: string) {
     cobrado: fila?.cobrado ?? 0,
     cuentasAbiertas: fila?.abiertas ?? 0,
     porCobrar: fila?.por_cobrar ?? 0,
+    cerradoConSaldo: fila?.cerrado_con_saldo ?? 0,
     enPreparacion: fila?.en_preparacion ?? 0,
   };
 }

@@ -42,6 +42,7 @@ import {
 } from './geometria';
 import { PlanoMesas, VisorPlano, type MesaDibujada } from './PlanoMesas';
 import type { PlanoParaEditar } from './servicios/mapa';
+import { plural } from '@/shared/utilidades/texto';
 
 type MesaEditable = Mesa & { nueva?: boolean };
 type Ambiente = NonNullable<PlanoParaEditar['ambiente']>;
@@ -85,8 +86,22 @@ export function EditorPlano({
   useEffect(() => {
     if (!hayCambios) return;
     const avisar = (evento: BeforeUnloadEvent) => evento.preventDefault();
+    // Los enlaces del menú navegan sin recargar y no disparan beforeunload: se pregunta antes de
+    // salir, en la fase de captura, para detener el clic antes de que lo tome el enlace.
+    const alSalir = (evento: MouseEvent) => {
+      const enlace = (evento.target as Element | null)?.closest('a[href]');
+      if (!enlace) return;
+      if (!window.confirm('Hay cambios sin guardar en el plano. ¿Salir y descartarlos?')) {
+        evento.preventDefault();
+        evento.stopPropagation();
+      }
+    };
     window.addEventListener('beforeunload', avisar);
-    return () => window.removeEventListener('beforeunload', avisar);
+    document.addEventListener('click', alSalir, true);
+    return () => {
+      window.removeEventListener('beforeunload', avisar);
+      document.removeEventListener('click', alSalir, true);
+    };
   }, [hayCambios]);
 
   const cambiar = (id: number, cambio: (mesa: MesaEditable) => MesaEditable) => {
@@ -136,6 +151,7 @@ export function EditorPlano({
   }
 
   function descartar() {
+    if (!window.confirm('¿Descartar los cambios del plano y volver al último guardado?')) return;
     setMesas(guardadas);
     setRetiradas([]);
     setSeleccionada(null);
@@ -185,7 +201,7 @@ export function EditorPlano({
       <EncabezadoPagina
         icono={IconMap2}
         titulo="Mapa de mesas"
-        descripcion={`${ambiente.nombre} · ${mesas.length} mesas · arrastra para mover, toca para editar`}
+        descripcion={`${ambiente.nombre} · ${plural(mesas.length, 'mesa', 'mesas')} · arrastra para mover, toca para editar`}
       />
 
       {inicial.ambientes.length > 1 && (
@@ -401,7 +417,7 @@ export function EditorPlano({
                 ) : (
                   !elegida.nueva && (
                     <Text size="xs" c="dimmed">
-                      Retirarla libera su número; sus cuentas pasadas no cambian (CA3).
+                      Retirarla libera su número; sus cuentas pasadas no cambian.
                     </Text>
                   )
                 )}

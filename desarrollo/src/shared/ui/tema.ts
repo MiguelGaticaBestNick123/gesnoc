@@ -45,15 +45,15 @@ export const tema = createTheme({
     Button: { defaultProps: { size: 'lg' } },
     Card: { defaultProps: { radius: 'lg' } },
     Paper: { defaultProps: { radius: 'lg' } },
-    Modal: { defaultProps: { radius: 'lg' } },
-    SegmentedControl: { defaultProps: { radius: 'md' } },
+    // La X de diálogos y hojas también mide 44 px y tiene nombre para el lector de pantalla.
+    CloseButton: { defaultProps: { size: 'xl' } },
+    Modal: { defaultProps: { radius: 'lg', closeButtonProps: { 'aria-label': 'Cerrar' } } },
+    Drawer: { defaultProps: { closeButtonProps: { 'aria-label': 'Cerrar' } } },
+    SegmentedControl: {
+      defaultProps: { radius: 'md' },
+      styles: {
+        label: { minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+      },
+    },
   },
 });
-
-/** Colores del plano y de los estados, compartidos por el mapa del garzón y el editor. */
-export const colorDeEstado = {
-  libre: '#34344d',
-  ocupada: '#7450fb',
-  lista: '#2fbf71',
-  espera: '#f59f0b',
-} as const;

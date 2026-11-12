@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { listar as listarPersonal } from '@/modules/acceso/servicios/personal';
-import { calendarioDelMes } from '@/modules/noche/servicios/noches';
+import { calendarioDelMes, estado } from '@/modules/noche/servicios/noches';
+import { hoyEnChile } from '@/shared/utilidades/fechas';
 import { miCalendario, pantallaAsignacion } from '@/modules/noche/servicios/turnos';
 import { NoAutorizado } from '@/shared/errores';
 import { sembrar } from '../../db/seeds/demostracion';
@@ -108,5 +109,18 @@ describe('HU-03 trayectoria en la pantalla de personal', () => {
       ultima: null,
       proximo: null,
     });
+  });
+});
+
+describe('HU-11 abrir la noche', () => {
+  it('propone la noche de hoy o la próxima; las pasadas sin abrir van al final, marcadas', async () => {
+    const hoyReal = hoyEnChile();
+    await sembrar(consultar, CLAVE, hoyReal);
+    const [hace3] = await consultar<{ fecha: string }[]>`
+      insert into gesnoc.noche (fecha, precio_entrada)
+      values (${hoyReal}::date - 3, 5000) returning fecha::text`;
+    const { programadas } = await estado(administracion);
+    expect(programadas[0]).toMatchObject({ fecha: hoyReal, pasada: false });
+    expect(programadas.at(-1)).toMatchObject({ fecha: hace3!.fecha, pasada: true });
   });
 });

@@ -31,7 +31,11 @@ export async function buscarNoche(fecha: string) {
 export const insertarNoche = (datos: DatosNoche) => db().insert(noche).values(datos);
 
 export const actualizarNoche = ({ fecha, ...datos }: DatosNoche) =>
-  db().update(noche).set(datos).where(eq(noche.fecha, fecha));
+  db()
+    .update(noche)
+    .set(datos)
+    .where(and(eq(noche.fecha, fecha), isNull(noche.cerradaEn)))
+    .returning({ fecha: noche.fecha });
 
 // La disponibilidad y los turnos caen con la noche; una noche abierta ya tiene operaciones.
 export const eliminarNocheSinAbrir = (fecha: string) =>

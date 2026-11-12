@@ -9,11 +9,8 @@ import { estaciones, productosActivos } from '../repositorios/pedidos';
 import { agruparPedidos, resumenCuenta } from '../cuenta';
 import { estacionDestino } from '../ruteo';
 
-export async function nocheEnCurso(): Promise<string> {
-  const fecha = await fechaAbierta();
-  if (!fecha) throw new ErrorDeNegocio('No hay una noche abierta');
-  return fecha;
-}
+export { nocheEnCurso } from '@/modules/noche/servicios/noches';
+import { nocheEnCurso } from '@/modules/noche/servicios/noches';
 
 /** El garzón ve el ambiente de su turno; la administración elige cualquiera. */
 async function ambienteVisible(actor: Actor, pedido?: number) {

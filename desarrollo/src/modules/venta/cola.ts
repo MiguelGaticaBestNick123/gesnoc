@@ -71,6 +71,17 @@ export function nivelDeEspera(segundos: number): NivelDeEspera {
 
 export const minutos = (segundos: number) => Math.floor(segundos / MINUTO);
 
+/** Color de la espera, el mismo en la barra, la cocina y el garzón. */
+export const colorDeEspera: Record<NivelDeEspera, string> = {
+  normal: 'gray',
+  atrasada: 'yellow',
+  critica: 'red',
+};
+
+/** Cuánto lleva lista una comanda para retirar: «recién lista», «lista hace 3 min». */
+export const haceCuanto = (segundos: number) =>
+  minutos(segundos) === 0 ? 'recién lista' : `lista hace ${minutos(segundos)} min`;
+
 export function armarCola(comandas: FilaComanda[], lineas: FilaLinea[]): Cola {
   const lineasDe = new Map<number, FilaLinea[]>();
   for (const linea of lineas) {

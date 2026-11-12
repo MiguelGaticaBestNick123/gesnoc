@@ -12,6 +12,7 @@ import { contarCaja } from './acciones';
 import { describirDiferencia } from './calculos';
 import type { Esperado } from './repositorios/caja';
 import type { PantallaArqueo } from './servicios/caja';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 const colorDeDiferencia = (diferencia: number) => {
   if (diferencia === 0) return 'green';
@@ -68,9 +69,7 @@ export function Arqueo({ datos }: Readonly<{ datos: PantallaArqueo }>) {
     return (
       <Stack gap="md">
         <EncabezadoPagina icono={IconCalculator} titulo="Arqueo" />
-        <Alert color="gray" variant="light">
-          No hay una noche abierta.
-        </Alert>
+        <SinNocheAbierta />
       </Stack>
     );
   }

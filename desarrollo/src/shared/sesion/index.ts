@@ -3,16 +3,16 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { inicioDe, puede, type Actor, type Permiso } from '@/shared/autorizacion';
-import { actorDeToken } from './actor';
+import { actorDeToken, HORAS_DE_SESION } from './actor';
 
 const COOKIE = 'gesnoc_sesion';
-const HORAS_DE_SESION = 12;
 
 export async function guardarCookieDeSesion(token: string) {
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    // Por http en la red del local (npm run local) el navegador descarta una cookie Secure.
+    secure: process.env.NODE_ENV === 'production' && process.env.SESION_SIN_HTTPS !== '1',
     maxAge: HORAS_DE_SESION * 60 * 60,
     path: '/',
   });

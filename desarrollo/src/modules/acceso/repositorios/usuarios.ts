@@ -2,10 +2,10 @@ import 'server-only';
 import { and, eq, lte, sql } from 'drizzle-orm';
 import { db } from '@/shared/db/cliente';
 import { sesion, usuario } from '@/shared/db/esquema/schema';
+import { HORAS_DE_SESION } from '@/shared/sesion/actor';
 
 const INTENTOS_PERMITIDOS = 5;
 const MINUTOS_DE_BLOQUEO = 15;
-const HORAS_DE_SESION = 12;
 
 const estaBloqueado = sql<boolean>`coalesce(${usuario.bloqueadoHasta} > now(), false)`;
 

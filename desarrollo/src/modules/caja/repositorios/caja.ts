@@ -1,8 +1,6 @@
 import 'server-only';
 import { sql } from 'drizzle-orm';
-import { db, type Transaccion } from '@/shared/db/cliente';
-
-type Conexion = Transaccion | ReturnType<typeof db>;
+import { db, type Conexion, type Transaccion } from '@/shared/db/cliente';
 
 // La caja de la noche. Nada de esto se guarda: el esperado, los saldos y las propinas se derivan de
 // los pagos, las entradas y el arqueo al consultarlos (RN-19, ADR-011).
@@ -77,6 +75,16 @@ export const guardarConteo = (
     update gesnoc.arqueo
     set efectivo_contado = ${contado}, nota = ${nota}, contado_por = ${contadoPor}
     where fecha = ${fecha}`);
+
+/**
+ * Un conteo de caja vale para el esperado con que se hizo. Si después entra efectivo (se confirma un
+ * pago o una entrada EF), el conteo se borra y hay que volver a contar: una nota escrita para una
+ * diferencia de $2.000 no puede quedar explicando otra de $62.000.
+ */
+export const anularConteo = (tx: Transaccion, fecha: string) =>
+  tx.execute(sql`
+    update gesnoc.arqueo set efectivo_contado = null, nota = null, contado_por = null
+    where fecha = ${fecha} and efectivo_contado is not null`);
 
 /** RN-17: el efectivo de los pagos que la administración aún no confirma, de cada garzón. */
 export async function efectivoSinConfirmar(fecha: string) {
@@ -224,24 +232,23 @@ export async function bloquearNocheParaCerrar(tx: Transaccion, fecha: string) {
  * nombre y documento.
  */
 export async function anonimizar(tx: Transaccion, fecha: string): Promise<number> {
-  const clientes = await tx.execute<{ id: number }>(sql`
-    update gesnoc.cliente c
-    set documento = 'ANON' || c.id, nombre = 'Anónimo', apellido = 'Anónimo'
-    where c.documento not like 'ANON%'
-      and not exists (select 1 from gesnoc.entrada e
-                      where e.cliente_id = c.id and e.fecha > ${fecha}::date - interval '12 months')
-    returning c.id`);
-  if (clientes.length > 0) {
-    await tx.execute(sql`
+  const [fila] = await tx.execute<{ anonimizados: number }>(sql`
+    with anonimos as (
+      update gesnoc.cliente c
+      set documento = 'ANON' || c.id, nombre = 'Anónimo', apellido = 'Anónimo'
+      where c.documento not like 'ANON%'
+        and not exists (select 1 from gesnoc.entrada e
+                        where e.cliente_id = c.id
+                          and e.fecha > ${fecha}::date - interval '12 months')
+      returning c.id
+    ), reportes as (
       update gesnoc.reporte set descripcion = 'Anonimizado'
-      where cliente_id in (${sql.join(
-        clientes.map((c) => sql`${c.id}`),
-        sql`, `,
-      )})`);
-  }
+      where cliente_id in (select id from anonimos)
+    )
+    select count(*)::int as anonimizados from anonimos`);
   await tx.execute(sql`
     delete from gesnoc.invitacion where fecha <= ${fecha}::date - interval '12 months'`);
-  return clientes.length;
+  return fila?.anonimizados ?? 0;
 }
 
 export const marcarCerrada = (tx: Transaccion, fecha: string) =>
@@ -252,8 +259,7 @@ export async function nochesConVentas() {
   const filas = await db().execute<{ fecha: string; cerrada: boolean }>(sql`
     select fecha::text as fecha, cerrada_en is not null as cerrada
     from gesnoc.noche where abierta_en is not null
-    order by fecha desc
-    limit 60`);
+    order by fecha desc`);
   return filas.map((f) => ({ fecha: f.fecha, cerrada: f.cerrada }));
 }
 

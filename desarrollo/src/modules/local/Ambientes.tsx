@@ -140,7 +140,7 @@ export function Ambientes({ local }: Readonly<{ local: LocalConEstaciones }>) {
 
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
         {local.ambientes.map((ambiente) => (
-          <Card key={ambiente.id} withBorder padding="md" radius="md">
+          <Card key={ambiente.id} withBorder padding="md">
             <Stack gap="md">
               <Group gap="sm" wrap="nowrap">
                 <ThemeIcon variant="light" size={44} radius="md">
@@ -206,6 +206,11 @@ export function Ambientes({ local }: Readonly<{ local: LocalConEstaciones }>) {
                   variant="default"
                   color={ambiente.activo ? 'red' : undefined}
                   aria-label={`${ambiente.activo ? 'Desactivar' : 'Activar'} ${ambiente.nombre}`}
+                  confirmar={
+                    ambiente.activo
+                      ? `¿Desactivar ${ambiente.nombre}? Sus mesas dejan de verse en el mapa.`
+                      : undefined
+                  }
                 />
               </Group>
             </Stack>
@@ -213,7 +218,7 @@ export function Ambientes({ local }: Readonly<{ local: LocalConEstaciones }>) {
         ))}
       </SimpleGrid>
 
-      <Card withBorder padding="md" radius="md">
+      <Card withBorder padding="md">
         <Stack gap="md">
           <Group justify="space-between" gap="sm">
             <Group gap="sm" wrap="nowrap">

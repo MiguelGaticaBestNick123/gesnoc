@@ -33,6 +33,7 @@ import { paraBuscar } from '@/shared/utilidades/buscar';
 import { fechaCorta } from '@/shared/utilidades/fechas';
 import { cambiarActivo, crearPersona, editarPersona, restablecerClave } from './acciones';
 import type { PersonaDelLocal } from './servicios/personal';
+import { iniciales } from '@/shared/utilidades/texto';
 
 type Dialogo = { tipo: 'nueva' } | { tipo: 'editar' | 'clave'; persona: PersonaDelLocal } | null;
 
@@ -44,13 +45,6 @@ const filtros: Record<Filtro, (persona: PersonaDelLocal) => boolean> = {
   administracion: (persona) => persona.esAdministrador,
   inactivas: (persona) => !persona.activo,
 };
-
-const iniciales = (nombre: string) =>
-  nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join('');
 
 const CampoClave = ({ etiqueta }: { etiqueta: string }) => (
   <PasswordInput
@@ -103,15 +97,16 @@ function TarjetaPersona({
   alCambiarClave,
 }: Readonly<{ persona: PersonaDelLocal; alEditar: () => void; alCambiarClave: () => void }>) {
   const { principal, proximo } = persona;
-  const color = principal ? colorDelRol[principal] : persona.esAdministrador ? 'violeta' : 'gray';
+  // Una cuenta desactivada se reconoce por el avatar gris y su insignia, sin bajar el contraste.
+  const color = !persona.activo
+    ? 'gray'
+    : principal
+      ? colorDelRol[principal]
+      : persona.esAdministrador
+        ? 'violeta'
+        : 'gray';
   return (
-    <Card
-      withBorder
-      padding="md"
-      style={persona.activo ? undefined : { opacity: 0.65 }}
-      aria-label={persona.nombre}
-      role="group"
-    >
+    <Card withBorder padding="md" aria-label={persona.nombre} role="group">
       <Stack gap="md">
         <Group wrap="nowrap" align="flex-start" gap="md">
           <Avatar size={52} radius="xl" color={color} variant="light" fw={700}>
@@ -290,14 +285,6 @@ export function Personal({ personas }: Readonly<{ personas: PersonaDelLocal[] }>
           value={filtro}
           onChange={(valor) => setFiltro(valor as Filtro)}
           aria-label="Mostrar"
-          styles={{
-            label: {
-              minHeight: 44,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-          }}
           data={[
             { value: 'todas', label: 'Todas' },
             { value: 'activas', label: 'Activas' },

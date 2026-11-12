@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { describirDiferencia, repartir } from '@/modules/caja/calculos';
 import * as caja from '@/modules/caja/servicios/caja';
+import * as ambientes from '@/modules/local/servicios/ambientes';
 import * as noches from '@/modules/noche/servicios/noches';
 import { datosEntrada } from '@/modules/porteria/esquemas';
 import { registrar } from '@/modules/porteria/servicios/puerta';
@@ -247,14 +248,23 @@ describe('HU-12 cerrar la noche', () => {
     expect(noche?.cerrada_en).toBeNull();
   });
 
-  it('si el esperado cambió después del conteo, pide volver a contar', async () => {
+  it('si entra efectivo después de contar, el conteo y su nota dejan de valer', async () => {
     const mesa4 = await cuentaCon(diego, local.salon, 4, ['Mojito']);
     await pagar(diego, mesa4, 'efectivo', 6500);
-    await caja.contar(admin, FONDO, null);
+    // Faltaban $2.000 y se explicó; después se confirma más efectivo.
+    await caja.contar(admin, FONDO - 2000, 'Vuelto mal dado');
     await caja.confirmarEfectivo(admin, [{ cuenta: mesa4, numero: 1 }]);
-    await expect(caja.cerrarNoche(admin, fecha)).rejects.toThrow(
-      'El esperado cambió a $56.500 después del conteo',
-    );
+    expect((await caja.pantallaArqueo(admin)).conteo).toMatchObject({ contado: null, nota: null });
+    await expect(caja.cerrarNoche(admin, fecha)).rejects.toThrow('queda la caja sin contar');
+
+    // Una entrada en efectivo también cambia el esperado.
+    await caja.contar(admin, FONDO + 6500, null);
+    await registrar(await guardia(), entrada('12345678-5', 'efectivo'));
+    expect((await caja.pantallaArqueo(admin)).conteo?.contado).toBeNull();
+    // Una tarjeta no toca la caja: el conteo sigue.
+    await caja.contar(admin, FONDO + 11_500, null);
+    await registrar(await guardia(), entrada('15678234-3', 'tarjeta'));
+    expect((await caja.pantallaArqueo(admin)).conteo?.contado).toBe(FONDO + 11_500);
   });
 
   it('cierra, anonimiza a quien no vino en 12 meses y después nada se registra (RN-25, RN-26)', async () => {
@@ -356,5 +366,40 @@ describe('HU-29 ventas y propinas', () => {
     await expect(caja.ventasYPropinas(diego)).rejects.toThrow(NoAutorizado);
     await expect(caja.pantallaArqueo(diego)).rejects.toThrow(NoAutorizado);
     await expect(caja.pantallaEfectivo(await guardia())).rejects.toThrow(NoAutorizado);
+  });
+});
+
+describe('ajustes de la auditoría (12 nov)', () => {
+  it('no se desactiva un ambiente con cuentas abiertas o comandas sin entregar esta noche', async () => {
+    await cuentaCon(diego, local.salon, 4, ['Mojito']);
+    await expect(ambientes.cambiarActivo(admin, local.salon, false)).rejects.toThrow(
+      'cuentas abiertas o comandas sin entregar',
+    );
+    // La Terraza no tiene nada abierto: se puede desactivar.
+    await expect(ambientes.cambiarActivo(admin, local.terraza, false)).resolves.toBeUndefined();
+  });
+
+  it('un reintento de cobro recibe el pago registrado aunque la noche ya se cerró (RN-13)', async () => {
+    const mesa4 = await cuentaCon(diego, local.salon, 4, ['Mojito']);
+    const cobro = {
+      cuenta: mesa4,
+      claveEnvio: randomUUID(),
+      medio: 'tarjeta' as const,
+      monto: 6500,
+      propina: 0,
+    };
+    const primero = await cobrar(diego, cobro);
+    await caja.contar(admin, FONDO, null);
+    await caja.cerrarNoche(admin, fecha);
+    // Ya sin turno (la noche se cerró), el mismo garzón reintenta con la misma clave.
+    const sinTurno = { ...diego, turno: null };
+    await expect(cobrar(sinTurno, cobro)).resolves.toMatchObject({
+      numero: primero.numero,
+      saldo: 0,
+      cerrada: true,
+      repetido: true,
+    });
+    // Otra persona con la clave no recibe el pago.
+    await expect(cobrar({ ...paula, turno: null }, cobro)).rejects.toThrow(NoAutorizado);
   });
 });

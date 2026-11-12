@@ -8,11 +8,12 @@ import { formatearHora } from '@/shared/utilidades/fechas';
 import { formatearDocumento } from '@/shared/utilidades/rut';
 import { formas } from './formas';
 import type { IngresosDeLaNoche } from './servicios/puerta';
+import { plural } from '@/shared/utilidades/texto';
 
 type Ingreso = IngresosDeLaNoche['ingresos'][number];
 
 /** Un ingreso como lo anota la puerta: hora, ticket, nombre, RUT y forma (EF, RC, PN o gratis). */
-export function FilaIngreso({ ingreso }: Readonly<{ ingreso: Ingreso }>) {
+function FilaIngreso({ ingreso }: Readonly<{ ingreso: Ingreso }>) {
   const forma = formas[ingreso.forma];
   const nombre = `${ingreso.nombre} ${ingreso.apellido}`;
   return (
@@ -22,7 +23,7 @@ export function FilaIngreso({ ingreso }: Readonly<{ ingreso: Ingreso }>) {
       gap="sm"
       py={8}
       role="listitem"
-      aria-label={`${nombre}, ${forma.codigo}${ingreso.ticket ? `, ticket ${ingreso.ticket}` : ''}`}
+      aria-label={`${nombre}, ${forma.codigo}${ingreso.ticket ? `, ticket ${ingreso.ticket}` : ''}, ${formatearHora(ingreso.registradaEn)}`}
       style={{ borderBottom: '1px solid var(--mantine-color-dark-5)' }}
     >
       <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
@@ -105,7 +106,12 @@ export function TarjetaIngresos({
           Ingresos de esta noche
         </Text>
         <Group gap="xs">
-          <Badge variant="light" size="lg" tt="none" aria-label={`${personas} personas`}>
+          <Badge
+            variant="light"
+            size="lg"
+            tt="none"
+            aria-label={plural(personas, 'persona', 'personas')}
+          >
             {personas} {personas === 1 ? 'persona' : 'personas'}
           </Badge>
           {datos.ultimoTicket !== null && (

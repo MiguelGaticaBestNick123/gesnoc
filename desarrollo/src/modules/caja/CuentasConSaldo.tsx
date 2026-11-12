@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Anchor, Card, Group, Stack, Text } from '@mantine/core';
+import { Card, Group, Stack, Text, Button } from '@mantine/core';
 import { IconCircleCheck, IconReceipt2 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
@@ -10,6 +10,8 @@ import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora } from '@/shared/utilidades/fechas';
 import { cerrarConSaldo } from './acciones';
 import type { PantallaSaldos } from './servicios/caja';
+import { plural } from '@/shared/utilidades/texto';
+import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 // HU-27: las cuentas que siguen abiertas. Para cerrar la noche no puede quedar ninguna (RN-20): el
 // garzón las cobra, o la administración cierra una con su saldo y queda registrado quién lo hizo.
@@ -23,16 +25,12 @@ export function CuentasConSaldo({ datos }: Readonly<{ datos: PantallaSaldos }>) 
         titulo="Cuentas con saldo"
         descripcion={
           datos.noche
-            ? `${datos.cuentas.length} abiertas · ${formatearPesos(saldo)} por cobrar. Cerrar una con saldo es excepcional y queda registrado.`
+            ? `${plural(datos.cuentas.length, 'abierta', 'abiertas')} · ${formatearPesos(saldo)} por cobrar. Cerrar una con saldo es excepcional y queda registrado.`
             : 'Las cuentas abiertas de la noche.'
         }
       />
 
-      {!datos.noche && (
-        <Alert color="gray" variant="light">
-          No hay una noche abierta.
-        </Alert>
-      )}
+      {!datos.noche && <SinNocheAbierta />}
       {datos.noche && datos.cuentas.length === 0 && (
         <Card withBorder padding="lg">
           <Group gap="sm">
@@ -53,9 +51,16 @@ export function CuentasConSaldo({ datos }: Readonly<{ datos: PantallaSaldos }>) 
                 <Text size="sm" c="dimmed">
                   Cuenta {cuenta.numero} · {cuenta.garzon} · desde {formatearHora(cuenta.abiertaEn)}
                 </Text>
-                <Anchor component={Link} href={`/garzon/cuenta/${cuenta.numero}/detalle`} size="sm">
+                <Button
+                  component={Link}
+                  href={`/garzon/cuenta/${cuenta.numero}/detalle`}
+                  size="sm"
+                  mih={44}
+                  px={0}
+                  variant="subtle"
+                >
                   Ver el detalle
-                </Anchor>
+                </Button>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <Text size="xs" c="dimmed">
@@ -80,7 +85,7 @@ export function CuentasConSaldo({ datos }: Readonly<{ datos: PantallaSaldos }>) 
               color={cuenta.saldo > 0 ? 'red' : undefined}
               variant="light"
               fullWidth
-              aria-label={`Cerrar la cuenta ${cuenta.numero}`}
+              aria-label={`${cuenta.saldo > 0 ? `Cerrar con saldo ${formatearPesos(cuenta.saldo)}` : 'Cerrar cuenta'} · cuenta ${cuenta.numero}`}
               confirmar={
                 cuenta.saldo > 0
                   ? `¿Cerrar la cuenta ${cuenta.numero} (${cuenta.ubicacion}) con ${formatearPesos(cuenta.saldo)} sin cobrar? Queda registrado que la cerraste tú.`

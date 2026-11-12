@@ -125,7 +125,7 @@ describe('HU-22 anular ítem', () => {
     await registrarPago(cuenta, 5000);
     await expect(
       anular(local.persona('garzon'), { cuenta, pedido: numero, linea: 1 }),
-    ).rejects.toThrow('RN-15');
+    ).rejects.toThrow('no se pueden anular ítems');
   });
 
   it('no se anula en una cuenta cerrada, de otro ambiente ni un ítem de otra cuenta', async () => {

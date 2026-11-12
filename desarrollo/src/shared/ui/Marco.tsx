@@ -22,6 +22,7 @@ import { usePathname } from 'next/navigation';
 import { salir } from '@/modules/acceso/acciones';
 import { gruposDe, rolDeRuta, rutaDe } from '@/modules/acceso/roles';
 import { fechaCorta } from '@/shared/utilidades/fechas';
+import { iniciales } from '@/shared/utilidades/texto';
 
 interface Props {
   nombre: string;
@@ -33,13 +34,6 @@ interface Props {
   noche: string | null;
   children: React.ReactNode;
 }
-
-const iniciales = (nombre: string) =>
-  nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join('');
 
 function Marca({ subtitulo }: Readonly<{ subtitulo: string }>) {
   return (
@@ -123,7 +117,10 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
               onClick={toggle}
               hiddenFrom="sm"
               size="sm"
-              aria-label="Abrir menú"
+              w={44}
+              h={44}
+              aria-label={abierto ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={abierto}
             />
             <Box w={{ sm: 232 }}>
               <Marca subtitulo={rol?.nombre ?? 'Gestión nocturna'} />
@@ -187,7 +184,9 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
                   {grupo.secciones.map((seccion) => {
                     const href = rutaDe(rol, seccion);
                     const Icono = seccion.icono;
-                    const activa = ruta === href;
+                    // Una subpágina (la noche de un día del calendario) marca su sección.
+                    const activa =
+                      ruta === href || (seccion.ruta !== '' && ruta.startsWith(`${href}/`));
                     return (
                       <NavLink
                         key={href}

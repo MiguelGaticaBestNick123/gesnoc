@@ -3,7 +3,7 @@ import { z } from 'zod';
 /** Casilla de un formulario: el navegador solo la envía si está marcada. */
 export const marcado = z.literal('on').optional().transform(Boolean);
 
-export const identificador = z.coerce.number().int().positive();
+export const identificador = z.coerce.number().int().positive().max(2_147_483_647);
 
 const TOPE_PESOS = 100_000_000;
 

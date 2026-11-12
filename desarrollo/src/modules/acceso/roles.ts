@@ -1,5 +1,7 @@
 import {
+  IconArmchair,
   IconBell,
+  IconBook2,
   IconBottle,
   IconBuildingStore,
   IconCalculator,
@@ -10,18 +12,17 @@ import {
   IconChefHat,
   IconClipboardList,
   IconDoorEnter,
+  IconGlassFull,
   IconHistory,
   IconLayoutDashboard,
   IconListCheck,
   IconMap2,
-  IconMapPin,
   IconMoon,
   IconQrcode,
   IconReceipt2,
   IconSettings,
   IconShieldCheck,
-  IconTicket,
-  IconToolsKitchen2,
+  IconTrophy,
   IconUserCheck,
   IconUsers,
   IconUsersGroup,
@@ -58,7 +59,7 @@ export interface Rol {
 const misTurnos: Seccion = {
   ruta: 'turnos',
   etiqueta: 'Mis turnos',
-  icono: IconCalendarEvent,
+  icono: IconCalendarUser,
   grupo: 'Mi cuenta',
   descripcion: 'Calendario de turnos asignados y declaración de disponibilidad.',
   historias: ['HU-09'],
@@ -85,7 +86,7 @@ export const roles: Rol[] = [
     descripcion: 'Configura el local, publica las noches y cuadra la caja.',
     icono: IconSettings,
     secciones: [
-      { ruta: '', etiqueta: 'Resumen', icono: IconLayoutDashboard },
+      { ruta: '', etiqueta: 'Resumen', icono: IconLayoutDashboard, construida: true },
       {
         ruta: 'noche',
         etiqueta: 'Noche en curso',
@@ -180,7 +181,7 @@ export const roles: Rol[] = [
       {
         ruta: 'catalogo',
         etiqueta: 'Catálogo',
-        icono: IconClipboardList,
+        icono: IconBook2,
         grupo: 'Local',
         descripcion: 'Categorías y productos con la regla que indica a qué estación va cada uno.',
         historias: ['HU-06'],
@@ -216,7 +217,13 @@ export const roles: Rol[] = [
     descripcion: 'Atiende las mesas de su ambiente: cuentas, pedidos, entrega y cobro.',
     icono: IconClipboardList,
     secciones: [
-      { ruta: '', etiqueta: 'Mesas', icono: IconMapPin, historias: ['HU-13'] },
+      {
+        ruta: '',
+        etiqueta: 'Mesas',
+        icono: IconArmchair,
+        historias: ['HU-13'],
+        construida: true,
+      },
       {
         ruta: 'cuentas',
         etiqueta: 'Cuentas abiertas',
@@ -228,7 +235,7 @@ export const roles: Rol[] = [
       },
       {
         ruta: 'comandas',
-        etiqueta: 'Comandas listas',
+        etiqueta: 'Comandas',
         icono: IconListCheck,
         descripcion: 'Avisos de pedidos listos para retirar y marcar como entregados.',
         historias: ['HU-20', 'HU-21'],
@@ -262,8 +269,9 @@ export const roles: Rol[] = [
       {
         ruta: '',
         etiqueta: 'Cola de comandas',
-        icono: IconListCheck,
+        icono: IconGlassFull,
         historias: ['HU-17', 'HU-19'],
+        construida: true,
       },
       misTurnos,
     ],
@@ -277,8 +285,9 @@ export const roles: Rol[] = [
       {
         ruta: '',
         etiqueta: 'Cola de comandas',
-        icono: IconToolsKitchen2,
+        icono: IconChefHat,
         historias: ['HU-18', 'HU-19'],
+        construida: true,
       },
       misTurnos,
     ],
@@ -294,6 +303,7 @@ export const roles: Rol[] = [
         etiqueta: 'Entrada',
         icono: IconDoorEnter,
         historias: ['HU-30', 'HU-31', 'HU-33'],
+        construida: true,
       },
       {
         ruta: 'puerta',
@@ -314,7 +324,7 @@ export const roles: Rol[] = [
       {
         ruta: 'sorteo',
         etiqueta: 'Sorteo',
-        icono: IconTicket,
+        icono: IconTrophy,
         descripcion: 'Sorteo del premio de cada ambiente entre los tickets de la noche.',
         historias: ['HU-37'],
         construida: true,

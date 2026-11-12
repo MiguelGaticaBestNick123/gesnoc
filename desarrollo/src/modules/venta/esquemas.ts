@@ -3,7 +3,8 @@ import { z } from 'zod';
 /** Dónde está la cuenta: en una mesa o, con el cliente de pie, en un ambiente con una referencia. */
 export type UbicacionCuenta = { mesaId: number } | { ambienteId: number; referencia: string };
 
-const id = (mensaje: string) => z.number(mensaje).int(mensaje).positive(mensaje);
+const id = (mensaje: string) =>
+  z.number(mensaje).int(mensaje).positive(mensaje).max(2_147_483_647, mensaje);
 
 export const datosAbrirCuenta = z
   .object({

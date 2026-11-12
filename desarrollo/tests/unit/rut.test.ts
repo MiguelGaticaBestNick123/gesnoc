@@ -40,6 +40,11 @@ describe('RUT (RN-21)', () => {
     expect(normalizarDocumento('extranjero', 'p 1234567')).toBe('P1234567');
   });
 
+  it('un documento extranjero no puede parecerse a uno anonimizado (RN-25)', () => {
+    expect(normalizarExtranjero('ANON12')).toBeNull();
+    expect(normalizarExtranjero('anon-12')).toBeNull();
+  });
+
   it('el tipo lo elige quien registra: un pasaporte de números no se toma como RUT', () => {
     expect(normalizarDocumento('extranjero', '123456785')).toBe('123456785');
     expect(normalizarDocumento('rut', '123456785')).toBe('12345678-5');
