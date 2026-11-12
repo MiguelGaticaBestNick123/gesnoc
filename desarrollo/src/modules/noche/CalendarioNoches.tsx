@@ -24,6 +24,7 @@ import { CalendarioMes, type DiaDelCalendario } from '@/shared/ui/CalendarioMes'
 import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
+import { hojaInferior } from '@/shared/ui/hoja';
 import { mesDe } from '@/shared/utilidades/calendario';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearFecha, tituloDeFecha } from '@/shared/utilidades/fechas';
@@ -325,9 +326,7 @@ export function CalendarioNoches({
         radius="lg"
         zIndex={400}
         closeButtonProps={{ 'aria-label': 'Cerrar' }}
-        styles={
-          ancha ? undefined : { content: { height: 'auto', maxHeight: '85dvh', flex: '0 0 auto' } }
-        }
+        styles={ancha ? undefined : hojaInferior}
         title={
           dia && (
             <Group gap="sm">

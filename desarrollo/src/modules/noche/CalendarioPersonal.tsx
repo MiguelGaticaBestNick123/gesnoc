@@ -5,6 +5,7 @@ import { useMediaQuery } from '@mantine/hooks';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { CalendarioMes, type DiaDelCalendario } from '@/shared/ui/CalendarioMes';
+import { hojaInferior } from '@/shared/ui/hoja';
 import { formatearFecha, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { declararDisponibilidad } from './acciones';
 import { colorDelRol, nombreDelRol } from './nombres';
@@ -104,9 +105,7 @@ export function CalendarioPersonal({
         radius="lg"
         zIndex={400}
         closeButtonProps={{ 'aria-label': 'Cerrar' }}
-        styles={
-          ancha ? undefined : { content: { height: 'auto', maxHeight: '85dvh', flex: '0 0 auto' } }
-        }
+        styles={ancha ? undefined : hojaInferior}
         title={
           dia && (
             <Text fw={700} size="lg">
