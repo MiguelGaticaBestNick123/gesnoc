@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   exigir,
   inicioDe,
+  llevaAmbiente,
   puede,
   type Actor,
   type Permiso,
@@ -15,7 +16,7 @@ const persona = (rol?: RolTurno): Actor => ({
   id: 1,
   nombre: 'Persona',
   esAdministrador: false,
-  turno: rol ? { fecha: '2026-11-06', rol, ambienteId: rol === 'guardia' ? null : 1 } : null,
+  turno: rol ? { fecha: '2026-11-06', rol, ambienteId: llevaAmbiente(rol) ? 1 : null } : null,
 });
 
 const permitidos = (actor: Actor) => permisos.filter((permiso) => puede(actor, permiso));
@@ -59,6 +60,22 @@ describe('el ambiente del recurso (RN-14)', () => {
 
   it('el guardia no tiene ambiente: no opera cuentas', () => {
     expect(puede(persona('guardia'), 'garzon', salon)).toBe(false);
+  });
+
+  it('la cocina es de todo el local: quien cocina la atiende sin ambiente y la barra no', () => {
+    const cocina = { ambienteId: null };
+    expect(puede(persona('cocinero'), 'cocina', cocina)).toBe(true);
+    expect(puede(persona('barman'), 'cocina', cocina)).toBe(false);
+    expect(puede(persona('cocinero'), 'barra', salon)).toBe(false);
+  });
+
+  it('solo garzón y barra llevan ambiente (RN-04)', () => {
+    expect((['garzon', 'barman', 'cocinero', 'guardia'] as const).map(llevaAmbiente)).toEqual([
+      true,
+      true,
+      false,
+      false,
+    ]);
   });
 
   it('exigir rechaza el ambiente ajeno', () => {

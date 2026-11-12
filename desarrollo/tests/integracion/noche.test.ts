@@ -202,26 +202,29 @@ describe('HU-10 asignar turnos', () => {
     expect((await dotacion())[0]).toMatchObject({ rol: 'barman', ambienteId: terraza });
   });
 
-  it('CA1: la base rechaza un guardia con ambiente y un garzón sin él (RN-04)', async () => {
+  it('CA1: la base rechaza guardia o cocina con ambiente y garzón sin él (RN-04)', async () => {
     const confirmado = { ...turno, confirmarSinDisponibilidad: true };
-    const mensaje = 'El guardia no lleva ambiente y los demás roles sí';
-    await expect(turnos.asignar(administracion, { ...confirmado, rol: 'guardia' })).rejects.toThrow(
-      mensaje,
-    );
+    const mensaje = 'Garzón y barra llevan ambiente; cocina y guardia no';
+    for (const rol of ['guardia', 'cocinero'] as const) {
+      await expect(turnos.asignar(administracion, { ...confirmado, rol })).rejects.toThrow(mensaje);
+    }
     await expect(
       turnos.asignar(administracion, { ...confirmado, ambienteId: null }),
     ).rejects.toThrow(mensaje);
   });
 
-  it('un guardia se asigna sin ambiente', async () => {
-    await turnos.asignar(administracion, {
-      ...turno,
-      rol: 'guardia',
-      ambienteId: null,
-      confirmarSinDisponibilidad: true,
-    });
-    expect((await dotacion())[0]).toMatchObject({ rol: 'guardia', ambienteId: null });
-  });
+  it.each(['guardia', 'cocinero'] as const)(
+    'quien hace de %s se asigna sin ambiente: trabaja para todo el local',
+    async (rol) => {
+      await turnos.asignar(administracion, {
+        ...turno,
+        rol,
+        ambienteId: null,
+        confirmarSinDisponibilidad: true,
+      });
+      expect((await dotacion())[0]).toMatchObject({ rol, ambienteId: null });
+    },
+  );
 
   it('un turno se puede quitar', async () => {
     await turnos.asignar(administracion, { ...turno, confirmarSinDisponibilidad: true });

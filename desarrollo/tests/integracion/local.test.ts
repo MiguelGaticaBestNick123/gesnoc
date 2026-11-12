@@ -8,12 +8,21 @@ import { administracion, conBaseVacia, conTurno } from './apoyo';
 conBaseVacia();
 
 const salon = { nombre: 'Salón', planoAncho: 900, planoAlto: 440 };
-const barra = { nombre: 'Barra Salón', tipo: 'barra' as const };
-const cocina = { nombre: 'Cocina', tipo: 'cocina' as const };
+const barra = (ambienteId: number) => ({
+  nombre: 'Barra Salón',
+  tipo: 'barra' as const,
+  ambienteId,
+});
+// La cocina es de todo el local: no tiene ambiente (decisión del Product Owner, 12 nov).
+const cocina = { nombre: 'Cocina', tipo: 'cocina' as const, ambienteId: null };
+
+const local = () => ambientes.listar(administracion);
 
 async function crearSalon() {
   await ambientes.crear(administracion, salon);
-  const [ambiente] = await ambientes.listar(administracion);
+  const {
+    ambientes: [ambiente],
+  } = await local();
   return ambiente!.id;
 }
 
@@ -39,7 +48,9 @@ describe('HU-04 ambientes y estaciones', () => {
     const id = await crearSalon();
     await ambientes.editar(administracion, id, { ...salon, nombre: 'Salón principal' });
     await ambientes.cambiarActivo(administracion, id, false);
-    const [ambiente] = await ambientes.listar(administracion);
+    const {
+      ambientes: [ambiente],
+    } = await local();
     expect(ambiente).toMatchObject({ nombre: 'Salón principal', activo: false });
   });
 
@@ -52,25 +63,35 @@ describe('HU-04 ambientes y estaciones', () => {
 
   it('CA2: un ambiente tiene a lo más una barra (RN-27)', async () => {
     const id = await crearSalon();
-    await ambientes.crearEstacion(administracion, id, barra);
+    await ambientes.crearEstacion(administracion, barra(id));
     await expect(
-      ambientes.crearEstacion(administracion, id, { nombre: 'Otra barra', tipo: 'barra' }),
+      ambientes.crearEstacion(administracion, { ...barra(id), nombre: 'Otra barra' }),
     ).rejects.toThrow('Este ambiente ya tiene una barra');
   });
 
-  it('CA3: la estación pertenece a su ambiente y puede convivir una cocina con la barra', async () => {
+  it('CA3: la barra pertenece a su ambiente y la cocina a todo el local', async () => {
     const id = await crearSalon();
-    await ambientes.crearEstacion(administracion, id, barra);
-    await ambientes.crearEstacion(administracion, id, cocina);
-    const [ambiente] = await ambientes.listar(administracion);
-    expect(ambiente?.estaciones.map((e) => e.nombre)).toEqual(['Barra Salón', 'Cocina']);
+    await ambientes.crearEstacion(administracion, barra(id));
+    await ambientes.crearEstacion(administracion, cocina);
+    const { ambientes: lista, cocinas } = await local();
+    expect(lista[0]?.barra?.nombre).toBe('Barra Salón');
+    expect(cocinas.map((e) => e.nombre)).toEqual(['Cocina']);
+  });
+
+  it('la base no acepta una cocina dentro de un ambiente ni una barra fuera de uno', async () => {
+    const id = await crearSalon();
+    await expect(
+      ambientes.crearEstacion(administracion, { ...cocina, ambienteId: id }),
+    ).rejects.toThrow('La barra va en un ambiente y la cocina en ninguno');
+    await expect(
+      ambientes.crearEstacion(administracion, { ...barra(id), ambienteId: null }),
+    ).rejects.toThrow('La barra va en un ambiente y la cocina en ninguno');
   });
 
   it('una estación con productos no se puede eliminar', async () => {
-    const id = await crearSalon();
-    await ambientes.crearEstacion(administracion, id, cocina);
-    const [ambiente] = await ambientes.listar(administracion);
-    const estacionId = ambiente!.estaciones[0]!.id;
+    await ambientes.crearEstacion(administracion, cocina);
+    const { cocinas } = await local();
+    const estacionId = cocinas[0]!.id;
     await catalogo.crearCategoria(administracion, {
       nombre: 'Comida',
       reglaRuteo: 'fija',
@@ -81,18 +102,21 @@ describe('HU-04 ambientes y estaciones', () => {
     );
   });
 
-  it('una estación sin uso se elimina', async () => {
+  it('una estación sin uso se elimina y se puede renombrar', async () => {
     const id = await crearSalon();
-    await ambientes.crearEstacion(administracion, id, barra);
-    const [ambiente] = await ambientes.listar(administracion);
-    await ambientes.eliminarEstacion(administracion, ambiente!.estaciones[0]!.id);
-    const [despues] = await ambientes.listar(administracion);
-    expect(despues?.estaciones).toEqual([]);
+    await ambientes.crearEstacion(administracion, barra(id));
+    const {
+      ambientes: [antes],
+    } = await local();
+    await ambientes.renombrarEstacion(administracion, antes!.barra!.id, 'Barra principal');
+    expect((await local()).ambientes[0]?.barra?.nombre).toBe('Barra principal');
+    await ambientes.eliminarEstacion(administracion, antes!.barra!.id);
+    expect((await local()).ambientes[0]?.barra).toBeNull();
   });
 
   it('solo la administración configura el local (RNF-01)', async () => {
     await expect(ambientes.crear(conTurno('garzon'), salon)).rejects.toThrow(NoAutorizado);
-    await expect(ambientes.crearEstacion(conTurno('barman'), 1, barra)).rejects.toThrow(
+    await expect(ambientes.crearEstacion(conTurno('barman'), barra(1))).rejects.toThrow(
       NoAutorizado,
     );
   });
@@ -101,10 +125,11 @@ describe('HU-04 ambientes y estaciones', () => {
 describe('HU-06 categorías y productos', () => {
   it('CA1: una categoría fija apunta a una estación y un producto puede forzar otra (RN-10)', async () => {
     const id = await crearSalon();
-    await ambientes.crearEstacion(administracion, id, cocina);
-    await ambientes.crearEstacion(administracion, id, barra);
-    const [ambiente] = await ambientes.listar(administracion);
-    const [barraSalon, cocinaSalon] = ambiente!.estaciones;
+    await ambientes.crearEstacion(administracion, cocina);
+    await ambientes.crearEstacion(administracion, barra(id));
+    const { ambientes: lista, cocinas } = await local();
+    const barraSalon = lista[0]!.barra;
+    const cocinaSalon = cocinas[0];
 
     await catalogo.crearCategoria(administracion, {
       nombre: 'Comida',

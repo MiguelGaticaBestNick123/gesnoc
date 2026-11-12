@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 import { db, type Transaccion } from '@/shared/db/cliente';
 import { ambiente, estacion } from '@/shared/db/esquema/schema';
 import type { FilaComanda, FilaLinea, TipoEstacion } from '../cola';
@@ -17,8 +17,9 @@ export const estacionesDelTipo = (tipo: TipoEstacion) =>
   db()
     .select(columnasDeEstacion)
     .from(estacion)
-    .innerJoin(ambiente, eq(ambiente.id, estacion.ambienteId))
-    .where(and(eq(estacion.tipo, tipo), eq(ambiente.activo, true)))
+    // La cocina no tiene ambiente; una barra se deja de ver si su ambiente se desactiva.
+    .leftJoin(ambiente, eq(ambiente.id, estacion.ambienteId))
+    .where(and(eq(estacion.tipo, tipo), or(isNull(estacion.ambienteId), eq(ambiente.activo, true))))
     .orderBy(asc(estacion.nombre));
 
 export type Estacion = Awaited<ReturnType<typeof estacionesDelTipo>>[number];
@@ -27,7 +28,7 @@ export async function buscarEstacion(tx: Transaccion, id: number) {
   const [fila] = await tx
     .select(columnasDeEstacion)
     .from(estacion)
-    .innerJoin(ambiente, eq(ambiente.id, estacion.ambienteId))
+    .leftJoin(ambiente, eq(ambiente.id, estacion.ambienteId))
     .where(eq(estacion.id, id));
   return fila;
 }

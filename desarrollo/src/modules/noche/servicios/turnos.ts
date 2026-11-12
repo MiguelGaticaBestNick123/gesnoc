@@ -80,7 +80,7 @@ export async function asignar(actor: Actor, datos: DatosAsignacion) {
     throw new ErrorDeNegocio('Esta persona no declaró disponibilidad: confirma para asignarla');
   }
   await traducir(repositorio.guardarTurno(datos), {
-    asignacion_ambiente_ck: 'El guardia no lleva ambiente y los demás roles sí', // RN-04
+    asignacion_ambiente_ck: 'Garzón y barra llevan ambiente; cocina y guardia no', // RN-04
   });
 }
 

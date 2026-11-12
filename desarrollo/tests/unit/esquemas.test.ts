@@ -30,6 +30,18 @@ describe('catálogo', () => {
     expect(datosEstacion.safeParse({ nombre: 'Patio', tipo: 'bodega' }).success).toBe(false);
   });
 
+  it('la barra exige su ambiente y la cocina no guarda ninguno', () => {
+    expect(datosEstacion.safeParse({ nombre: 'Barra Patio', tipo: 'barra' }).success).toBe(false);
+    expect(datosEstacion.parse({ nombre: 'Barra', tipo: 'barra', ambienteId: '2' })).toEqual({
+      nombre: 'Barra',
+      tipo: 'barra',
+      ambienteId: 2,
+    });
+    expect(
+      datosEstacion.parse({ nombre: 'Cocina', tipo: 'cocina', ambienteId: '2' }).ambienteId,
+    ).toBe(null);
+  });
+
   it('la regla fija exige estación (RN-10)', () => {
     const sin = { nombre: 'Comida', reglaRuteo: 'fija', estacionId: '' };
     expect(datosCategoria.safeParse(sin).success).toBe(false);
@@ -82,12 +94,12 @@ describe('noche', () => {
     expect(datosApertura.safeParse({ ...apertura, fondo: '10.5' }).success).toBe(false);
   });
 
-  it('el guardia no lleva ambiente y los demás roles sí (RN-04)', () => {
+  it('garzón y barra llevan ambiente; cocina y guardia no (RN-04)', () => {
     const turno = { fecha: noche.fecha, usuarioId: '1' };
-    expect(datosAsignacion.parse({ ...turno, rol: 'guardia', ambienteId: '1' }).ambienteId).toBe(
-      null,
-    );
+    for (const rol of ['guardia', 'cocinero']) {
+      expect(datosAsignacion.parse({ ...turno, rol, ambienteId: '1' }).ambienteId).toBe(null);
+    }
     expect(datosAsignacion.safeParse({ ...turno, rol: 'garzon' }).success).toBe(false);
-    expect(datosAsignacion.parse({ ...turno, rol: 'garzon', ambienteId: '1' }).ambienteId).toBe(1);
+    expect(datosAsignacion.parse({ ...turno, rol: 'barman', ambienteId: '1' }).ambienteId).toBe(1);
   });
 });

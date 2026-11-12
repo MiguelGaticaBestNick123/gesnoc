@@ -19,13 +19,10 @@ export const actualizarAmbiente = (id: number, datos: DatosAmbiente) =>
 export const fijarAmbienteActivo = (id: number, activo: boolean) =>
   db().update(ambiente).set({ activo }).where(eq(ambiente.id, id));
 
-export const insertarEstacion = (ambienteId: number, datos: DatosEstacion) =>
-  db()
-    .insert(estacion)
-    .values({ ...datos, ambienteId });
+export const insertarEstacion = (datos: DatosEstacion) => db().insert(estacion).values(datos);
 
-export const actualizarEstacion = (id: number, datos: DatosEstacion) =>
-  db().update(estacion).set(datos).where(eq(estacion.id, id));
+export const renombrarEstacion = (id: number, nombre: string) =>
+  db().update(estacion).set({ nombre }).where(eq(estacion.id, id));
 
 export const eliminarEstacion = (id: number) => db().delete(estacion).where(eq(estacion.id, id));
 

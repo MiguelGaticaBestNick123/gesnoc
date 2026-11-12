@@ -47,24 +47,24 @@ test('HU-03: un correo repetido se rechaza sin cerrar el formulario', async ({ p
   await expect(modal(page).getByLabel('Nombre')).toHaveValue('Repetida');
 });
 
-test('HU-04: un ambiente admite una sola barra', async ({ page }) => {
+test('HU-04: cada ambiente tiene una barra y la cocina es de todo el local', async ({ page }) => {
   await entrarComo(page, 'admin');
   await page.goto('/admin/ambientes');
+  await expect(
+    page.getByText('De todo el local: recibe la comida de todos los ambientes.', { exact: true }),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'Agregar ambiente' }).click();
   await modal(page).getByLabel('Nombre').fill('Patio');
   await modal(page).getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByRole('heading', { name: 'Patio' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Agregar estación a Patio' }).click();
+  await page.getByRole('button', { name: 'Agregar barra a Patio' }).click();
   await modal(page).getByLabel('Nombre').fill('Barra Patio');
   await modal(page).getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByText('Barra Patio')).toBeVisible();
-
-  await page.getByRole('button', { name: 'Agregar estación a Patio' }).click();
-  await modal(page).getByLabel('Nombre').fill('Otra barra');
-  await modal(page).getByRole('button', { name: 'Guardar' }).click();
-  await expect(modal(page).getByRole('alert')).toHaveText('Este ambiente ya tiene una barra');
+  // RN-27: con su barra, el ambiente ya no ofrece otra (la base también la rechaza).
+  await expect(page.getByRole('button', { name: 'Agregar barra a Patio' })).toHaveCount(0);
 });
 
 test('HU-06: se agrega un producto y el precio debe ser mayor que cero', async ({ page }) => {

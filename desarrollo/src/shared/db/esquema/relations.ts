@@ -7,19 +7,22 @@ import {
   estacion,
   categoria,
   producto,
-  noche,
   arqueo,
+  noche,
   disponibilidad,
   asignacion,
+  evento,
+  premio,
   comanda,
   pedido,
+  lista,
   sorteo,
   entrada,
   llamado,
   cuenta,
   cliente,
   reporte,
-  invitado,
+  invitacion,
   detallePedido,
   pago,
 } from './schema';
@@ -48,11 +51,11 @@ export const usuarioRelations = relations(usuario, ({ many }) => ({
     relationName: 'cuenta_cerradaPor_usuario_id',
   }),
   detallePedidos: many(detallePedido),
-  pagos_registradoPor: many(pago, {
-    relationName: 'pago_registradoPor_usuario_id',
-  }),
   pagos_confirmadoPor: many(pago, {
     relationName: 'pago_confirmadoPor_usuario_id',
+  }),
+  pagos_registradoPor: many(pago, {
+    relationName: 'pago_registradoPor_usuario_id',
   }),
 }));
 
@@ -69,6 +72,7 @@ export const ambienteRelations = relations(ambiente, ({ many }) => ({
   mesas: many(mesa),
   estacions: many(estacion),
   asignacions: many(asignacion),
+  premios: many(premio),
   sorteos: many(sorteo),
   cuentas: many(cuenta),
 }));
@@ -100,17 +104,18 @@ export const productoRelations = relations(producto, ({ one, many }) => ({
     fields: [producto.estacionId],
     references: [estacion.id],
   }),
+  premios: many(premio),
   detallePedidos: many(detallePedido),
 }));
 
 export const arqueoRelations = relations(arqueo, ({ one }) => ({
-  noche: one(noche, {
-    fields: [arqueo.fecha],
-    references: [noche.fecha],
-  }),
   usuario: one(usuario, {
     fields: [arqueo.contadoPor],
     references: [usuario.id],
+  }),
+  noche: one(noche, {
+    fields: [arqueo.fecha],
+    references: [noche.fecha],
   }),
 }));
 
@@ -118,10 +123,14 @@ export const nocheRelations = relations(noche, ({ many }) => ({
   arqueos: many(arqueo),
   disponibilidads: many(disponibilidad),
   asignacions: many(asignacion),
+  eventos: many(evento),
+  premios: many(premio),
+  listas: many(lista),
   sorteos: many(sorteo),
   llamados: many(llamado),
   pedidos: many(pedido),
   reportes: many(reporte),
+  invitacions: many(invitacion),
   entradas: many(entrada),
   cuentas: many(cuenta),
 }));
@@ -138,6 +147,10 @@ export const disponibilidadRelations = relations(disponibilidad, ({ one }) => ({
 }));
 
 export const asignacionRelations = relations(asignacion, ({ one }) => ({
+  ambiente: one(ambiente, {
+    fields: [asignacion.ambienteId],
+    references: [ambiente.id],
+  }),
   noche: one(noche, {
     fields: [asignacion.fecha],
     references: [noche.fecha],
@@ -146,9 +159,27 @@ export const asignacionRelations = relations(asignacion, ({ one }) => ({
     fields: [asignacion.usuarioId],
     references: [usuario.id],
   }),
+}));
+
+export const eventoRelations = relations(evento, ({ one }) => ({
+  noche: one(noche, {
+    fields: [evento.fecha],
+    references: [noche.fecha],
+  }),
+}));
+
+export const premioRelations = relations(premio, ({ one }) => ({
   ambiente: one(ambiente, {
-    fields: [asignacion.ambienteId],
+    fields: [premio.ambienteId],
     references: [ambiente.id],
+  }),
+  noche: one(noche, {
+    fields: [premio.fecha],
+    references: [noche.fecha],
+  }),
+  producto: one(producto, {
+    fields: [premio.productoId],
+    references: [producto.id],
   }),
 }));
 
@@ -166,6 +197,10 @@ export const comandaRelations = relations(comanda, ({ one, many }) => ({
 
 export const pedidoRelations = relations(pedido, ({ one, many }) => ({
   comandas: many(comanda),
+  cuenta: one(cuenta, {
+    fields: [pedido.fecha],
+    references: [cuenta.fecha],
+  }),
   noche: one(noche, {
     fields: [pedido.fecha],
     references: [noche.fecha],
@@ -174,53 +209,57 @@ export const pedidoRelations = relations(pedido, ({ one, many }) => ({
     fields: [pedido.tomadoPor],
     references: [usuario.id],
   }),
-  cuenta: one(cuenta, {
-    fields: [pedido.fecha],
-    references: [cuenta.fecha],
-  }),
   detallePedidos: many(detallePedido),
 }));
 
-export const sorteoRelations = relations(sorteo, ({ one }) => ({
+export const listaRelations = relations(lista, ({ one, many }) => ({
   noche: one(noche, {
-    fields: [sorteo.fecha],
+    fields: [lista.fecha],
     references: [noche.fecha],
   }),
+  invitacions: many(invitacion),
+}));
+
+export const sorteoRelations = relations(sorteo, ({ one }) => ({
   ambiente: one(ambiente, {
     fields: [sorteo.ambienteId],
     references: [ambiente.id],
   }),
-  usuario: one(usuario, {
-    fields: [sorteo.realizadoPor],
-    references: [usuario.id],
+  noche: one(noche, {
+    fields: [sorteo.fecha],
+    references: [noche.fecha],
   }),
   entrada: one(entrada, {
     fields: [sorteo.fecha],
     references: [entrada.fecha],
   }),
+  usuario: one(usuario, {
+    fields: [sorteo.realizadoPor],
+    references: [usuario.id],
+  }),
 }));
 
 export const entradaRelations = relations(entrada, ({ one, many }) => ({
   sorteos: many(sorteo),
-  noche: one(noche, {
-    fields: [entrada.fecha],
-    references: [noche.fecha],
-  }),
   cliente: one(cliente, {
     fields: [entrada.clienteId],
     references: [cliente.id],
+  }),
+  noche: one(noche, {
+    fields: [entrada.fecha],
+    references: [noche.fecha],
   }),
   usuario: one(usuario, {
     fields: [entrada.registradaPor],
     references: [usuario.id],
   }),
-  invitado: one(invitado, {
-    fields: [entrada.invitadoId],
-    references: [invitado.id],
-  }),
 }));
 
 export const llamadoRelations = relations(llamado, ({ one }) => ({
+  usuario: one(usuario, {
+    fields: [llamado.atendidoPor],
+    references: [usuario.id],
+  }),
   noche: one(noche, {
     fields: [llamado.fecha],
     references: [noche.fecha],
@@ -229,14 +268,24 @@ export const llamadoRelations = relations(llamado, ({ one }) => ({
     fields: [llamado.mesaId],
     references: [mesa.id],
   }),
-  usuario: one(usuario, {
-    fields: [llamado.atendidoPor],
-    references: [usuario.id],
-  }),
 }));
 
 export const cuentaRelations = relations(cuenta, ({ one, many }) => ({
   pedidos: many(pedido),
+  usuario_abiertaPor: one(usuario, {
+    fields: [cuenta.abiertaPor],
+    references: [usuario.id],
+    relationName: 'cuenta_abiertaPor_usuario_id',
+  }),
+  ambiente: one(ambiente, {
+    fields: [cuenta.ambienteId],
+    references: [ambiente.id],
+  }),
+  usuario_cerradaPor: one(usuario, {
+    fields: [cuenta.cerradaPor],
+    references: [usuario.id],
+    relationName: 'cuenta_cerradaPor_usuario_id',
+  }),
   noche: one(noche, {
     fields: [cuenta.fecha],
     references: [noche.fecha],
@@ -244,20 +293,6 @@ export const cuentaRelations = relations(cuenta, ({ one, many }) => ({
   mesa: one(mesa, {
     fields: [cuenta.mesaId],
     references: [mesa.id],
-  }),
-  ambiente: one(ambiente, {
-    fields: [cuenta.ambienteId],
-    references: [ambiente.id],
-  }),
-  usuario_abiertaPor: one(usuario, {
-    fields: [cuenta.abiertaPor],
-    references: [usuario.id],
-    relationName: 'cuenta_abiertaPor_usuario_id',
-  }),
-  usuario_cerradaPor: one(usuario, {
-    fields: [cuenta.cerradaPor],
-    references: [usuario.id],
-    relationName: 'cuenta_cerradaPor_usuario_id',
   }),
   pagos: many(pago),
 }));
@@ -282,14 +317,21 @@ export const clienteRelations = relations(cliente, ({ many }) => ({
   entradas: many(entrada),
 }));
 
-export const invitadoRelations = relations(invitado, ({ many }) => ({
-  entradas: many(entrada),
+export const invitacionRelations = relations(invitacion, ({ one }) => ({
+  noche: one(noche, {
+    fields: [invitacion.fecha],
+    references: [noche.fecha],
+  }),
+  lista: one(lista, {
+    fields: [invitacion.fecha],
+    references: [lista.fecha],
+  }),
 }));
 
 export const detallePedidoRelations = relations(detallePedido, ({ one }) => ({
-  producto: one(producto, {
-    fields: [detallePedido.productoId],
-    references: [producto.id],
+  comanda: one(comanda, {
+    fields: [detallePedido.fecha],
+    references: [comanda.fecha],
   }),
   usuario: one(usuario, {
     fields: [detallePedido.anuladoPor],
@@ -299,18 +341,13 @@ export const detallePedidoRelations = relations(detallePedido, ({ one }) => ({
     fields: [detallePedido.fecha],
     references: [pedido.fecha],
   }),
-  comanda: one(comanda, {
-    fields: [detallePedido.fecha],
-    references: [comanda.estacionId],
+  producto: one(producto, {
+    fields: [detallePedido.productoId],
+    references: [producto.id],
   }),
 }));
 
 export const pagoRelations = relations(pago, ({ one }) => ({
-  usuario_registradoPor: one(usuario, {
-    fields: [pago.registradoPor],
-    references: [usuario.id],
-    relationName: 'pago_registradoPor_usuario_id',
-  }),
   usuario_confirmadoPor: one(usuario, {
     fields: [pago.confirmadoPor],
     references: [usuario.id],
@@ -319,5 +356,10 @@ export const pagoRelations = relations(pago, ({ one }) => ({
   cuenta: one(cuenta, {
     fields: [pago.fecha],
     references: [cuenta.fecha],
+  }),
+  usuario_registradoPor: one(usuario, {
+    fields: [pago.registradoPor],
+    references: [usuario.id],
+    relationName: 'pago_registradoPor_usuario_id',
   }),
 }));

@@ -17,7 +17,10 @@ const ajustar = (archivo, cambiar) => {
   writeFileSync(ruta, cambiar(readFileSync(ruta, 'utf8')));
 };
 
-const sinSufijo = (texto) => texto.replace(/(\w+?)InGesnoc/g, '$1');
+// Según la base contra la que corre, drizzle-kit nombra las secuencias con o sin el esquema; sin él,
+// el resultado no depende de la base.
+const sinSufijo = (texto) =>
+  texto.replace(/(\w+?)InGesnoc/g, '$1').replace(/(['"])gesnoc\.(\w+_seq)\1/g, '$1$2$1');
 
 ajustar('schema.ts', (texto) => {
   const conBytea = texto.replace(

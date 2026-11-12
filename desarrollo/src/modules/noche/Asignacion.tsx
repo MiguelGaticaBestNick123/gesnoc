@@ -18,7 +18,7 @@ import { IconStarFilled, IconUserCheck } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { Ambiente } from '@/modules/local/repositorios/ambientes';
-import type { RolTurno } from '@/shared/autorizacion';
+import { llevaAmbiente, type RolTurno } from '@/shared/autorizacion';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
@@ -76,7 +76,7 @@ function FormularioTurno({
         size="md"
         data={opcionesRol}
       />
-      {rol !== 'guardia' && (
+      {llevaAmbiente(rol) && (
         <NativeSelect
           name="ambienteId"
           label="Ambiente"
@@ -98,12 +98,11 @@ function ResumenDotacion({
     <Group gap="xs">
       {roles.map((rol) => {
         const delRol = dotacion.filter((p) => p.rol === rol);
-        const detalle =
-          rol === 'guardia'
-            ? String(delRol.length)
-            : ambientes
-                .map((a) => `${a.nombre} ${delRol.filter((p) => p.ambienteId === a.id).length}`)
-                .join(' · ');
+        const detalle = !llevaAmbiente(rol)
+          ? String(delRol.length)
+          : ambientes
+              .map((a) => `${a.nombre} ${delRol.filter((p) => p.ambienteId === a.id).length}`)
+              .join(' · ');
         return (
           <Badge key={rol} size="lg" variant="light" color={colorDelRol[rol]} tt="none">
             {nombreDelRol[rol]}: {detalle}
@@ -181,14 +180,14 @@ function TarjetaPersona({
         </Text>
       )}
       <Group gap="xs" mt="xs">
-        {rol === 'guardia'
-          ? persona.rol !== 'guardia' && (
+        {!llevaAmbiente(rol)
+          ? persona.rol !== rol && (
               <BotonAccion
                 accion={asignarTurno}
                 datos={datos}
-                etiqueta="Asignar como guardia"
+                etiqueta={`Asignar como ${nombreDelRol[rol]!.toLowerCase()}`}
                 confirmar={confirmar}
-                aria-label={`Asignar a ${persona.nombre} como Guardia`}
+                aria-label={`Asignar a ${persona.nombre} como ${nombreDelRol[rol]}`}
               />
             )
           : ambientes.map((ambiente) =>
@@ -256,7 +255,7 @@ export function Asignacion({ noches, elegida, dotacion, ambientes }: Readonly<Pr
       <EncabezadoPagina
         icono={IconUserCheck}
         titulo="Asignar turnos"
-        descripcion="Cada persona tiene a lo más un turno por noche. Garzón y barra llevan ambiente: con él se reparten las propinas."
+        descripcion="Cada persona tiene a lo más un turno por noche. Garzón y barra llevan ambiente: con él se reparten las propinas. Cocina y guardia trabajan para todo el local."
       />
 
       <NativeSelect

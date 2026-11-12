@@ -121,3 +121,38 @@ export async function mesDe(usuarioId: number, desde: string, hasta: string) {
     order by n.fecha`);
   return filas.map((f) => ({ ...f }));
 }
+
+/**
+ * La trayectoria de cada persona para la pantalla de personal: cuántas noches trabajó en cada rol
+ * (solo noches que se abrieron) y cuál es su próximo turno en una noche que aún no se cierra.
+ */
+export async function trayectoriaDelPersonal() {
+  const [roles, proximos] = await Promise.all([
+    db().execute<{ usuario_id: number; rol: RolTurno; veces: number; ultima: string }>(sql`
+      select a.usuario_id, a.rol, count(*)::int as veces, max(a.fecha)::text as ultima
+      from gesnoc.asignacion a
+      join gesnoc.noche n on n.fecha = a.fecha and n.abierta_en is not null
+      group by a.usuario_id, a.rol`),
+    db().execute<{ usuario_id: number; fecha: string; rol: RolTurno; ambiente: string | null }>(sql`
+      select distinct on (a.usuario_id) a.usuario_id, a.fecha::text as fecha, a.rol,
+             amb.nombre as ambiente
+      from gesnoc.asignacion a
+      join gesnoc.noche n on n.fecha = a.fecha and n.cerrada_en is null
+      left join gesnoc.ambiente amb on amb.id = a.ambiente_id
+      order by a.usuario_id, a.fecha`),
+  ]);
+  return {
+    roles: roles.map((f) => ({
+      usuarioId: f.usuario_id,
+      rol: f.rol,
+      veces: f.veces,
+      ultima: f.ultima,
+    })),
+    proximos: proximos.map((f) => ({
+      usuarioId: f.usuario_id,
+      fecha: f.fecha,
+      rol: f.rol,
+      ambiente: f.ambiente,
+    })),
+  };
+}

@@ -16,11 +16,11 @@ const codigoDeError = async (consulta: Promise<unknown>) => {
 };
 
 describe('esquema migrado', () => {
-  it('tiene las 22 tablas del modelo vigente en el esquema gesnoc', async () => {
+  it('tiene las 25 tablas del modelo vigente en el esquema gesnoc', async () => {
     const [fila] = await sql<{ tablas: number }[]>`
       select count(*)::int as tablas from information_schema.tables
       where table_schema = 'gesnoc' and table_type = 'BASE TABLE'`;
-    expect(fila?.tablas).toBe(22);
+    expect(fila?.tablas).toBe(25);
   });
 
   it('la aplicación no puede cambiar la estructura (ADR-004)', async () => {

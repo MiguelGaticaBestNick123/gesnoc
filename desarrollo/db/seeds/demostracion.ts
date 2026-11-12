@@ -79,6 +79,15 @@ const catalogo: { categoria: string; productos: [nombre: string, precio: number]
     ],
   },
   {
+    categoria: 'Botellas',
+    productos: [
+      ['Botella de pisco 35°', 28000],
+      ['Botella de ron añejo', 32000],
+      ['Botella de vodka', 30000],
+      ['Botella de espumante', 25000],
+    ],
+  },
+  {
     categoria: 'Comida',
     productos: [
       ['Papas fritas', 6500],
@@ -110,7 +119,13 @@ async function crearAmbiente(tx: TransactionSql, ambiente: (typeof ambientes)[nu
   return fila!.id;
 }
 
-async function crearEstacion(tx: TransactionSql, ambiente: number, nombre: string, tipo: string) {
+// La barra es de un ambiente; la cocina, de todo el local (sin ambiente).
+async function crearEstacion(
+  tx: TransactionSql,
+  ambiente: number | null,
+  nombre: string,
+  tipo: 'barra' | 'cocina',
+) {
   const [fila] = await tx<{ id: number }[]>`
     insert into gesnoc.estacion (ambiente_id, nombre, tipo)
     values (${ambiente}, ${nombre}, ${tipo}) returning id`;
@@ -132,6 +147,41 @@ async function crearCatalogo(tx: TransactionSql, cocina: number) {
   }
 }
 
+// Lo que la administración prepara para la noche de demostración: el premio de cada ambiente, los
+// eventos, una lista que paga (un cumpleaños), una que entra gratis (bailarines) y dos invitados.
+// Los RUT son ficticios, con dígito verificador válido.
+async function detallarNoche(tx: TransactionSql, fecha: string, ambientes: number[]) {
+  const premios = ['Botella de ron añejo', 'Botella de pisco 35°'];
+  for (const [i, ambiente] of ambientes.entries()) {
+    await tx`
+      insert into gesnoc.premio (fecha, ambiente_id, producto_id)
+      select ${fecha}, ${ambiente}, id from gesnoc.producto where nombre = ${premios[i]!}`;
+  }
+  await tx`
+    insert into gesnoc.evento (fecha, numero, nombre, hora)
+    values (${fecha}, 1, 'Show de baile', '01:00'), (${fecha}, 2, 'Robot de shots', '02:30')`;
+  await tx`
+    insert into gesnoc.lista (fecha, numero, nombre, responsable, gratis)
+    values (${fecha}, 1, 'Cumpleaños de Camila', 'Camila Rojas', false),
+           (${fecha}, 2, 'Bailarines', 'Javiera Soto, coordinadora del show', true)`;
+  const invitaciones: [string, string, string, number | null, string | null][] = [
+    ['15678234-3', 'Camila', 'Rojas', 1, null],
+    ['17654321-3', 'Ignacio', 'Bravo', 1, null],
+    ['18234567-9', 'Fernanda', 'Lagos', 1, null],
+    ['19876543-0', 'Javiera', 'Soto', 2, null],
+    ['20123456-5', 'Martina', 'Herrera', 2, null],
+    ['16543210-K', 'Felipe', 'Araya', null, 'DJ de la noche'],
+    ['21345678-4', 'Marcela', 'Pinto', null, 'Administración'],
+  ];
+  for (const [documento, nombre, apellido, lista, invitadoPor] of invitaciones) {
+    await tx`
+      insert into gesnoc.invitacion
+        (fecha, documento, nombre, apellido, lista_numero, invitado_por, gratis)
+      values (${fecha}, ${documento}, ${nombre}, ${apellido}, ${lista}, ${invitadoPor},
+              ${lista === null ? true : null})`;
+  }
+}
+
 async function crearPersona(tx: TransactionSql, persona: (typeof personas)[number], hash: string) {
   const [fila] = await tx<{ id: number }[]>`
     insert into gesnoc.usuario (nombre, correo, clave_hash, es_administrador)
@@ -142,8 +192,7 @@ async function crearPersona(tx: TransactionSql, persona: (typeof personas)[numbe
 
 /** Vacía todas las tablas: el vaciado se propaga por las claves foráneas. Solo el dueño puede. */
 export const vaciar = (sql: Sql) => sql`
-  truncate gesnoc.usuario, gesnoc.ambiente, gesnoc.noche, gesnoc.cliente, gesnoc.invitado
-  restart identity cascade`;
+  truncate gesnoc.usuario, gesnoc.ambiente, gesnoc.noche, gesnoc.cliente restart identity cascade`;
 
 /** Siembra una base vacía; si ya tiene personal no toca nada y devuelve false. */
 export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Promise<boolean> {
@@ -157,7 +206,7 @@ export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Prom
     const terraza = await crearAmbiente(tx, ambientes[1]!);
     await crearEstacion(tx, salon, 'Barra Salón', 'barra');
     await crearEstacion(tx, terraza, 'Barra Terraza', 'barra');
-    await crearCatalogo(tx, await crearEstacion(tx, salon, 'Cocina', 'cocina'));
+    await crearCatalogo(tx, await crearEstacion(tx, null, 'Cocina', 'cocina'));
 
     const id: Record<string, number> = {};
     for (const persona of personas) id[persona.clave] = await crearPersona(tx, persona, hash);
@@ -168,13 +217,14 @@ export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Prom
       values (${hoy}, 'Noche de demostración', 5000),
              (${sumarDias(hoy, 1)}, null, 5000),
              (${proxima}, 'Entrada gratis hasta las 00:00', 7000)`;
+    await detallarNoche(tx, hoy, [salon, terraza]);
 
     const dotacion = [
       ['garzon', 'garzon', salon],
       ['garzon2', 'garzon', terraza],
       ['barra', 'barman', salon],
       ['barra2', 'barman', terraza],
-      ['cocina', 'cocinero', salon],
+      ['cocina', 'cocinero', null],
       ['guardia', 'guardia', null],
     ] as const;
     for (const [clavePersona, rol, ambiente] of dotacion) {
@@ -211,7 +261,7 @@ export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Prom
         ['garzon', terraza],
         ['barman', terraza],
       ],
-      cocina: pasadas.map(() => ['cocinero', salon]),
+      cocina: pasadas.map(() => ['cocinero', null]),
       guardia: pasadas.map(() => ['guardia', null]),
       sinturno: [
         ['guardia', null],

@@ -3,12 +3,20 @@
 import { ejecutar, type EstadoAccion } from '@/shared/acciones';
 import {
   conFecha,
+  conNumero,
   datosApertura,
   datosAsignacion,
   datosDisponibilidad,
+  datosEvento,
+  datosInvitacion,
+  datosLista,
+  datosListaPegada,
   datosNoche,
+  datosPremio,
+  datosQuitarInvitacion,
   datosQuitarTurno,
 } from './esquemas';
+import * as detalles from './servicios/detalles';
 import * as noches from './servicios/noches';
 import * as turnos from './servicios/turnos';
 
@@ -48,5 +56,52 @@ export async function quitarTurno(_: EstadoAccion, datos: FormData) {
   return ejecutar((actor) => {
     const { fecha, usuarioId } = datosQuitarTurno.parse(campos(datos));
     return turnos.quitar(actor, fecha, usuarioId);
+  });
+}
+
+export async function elegirPremio(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => detalles.elegirPremio(actor, datosPremio.parse(campos(datos))));
+}
+
+export async function agregarEvento(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => {
+    const { fecha, nombre, hora } = datosEvento.parse(campos(datos));
+    return detalles.agregarEvento(actor, fecha, nombre, hora);
+  });
+}
+
+export async function quitarEvento(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => {
+    const { fecha, numero } = conNumero.parse(campos(datos));
+    return detalles.quitarEvento(actor, fecha, numero);
+  });
+}
+
+export async function guardarLista(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => detalles.guardarLista(actor, datosLista.parse(campos(datos))));
+}
+
+export async function quitarLista(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => {
+    const { fecha, numero } = conNumero.parse(campos(datos));
+    return detalles.quitarLista(actor, fecha, numero);
+  });
+}
+
+export async function invitar(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => detalles.invitar(actor, datosInvitacion.parse(campos(datos))));
+}
+
+export async function pegarLista(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => {
+    const { fecha, listaNumero, texto } = datosListaPegada.parse(campos(datos));
+    return detalles.pegarLista(actor, fecha, listaNumero, texto);
+  });
+}
+
+export async function quitarInvitacion(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => {
+    const { fecha, documento } = datosQuitarInvitacion.parse(campos(datos));
+    return detalles.quitarInvitacion(actor, fecha, documento);
   });
 }

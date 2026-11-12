@@ -1,6 +1,6 @@
 import postgres from 'postgres';
 import { afterAll, beforeEach } from 'vitest';
-import type { Actor, RolTurno } from '@/shared/autorizacion';
+import { llevaAmbiente, type Actor, type RolTurno } from '@/shared/autorizacion';
 import { hashearClave } from '@/shared/sesion/clave';
 import { vaciar } from '../../db/seeds/demostracion';
 
@@ -29,7 +29,7 @@ export const sinTurno = (id = 0): Actor => ({
 
 export const conTurno = (rol: RolTurno, id = 0): Actor => ({
   ...sinTurno(id),
-  turno: { fecha: '2026-11-06', rol, ambienteId: rol === 'guardia' ? null : 1 },
+  turno: { fecha: '2026-11-06', rol, ambienteId: llevaAmbiente(rol) ? 1 : null },
 });
 
 export const CLAVE = 'clave-de-prueba';

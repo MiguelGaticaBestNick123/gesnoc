@@ -5,6 +5,8 @@ import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { tituloDeFecha } from '@/shared/utilidades/fechas';
+import { CierreDeNoche } from '@/modules/caja/CierreDeNoche';
+import type { EstadoDelCierre } from '@/modules/caja/servicios/caja';
 import { abrirNoche } from './acciones';
 import type { nocheAbierta, Noche } from './repositorios/noches';
 import { IconMoon } from '@tabler/icons-react';
@@ -13,15 +15,16 @@ import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 interface Props {
   abierta: Awaited<ReturnType<typeof nocheAbierta>>;
   programadas: Noche[];
+  cierre: EstadoDelCierre | null;
 }
 
-export function NocheEnCurso({ abierta, programadas }: Readonly<Props>) {
+export function NocheEnCurso({ abierta, programadas, cierre }: Readonly<Props>) {
   return (
     <Stack gap="md">
       <EncabezadoPagina
         icono={IconMoon}
         titulo="Noche en curso"
-        descripcion="Abrir la noche con el fondo de caja habilita la operación del personal."
+        descripcion="Abrir la noche con el fondo de caja habilita la operación del personal; cerrarla, después de cuadrar la caja, deja la jornada registrada."
       />
 
       {abierta ? (
@@ -64,6 +67,8 @@ export function NocheEnCurso({ abierta, programadas }: Readonly<Props>) {
           </FormularioAccion>
         </Card>
       )}
+
+      {abierta && cierre && <CierreDeNoche estado={cierre} />}
     </Stack>
   );
 }

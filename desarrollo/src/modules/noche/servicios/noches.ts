@@ -5,6 +5,7 @@ import { ErrorDeNegocio, traducir } from '@/shared/errores';
 import { rangoDelMes } from '@/shared/utilidades/calendario';
 import { hoyEnChile } from '@/shared/utilidades/fechas';
 import type { DatosNoche } from '../esquemas';
+import { detallesDelRango } from '../repositorios/detalles';
 import * as repositorio from '../repositorios/noches';
 
 /**
@@ -75,10 +76,11 @@ export async function abrir(actor: Actor, fecha: string, fondo: number) {
 export async function calendarioDelMes(actor: Actor, mes: string) {
   exigir(actor, 'admin');
   const { desde, hasta } = rangoDelMes(mes);
-  const [noches, turnos, postulantes, precioSugerido] = await Promise.all([
+  const [noches, turnos, postulantes, detalles, precioSugerido] = await Promise.all([
     repositorio.nochesDelRango(desde, hasta),
     repositorio.turnosDelRango(desde, hasta),
     repositorio.postulantesDelRango(desde, hasta),
+    detallesDelRango(desde, hasta),
     repositorio.ultimoPrecio(),
   ]);
   const delDia = <T extends { fecha: string }>(filas: T[], fecha: string) =>
@@ -90,7 +92,12 @@ export async function calendarioDelMes(actor: Actor, mes: string) {
     noches: Object.fromEntries(
       noches.map((n) => [
         n.fecha,
-        { ...n, turnos: delDia(turnos, n.fecha), postulantes: delDia(postulantes, n.fecha) },
+        {
+          ...n,
+          turnos: delDia(turnos, n.fecha),
+          postulantes: delDia(postulantes, n.fecha),
+          detalles: detalles.find((d) => d.fecha === n.fecha) ?? null,
+        },
       ]),
     ),
   };

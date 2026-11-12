@@ -22,11 +22,27 @@ export const datosAmbiente = z.object({
 });
 export type DatosAmbiente = z.output<typeof datosAmbiente>;
 
-export const datosEstacion = z.object({
-  nombre: nombre(40),
-  tipo: z.enum(['barra', 'cocina'], 'La estación debe ser barra o cocina'),
-});
+/**
+ * Una estación nueva: la barra es de un ambiente (a lo más una, RN-27); la cocina es de todo el
+ * local y recibe la comida de todos los ambientes (decisión del Product Owner, 12 nov).
+ */
+export const datosEstacion = z
+  .object({
+    nombre: nombre(40),
+    tipo: z.enum(['barra', 'cocina'], 'La estación debe ser barra o cocina'),
+    ambienteId: z.coerce.number().int().optional(),
+  })
+  .transform(({ ambienteId, ...datos }) => ({
+    ...datos,
+    ambienteId: datos.tipo === 'barra' ? ambienteId || null : null,
+  }))
+  .refine((datos) => datos.tipo === 'cocina' || datos.ambienteId !== null, {
+    message: 'Elige el ambiente de la barra',
+  });
 export type DatosEstacion = z.output<typeof datosEstacion>;
+
+/** Al editar una estación solo cambia su nombre: el tipo y el ambiente se fijan al crearla. */
+export const datosNombreEstacion = z.object({ nombre: nombre(40) });
 
 export const datosCategoria = z
   .object({

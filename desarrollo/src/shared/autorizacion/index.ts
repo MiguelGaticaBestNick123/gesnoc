@@ -19,10 +19,16 @@ export interface Actor {
   turno: Turno | null;
 }
 
-/** Sobre qué se actúa: una cuenta o una estación pertenece a un ambiente. */
+/**
+ * Sobre qué se actúa: una cuenta o una barra pertenece a un ambiente; la cocina, a todo el local
+ * (`null`), igual que el turno de quien cocina.
+ */
 export interface Recurso {
-  ambienteId: number;
+  ambienteId: number | null;
 }
+
+/** RN-04: garzón y barra trabajan en un ambiente; cocina y guardia, para todo el local. */
+export const llevaAmbiente = (rol: RolTurno) => rol === 'garzon' || rol === 'barman';
 
 const permisoDelTurno: Record<RolTurno, Permiso> = {
   garzon: 'garzon',

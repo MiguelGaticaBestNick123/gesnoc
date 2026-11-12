@@ -2,16 +2,15 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { z } from 'zod';
 import { ejecutar, intentar, type EstadoAccion } from '@/shared/acciones';
 import { actorActual } from '@/shared/sesion';
-import { identificador } from '@/shared/esquemas';
 import {
   conId,
   datosActivacion,
   datosAmbiente,
   datosCategoria,
   datosEstacion,
+  datosNombreEstacion,
   datosPlano,
   datosProducto,
 } from './esquemas';
@@ -42,16 +41,14 @@ export async function cambiarAmbienteActivo(_: EstadoAccion, datos: FormData) {
 }
 
 export async function crearEstacion(_: EstadoAccion, datos: FormData) {
-  return ejecutar((actor) => {
-    const { ambienteId } = z.object({ ambienteId: identificador }).parse(campos(datos));
-    return ambientes.crearEstacion(actor, ambienteId, datosEstacion.parse(campos(datos)));
-  });
+  return ejecutar((actor) => ambientes.crearEstacion(actor, datosEstacion.parse(campos(datos))));
 }
 
 export async function editarEstacion(_: EstadoAccion, datos: FormData) {
-  return ejecutar((actor) =>
-    ambientes.editarEstacion(actor, idDe(datos), datosEstacion.parse(campos(datos))),
-  );
+  return ejecutar((actor) => {
+    const { nombre } = datosNombreEstacion.parse(campos(datos));
+    return ambientes.renombrarEstacion(actor, idDe(datos), nombre);
+  });
 }
 
 export async function eliminarEstacion(_: EstadoAccion, datos: FormData) {

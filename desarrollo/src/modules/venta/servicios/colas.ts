@@ -10,12 +10,15 @@ import * as colas from '../repositorios/colas';
 const permisoDe: Record<TipoEstacion, Permiso> = { barra: 'barra', cocina: 'cocina' };
 
 /**
- * Una sola regla decide qué estaciones ve una persona y cuáles puede marcar: el barman o cocinero
- * atiende las de su tipo en el ambiente de su turno (RN-14) y la administración, todas. Con dos
- * reglas separadas, el sistema anterior dejaba a un barman ver comandas que no podía marcar.
+ * Una sola regla decide qué estaciones ve una persona y cuáles puede marcar: el barman atiende la
+ * barra del ambiente de su turno (RN-14), quien cocina atiende la cocina, que es de todo el local,
+ * y la administración, todas. Con dos reglas separadas, el sistema anterior dejaba a un barman ver
+ * comandas que no podía marcar.
  */
-export const puedeAtender = (actor: Actor, estacion: { tipo: TipoEstacion; ambienteId: number }) =>
-  puede(actor, permisoDe[estacion.tipo], { ambienteId: estacion.ambienteId });
+export const puedeAtender = (
+  actor: Actor,
+  estacion: { tipo: TipoEstacion; ambienteId: number | null },
+) => puede(actor, permisoDe[estacion.tipo], { ambienteId: estacion.ambienteId });
 
 /** HU-17 y HU-18: la cola de una estación en la noche abierta. */
 export async function cola(actor: Actor, tipo: TipoEstacion, estacionId?: number) {

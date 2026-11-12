@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   date,
   primaryKey,
+  time,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -44,16 +45,16 @@ export const usuario = gesnoc.table(
   (table) => [
     unique('usuario_correo_uq').on(table.correo),
     check(
-      'usuario_nombre_check',
-      sql`(length(TRIM(BOTH FROM nombre)) >= 2) AND (length(TRIM(BOTH FROM nombre)) <= 80)`,
-    ),
-    check(
       'usuario_correo_check',
       sql`(correo = lower(correo)) AND (correo ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'::text)`,
     ),
     check(
       'usuario_intentos_fallidos_check',
       sql`(intentos_fallidos >= 0) AND (intentos_fallidos <= 100)`,
+    ),
+    check(
+      'usuario_nombre_check',
+      sql`(length(TRIM(BOTH FROM nombre)) >= 2) AND (length(TRIM(BOTH FROM nombre)) <= 80)`,
     ),
   ],
 );
@@ -98,8 +99,8 @@ export const ambiente = gesnoc.table(
       'ambiente_nombre_check',
       sql`(length(TRIM(BOTH FROM nombre)) >= 2) AND (length(TRIM(BOTH FROM nombre)) <= 40)`,
     ),
-    check('ambiente_plano_ancho_check', sql`(plano_ancho >= 200) AND (plano_ancho <= 5000)`),
     check('ambiente_plano_alto_check', sql`(plano_alto >= 200) AND (plano_alto <= 5000)`),
+    check('ambiente_plano_ancho_check', sql`(plano_ancho >= 200) AND (plano_ancho <= 5000)`),
   ],
 );
 
@@ -140,19 +141,19 @@ export const mesa = gesnoc.table(
       name: 'mesa_ambiente_id_fkey',
     }),
     unique('mesa_token_qr_uq').on(table.tokenQr),
-    check('mesa_numero_check', sql`(numero >= 1) AND (numero <= 999)`),
+    check('mesa_alto_check', sql`(alto >= 20) AND (alto <= 400)`),
+    check('mesa_ancho_check', sql`(ancho >= 20) AND (ancho <= 400)`),
     check(
       'mesa_forma_check',
       sql`forma = ANY (ARRAY['cuadrada'::text, 'redonda'::text, 'rectangular'::text])`,
     ),
+    check('mesa_numero_check', sql`(numero >= 1) AND (numero <= 999)`),
     check('mesa_pos_x_check', sql`pos_x >= 0`),
     check('mesa_pos_y_check', sql`pos_y >= 0`),
-    check('mesa_ancho_check', sql`(ancho >= 20) AND (ancho <= 400)`),
-    check('mesa_alto_check', sql`(alto >= 20) AND (alto <= 400)`),
-    check('mesa_rotacion_check', sql`(rotacion >= 0) AND (rotacion <= 359)`),
-    check('mesa_token_qr_check', sql`token_qr ~ '^[A-Za-z0-9_-]{22,64}$'::text`),
-    check('mesa_sillas_ck', sql`(sillas >= 0) AND (sillas <= 20)`),
     check('mesa_proporcion_ck', sql`(forma = 'rectangular'::text) OR (ancho = alto)`),
+    check('mesa_rotacion_check', sql`(rotacion >= 0) AND (rotacion <= 359)`),
+    check('mesa_sillas_ck', sql`(sillas >= 0) AND (sillas <= 20)`),
+    check('mesa_token_qr_check', sql`token_qr ~ '^[A-Za-z0-9_-]{22,64}$'::text`),
   ],
 );
 
@@ -167,7 +168,7 @@ export const estacion = gesnoc.table(
       maxValue: 2147483647,
       cache: 1,
     }),
-    ambienteId: integer('ambiente_id').notNull(),
+    ambienteId: integer('ambiente_id'),
     nombre: text().notNull(),
     tipo: text().notNull(),
   },
@@ -181,6 +182,7 @@ export const estacion = gesnoc.table(
       foreignColumns: [ambiente.id],
       name: 'estacion_ambiente_id_fkey',
     }),
+    check('estacion_ambiente_ck', sql`(tipo = 'barra'::text) = (ambiente_id IS NOT NULL)`),
     check(
       'estacion_nombre_check',
       sql`(length(TRIM(BOTH FROM nombre)) >= 2) AND (length(TRIM(BOTH FROM nombre)) <= 40)`,
@@ -277,12 +279,12 @@ export const noche = gesnoc.table(
     uniqueIndex('noche_una_abierta_uq')
       .using('btree', sql`(true)`)
       .where(sql`((abierta_en IS NOT NULL) AND (cerrada_en IS NULL))`),
-    check('noche_nota_check', sql`length(nota) <= 280`),
-    check('noche_precio_entrada_check', sql`precio_entrada >= 0`),
     check(
       'noche_ciclo_ck',
       sql`(cerrada_en IS NULL) OR ((abierta_en IS NOT NULL) AND (cerrada_en > abierta_en))`,
     ),
+    check('noche_nota_check', sql`length(nota) <= 280`),
+    check('noche_precio_entrada_check', sql`precio_entrada >= 0`),
   ],
 );
 
@@ -303,44 +305,15 @@ export const cliente = gesnoc.table(
   },
   (table) => [
     unique('cliente_documento_uq').on(table.documento),
+    check(
+      'cliente_apellido_check',
+      sql`(length(TRIM(BOTH FROM apellido)) >= 1) AND (length(TRIM(BOTH FROM apellido)) <= 60)`,
+    ),
     check('cliente_documento_check', sql`documento ~ '^[0-9A-Z]{4,15}(-[0-9K])?$'::text`),
     check(
       'cliente_nombre_check',
       sql`(length(TRIM(BOTH FROM nombre)) >= 1) AND (length(TRIM(BOTH FROM nombre)) <= 60)`,
     ),
-    check(
-      'cliente_apellido_check',
-      sql`(length(TRIM(BOTH FROM apellido)) >= 1) AND (length(TRIM(BOTH FROM apellido)) <= 60)`,
-    ),
-  ],
-);
-
-export const invitado = gesnoc.table(
-  'invitado',
-  {
-    id: integer().primaryKey().generatedAlwaysAsIdentity({
-      name: 'invitado_id_seq',
-      startWith: 1,
-      increment: 1,
-      minValue: 1,
-      maxValue: 2147483647,
-      cache: 1,
-    }),
-    nombre: text().notNull(),
-    documento: text(),
-    nota: text(),
-    activo: boolean().default(true).notNull(),
-  },
-  (table) => [
-    uniqueIndex('invitado_documento_uq')
-      .using('btree', table.documento.asc().nullsLast().op('text_ops'))
-      .where(sql`(activo AND (documento IS NOT NULL))`),
-    check(
-      'invitado_nombre_check',
-      sql`(length(TRIM(BOTH FROM nombre)) >= 2) AND (length(TRIM(BOTH FROM nombre)) <= 80)`,
-    ),
-    check('invitado_documento_check', sql`documento ~ '^[0-9A-Z]{4,15}(-[0-9K])?$'::text`),
-    check('invitado_nota_check', sql`length(nota) <= 280`),
   ],
 );
 
@@ -355,19 +328,19 @@ export const arqueo = gesnoc.table(
   },
   (table) => [
     foreignKey({
-      columns: [table.fecha],
-      foreignColumns: [noche.fecha],
-      name: 'arqueo_fecha_fkey',
-    }),
-    foreignKey({
       columns: [table.contadoPor],
       foreignColumns: [usuario.id],
       name: 'arqueo_contado_por_fkey',
     }),
-    check('arqueo_nota_check', sql`length(nota) <= 500`),
+    foreignKey({
+      columns: [table.fecha],
+      foreignColumns: [noche.fecha],
+      name: 'arqueo_fecha_fkey',
+    }),
     check('arqueo_conteo_ck', sql`(efectivo_contado IS NULL) = (contado_por IS NULL)`),
-    check('arqueo_fondo_inicial_check', sql`fondo_inicial >= 0`),
     check('arqueo_efectivo_contado_check', sql`efectivo_contado >= 0`),
+    check('arqueo_fondo_inicial_check', sql`fondo_inicial >= 0`),
+    check('arqueo_nota_check', sql`length(nota) <= 500`),
   ],
 );
 
@@ -407,6 +380,11 @@ export const asignacion = gesnoc.table(
   (table) => [
     index('asignacion_usuario_ix').using('btree', table.usuarioId.asc().nullsLast().op('int4_ops')),
     foreignKey({
+      columns: [table.ambienteId],
+      foreignColumns: [ambiente.id],
+      name: 'asignacion_ambiente_id_fkey',
+    }),
+    foreignKey({
       columns: [table.fecha],
       foreignColumns: [noche.fecha],
       name: 'asignacion_fecha_fkey',
@@ -416,17 +394,69 @@ export const asignacion = gesnoc.table(
       foreignColumns: [usuario.id],
       name: 'asignacion_usuario_id_fkey',
     }),
-    foreignKey({
-      columns: [table.ambienteId],
-      foreignColumns: [ambiente.id],
-      name: 'asignacion_ambiente_id_fkey',
-    }),
     primaryKey({ columns: [table.fecha, table.usuarioId], name: 'asignacion_pkey' }),
+    check(
+      'asignacion_ambiente_ck',
+      sql`(rol = ANY (ARRAY['garzon'::text, 'barman'::text])) = (ambiente_id IS NOT NULL)`,
+    ),
     check(
       'asignacion_rol_check',
       sql`rol = ANY (ARRAY['garzon'::text, 'barman'::text, 'cocinero'::text, 'guardia'::text])`,
     ),
-    check('asignacion_ambiente_ck', sql`(rol = 'guardia'::text) = (ambiente_id IS NULL)`),
+  ],
+);
+
+export const evento = gesnoc.table(
+  'evento',
+  {
+    fecha: date().notNull(),
+    numero: smallint().notNull(),
+    nombre: text().notNull(),
+    hora: time(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.fecha],
+      foreignColumns: [noche.fecha],
+      name: 'evento_fecha_fkey',
+    }).onDelete('cascade'),
+    primaryKey({ columns: [table.fecha, table.numero], name: 'evento_pkey' }),
+    check(
+      'evento_nombre_check',
+      sql`(length(TRIM(BOTH FROM nombre)) >= 2) AND (length(TRIM(BOTH FROM nombre)) <= 80)`,
+    ),
+    check('evento_numero_check', sql`(numero >= 1) AND (numero <= 50)`),
+  ],
+);
+
+export const premio = gesnoc.table(
+  'premio',
+  {
+    fecha: date().notNull(),
+    ambienteId: integer('ambiente_id').notNull(),
+    productoId: integer('producto_id').notNull(),
+    cantidad: smallint().default(1).notNull(),
+  },
+  (table) => [
+    index('premio_ambiente_ix').using('btree', table.ambienteId.asc().nullsLast().op('int4_ops')),
+    index('premio_producto_ix').using('btree', table.productoId.asc().nullsLast().op('int4_ops')),
+    foreignKey({
+      columns: [table.ambienteId],
+      foreignColumns: [ambiente.id],
+      name: 'premio_ambiente_id_fkey',
+    }),
+    foreignKey({
+      columns: [table.fecha],
+      foreignColumns: [noche.fecha],
+      name: 'premio_fecha_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.productoId],
+      foreignColumns: [producto.id],
+      name: 'premio_producto_id_fkey',
+    }),
+    primaryKey({ columns: [table.fecha, table.ambienteId, table.productoId], name: 'premio_pkey' }),
+    check('premio_cantidad_check', sql`(cantidad >= 1) AND (cantidad <= 10)`),
   ],
 );
 
@@ -443,7 +473,7 @@ export const comanda = gesnoc.table(
     index('comanda_cola_ix')
       .using(
         'btree',
-        table.estacionId.asc().nullsLast().op('date_ops'),
+        table.estacionId.asc().nullsLast().op('int4_ops'),
         table.fecha.asc().nullsLast().op('date_ops'),
       )
       .where(sql`(entregada_en IS NULL)`),
@@ -458,12 +488,41 @@ export const comanda = gesnoc.table(
       name: 'comanda_pedido_fk',
     }).onDelete('cascade'),
     primaryKey({
-      columns: [table.estacionId, table.fecha, table.pedidoNumero],
+      columns: [table.fecha, table.pedidoNumero, table.estacionId],
       name: 'comanda_pkey',
     }),
     check(
       'comanda_ciclo_ck',
       sql`(entregada_en IS NULL) OR ((lista_en IS NOT NULL) AND (entregada_en >= lista_en))`,
+    ),
+  ],
+);
+
+export const lista = gesnoc.table(
+  'lista',
+  {
+    fecha: date().notNull(),
+    numero: smallint().notNull(),
+    nombre: text().notNull(),
+    responsable: text().notNull(),
+    gratis: boolean().notNull(),
+  },
+  (table) => [
+    uniqueIndex('lista_nombre_uq').using('btree', sql`fecha`, sql`lower(nombre)`),
+    foreignKey({
+      columns: [table.fecha],
+      foreignColumns: [noche.fecha],
+      name: 'lista_fecha_fkey',
+    }).onDelete('cascade'),
+    primaryKey({ columns: [table.fecha, table.numero], name: 'lista_pkey' }),
+    check(
+      'lista_nombre_check',
+      sql`(length(TRIM(BOTH FROM nombre)) >= 2) AND (length(TRIM(BOTH FROM nombre)) <= 60)`,
+    ),
+    check('lista_numero_check', sql`(numero >= 1) AND (numero <= 99)`),
+    check(
+      'lista_responsable_check',
+      sql`(length(TRIM(BOTH FROM responsable)) >= 2) AND (length(TRIM(BOTH FROM responsable)) <= 80)`,
     ),
   ],
 );
@@ -482,26 +541,26 @@ export const sorteo = gesnoc.table(
   },
   (table) => [
     foreignKey({
-      columns: [table.fecha],
-      foreignColumns: [noche.fecha],
-      name: 'sorteo_fecha_fkey',
-    }),
-    foreignKey({
       columns: [table.ambienteId],
       foreignColumns: [ambiente.id],
       name: 'sorteo_ambiente_id_fkey',
     }),
     foreignKey({
-      columns: [table.realizadoPor],
-      foreignColumns: [usuario.id],
-      name: 'sorteo_realizado_por_fkey',
+      columns: [table.fecha],
+      foreignColumns: [noche.fecha],
+      name: 'sorteo_fecha_fkey',
     }),
     foreignKey({
       columns: [table.fecha, table.ticketGanador],
       foreignColumns: [entrada.fecha, entrada.ticket],
       name: 'sorteo_ganador_fk',
     }),
-    primaryKey({ columns: [table.ambienteId, table.fecha], name: 'sorteo_pkey' }),
+    foreignKey({
+      columns: [table.realizadoPor],
+      foreignColumns: [usuario.id],
+      name: 'sorteo_realizado_por_fkey',
+    }),
+    primaryKey({ columns: [table.fecha, table.ambienteId], name: 'sorteo_pkey' }),
     unique('sorteo_ganador_uq').on(table.fecha, table.ticketGanador),
     check(
       'sorteo_premio_check',
@@ -534,6 +593,11 @@ export const llamado = gesnoc.table(
       )
       .where(sql`(atendido_en IS NULL)`),
     foreignKey({
+      columns: [table.atendidoPor],
+      foreignColumns: [usuario.id],
+      name: 'llamado_atendido_por_fkey',
+    }),
+    foreignKey({
       columns: [table.fecha],
       foreignColumns: [noche.fecha],
       name: 'llamado_fecha_fkey',
@@ -543,15 +607,10 @@ export const llamado = gesnoc.table(
       foreignColumns: [mesa.id],
       name: 'llamado_mesa_id_fkey',
     }),
-    foreignKey({
-      columns: [table.atendidoPor],
-      foreignColumns: [usuario.id],
-      name: 'llamado_atendido_por_fkey',
-    }),
     primaryKey({ columns: [table.fecha, table.numero], name: 'llamado_pkey' }),
-    check('llamado_numero_check', sql`numero > 0`),
     check('llamado_atencion_ck', sql`(atendido_en IS NULL) = (atendido_por IS NULL)`),
     check('llamado_atencion_orden_ck', sql`(atendido_en IS NULL) OR (atendido_en >= creado_en)`),
+    check('llamado_numero_check', sql`numero > 0`),
   ],
 );
 
@@ -572,8 +631,13 @@ export const pedido = gesnoc.table(
     index('pedido_cuenta_ix').using(
       'btree',
       table.fecha.asc().nullsLast().op('date_ops'),
-      table.cuentaNumero.asc().nullsLast().op('date_ops'),
+      table.cuentaNumero.asc().nullsLast().op('int4_ops'),
     ),
+    foreignKey({
+      columns: [table.fecha, table.cuentaNumero],
+      foreignColumns: [cuenta.fecha, cuenta.numero],
+      name: 'pedido_cuenta_fk',
+    }),
     foreignKey({
       columns: [table.fecha],
       foreignColumns: [noche.fecha],
@@ -583,11 +647,6 @@ export const pedido = gesnoc.table(
       columns: [table.tomadoPor],
       foreignColumns: [usuario.id],
       name: 'pedido_tomado_por_fkey',
-    }),
-    foreignKey({
-      columns: [table.fecha, table.cuentaNumero],
-      foreignColumns: [cuenta.fecha, cuenta.numero],
-      name: 'pedido_cuenta_fk',
     }),
     primaryKey({ columns: [table.fecha, table.numero], name: 'pedido_pkey' }),
     unique('pedido_clave_envio_uq').on(table.claveEnvio),
@@ -627,14 +686,64 @@ export const reporte = gesnoc.table(
       name: 'reporte_registrado_por_fkey',
     }),
     primaryKey({ columns: [table.clienteId, table.numero], name: 'reporte_pkey' }),
+    check(
+      'reporte_descripcion_check',
+      sql`(length(TRIM(BOTH FROM descripcion)) >= 2) AND (length(TRIM(BOTH FROM descripcion)) <= 1000)`,
+    ),
     check('reporte_numero_check', sql`(numero >= 1) AND (numero <= 999)`),
     check(
       'reporte_tipo_check',
       sql`tipo = ANY (ARRAY['advertencia'::text, 'expulsion'::text, 'observacion'::text])`,
     ),
+  ],
+);
+
+export const invitacion = gesnoc.table(
+  'invitacion',
+  {
+    fecha: date().notNull(),
+    documento: text().notNull(),
+    nombre: text().notNull(),
+    apellido: text().notNull(),
+    listaNumero: smallint('lista_numero'),
+    invitadoPor: text('invitado_por'),
+    gratis: boolean(),
+  },
+  (table) => [
+    index('invitacion_lista_ix')
+      .using(
+        'btree',
+        table.fecha.asc().nullsLast().op('int2_ops'),
+        table.listaNumero.asc().nullsLast().op('date_ops'),
+      )
+      .where(sql`(lista_numero IS NOT NULL)`),
+    foreignKey({
+      columns: [table.fecha],
+      foreignColumns: [noche.fecha],
+      name: 'invitacion_fecha_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.fecha, table.listaNumero],
+      foreignColumns: [lista.fecha, lista.numero],
+      name: 'invitacion_lista_fk',
+    }).onDelete('cascade'),
+    primaryKey({ columns: [table.fecha, table.documento], name: 'invitacion_pkey' }),
     check(
-      'reporte_descripcion_check',
-      sql`(length(TRIM(BOTH FROM descripcion)) >= 2) AND (length(TRIM(BOTH FROM descripcion)) <= 1000)`,
+      'invitacion_apellido_check',
+      sql`(length(TRIM(BOTH FROM apellido)) >= 1) AND (length(TRIM(BOTH FROM apellido)) <= 60)`,
+    ),
+    check('invitacion_documento_check', sql`documento ~ '^[0-9A-Z]{4,15}(-[0-9K])?$'::text`),
+    check(
+      'invitacion_invitado_por_check',
+      sql`(length(TRIM(BOTH FROM invitado_por)) >= 2) AND (length(TRIM(BOTH FROM invitado_por)) <= 80)`,
+    ),
+    check(
+      'invitacion_nombre_check',
+      sql`(length(TRIM(BOTH FROM nombre)) >= 1) AND (length(TRIM(BOTH FROM nombre)) <= 60)`,
+    ),
+    check(
+      'invitacion_origen_ck',
+      sql`((lista_numero IS NULL) = (invitado_por IS NOT NULL)) AND ((lista_numero IS NULL) = (gratis IS NOT NULL))`,
     ),
   ],
 );
@@ -651,49 +760,36 @@ export const entrada = gesnoc.table(
     registradaEn: timestamp('registrada_en', { withTimezone: true, mode: 'string' })
       .defaultNow()
       .notNull(),
-    invitadoId: integer('invitado_id'),
   },
   (table) => [
     index('entrada_cliente_ix').using('btree', table.clienteId.asc().nullsLast().op('int4_ops')),
-    index('entrada_invitado_ix')
-      .using('btree', table.invitadoId.asc().nullsLast().op('int4_ops'))
-      .where(sql`(invitado_id IS NOT NULL)`),
-    foreignKey({
-      columns: [table.fecha],
-      foreignColumns: [noche.fecha],
-      name: 'entrada_fecha_fkey',
-    }),
     foreignKey({
       columns: [table.clienteId],
       foreignColumns: [cliente.id],
       name: 'entrada_cliente_id_fkey',
     }),
     foreignKey({
+      columns: [table.fecha],
+      foreignColumns: [noche.fecha],
+      name: 'entrada_fecha_fkey',
+    }),
+    foreignKey({
       columns: [table.registradaPor],
       foreignColumns: [usuario.id],
       name: 'entrada_registrada_por_fkey',
     }),
-    foreignKey({
-      columns: [table.invitadoId],
-      foreignColumns: [invitado.id],
-      name: 'entrada_invitado_id_fkey',
-    }),
-    primaryKey({ columns: [table.clienteId, table.fecha], name: 'entrada_pkey' }),
+    primaryKey({ columns: [table.fecha, table.clienteId], name: 'entrada_pkey' }),
     unique('entrada_ticket_uq').on(table.fecha, table.ticket),
-    check('entrada_ticket_check', sql`ticket > 0`),
-    check('entrada_monto_check', sql`monto >= 0`),
     check(
       'entrada_medio_pago_check',
-      sql`medio_pago = ANY (ARRAY['efectivo'::text, 'tarjeta'::text, 'transferencia'::text])`,
+      sql`medio_pago = ANY (ARRAY['efectivo'::text, 'tarjeta'::text, 'pendiente'::text])`,
     ),
+    check('entrada_monto_check', sql`monto >= 0`),
     check(
       'entrada_pago_ck',
       sql`((monto = 0) AND (medio_pago IS NULL) AND (ticket IS NULL)) OR ((monto > 0) AND (medio_pago IS NOT NULL) AND (ticket IS NOT NULL))`,
     ),
-    check(
-      'entrada_invitado_ck',
-      sql`(invitado_id IS NULL) OR ((monto = 0) AND (medio_pago IS NULL) AND (ticket IS NULL))`,
-    ),
+    check('entrada_ticket_check', sql`ticket > 0`),
   ],
 );
 
@@ -717,6 +813,21 @@ export const cuenta = gesnoc.table(
       .using('btree', table.mesaId.asc().nullsLast().op('int4_ops'))
       .where(sql`(cerrada_en IS NULL)`),
     foreignKey({
+      columns: [table.abiertaPor],
+      foreignColumns: [usuario.id],
+      name: 'cuenta_abierta_por_fkey',
+    }),
+    foreignKey({
+      columns: [table.ambienteId],
+      foreignColumns: [ambiente.id],
+      name: 'cuenta_ambiente_id_fkey',
+    }),
+    foreignKey({
+      columns: [table.cerradaPor],
+      foreignColumns: [usuario.id],
+      name: 'cuenta_cerrada_por_fkey',
+    }),
+    foreignKey({
       columns: [table.fecha],
       foreignColumns: [noche.fecha],
       name: 'cuenta_fecha_fkey',
@@ -726,22 +837,9 @@ export const cuenta = gesnoc.table(
       foreignColumns: [mesa.id],
       name: 'cuenta_mesa_id_fkey',
     }),
-    foreignKey({
-      columns: [table.ambienteId],
-      foreignColumns: [ambiente.id],
-      name: 'cuenta_ambiente_id_fkey',
-    }),
-    foreignKey({
-      columns: [table.abiertaPor],
-      foreignColumns: [usuario.id],
-      name: 'cuenta_abierta_por_fkey',
-    }),
-    foreignKey({
-      columns: [table.cerradaPor],
-      foreignColumns: [usuario.id],
-      name: 'cuenta_cerrada_por_fkey',
-    }),
     primaryKey({ columns: [table.fecha, table.numero], name: 'cuenta_pkey' }),
+    check('cuenta_cierre_ck', sql`(cerrada_en IS NULL) = (cerrada_por IS NULL)`),
+    check('cuenta_cierre_orden_ck', sql`(cerrada_en IS NULL) OR (cerrada_en >= abierta_en)`),
     check('cuenta_numero_check', sql`numero > 0`),
     check(
       'cuenta_referencia_check',
@@ -751,8 +849,6 @@ export const cuenta = gesnoc.table(
       'cuenta_ubicacion_ck',
       sql`((mesa_id IS NOT NULL) AND (ambiente_id IS NULL) AND (referencia IS NULL)) OR ((mesa_id IS NULL) AND (ambiente_id IS NOT NULL) AND (referencia IS NOT NULL))`,
     ),
-    check('cuenta_cierre_ck', sql`(cerrada_en IS NULL) = (cerrada_por IS NULL)`),
-    check('cuenta_cierre_orden_ck', sql`(cerrada_en IS NULL) OR (cerrada_en >= abierta_en)`),
   ],
 );
 
@@ -773,15 +869,15 @@ export const detallePedido = gesnoc.table(
   (table) => [
     index('detalle_comanda_ix').using(
       'btree',
-      table.fecha.asc().nullsLast().op('date_ops'),
-      table.pedidoNumero.asc().nullsLast().op('int4_ops'),
-      table.estacionId.asc().nullsLast().op('date_ops'),
+      table.fecha.asc().nullsLast().op('int4_ops'),
+      table.pedidoNumero.asc().nullsLast().op('date_ops'),
+      table.estacionId.asc().nullsLast().op('int4_ops'),
     ),
     foreignKey({
-      columns: [table.productoId],
-      foreignColumns: [producto.id],
-      name: 'detalle_pedido_producto_id_fkey',
-    }),
+      columns: [table.fecha, table.pedidoNumero, table.estacionId],
+      foreignColumns: [comanda.fecha, comanda.pedidoNumero, comanda.estacionId],
+      name: 'detalle_comanda_fk',
+    }).onDelete('cascade'),
     foreignKey({
       columns: [table.anuladoPor],
       foreignColumns: [usuario.id],
@@ -793,19 +889,19 @@ export const detallePedido = gesnoc.table(
       name: 'detalle_pedido_fk',
     }).onDelete('cascade'),
     foreignKey({
-      columns: [table.fecha, table.pedidoNumero, table.estacionId],
-      foreignColumns: [comanda.estacionId, comanda.fecha, comanda.pedidoNumero],
-      name: 'detalle_comanda_fk',
-    }).onDelete('cascade'),
+      columns: [table.productoId],
+      foreignColumns: [producto.id],
+      name: 'detalle_pedido_producto_id_fkey',
+    }),
     primaryKey({
-      columns: [table.fecha, table.linea, table.pedidoNumero],
+      columns: [table.fecha, table.pedidoNumero, table.linea],
       name: 'detalle_pedido_pkey',
     }),
-    check('detalle_pedido_linea_check', sql`(linea >= 1) AND (linea <= 200)`),
-    check('detalle_pedido_cantidad_check', sql`(cantidad >= 1) AND (cantidad <= 99)`),
-    check('detalle_pedido_precio_unitario_check', sql`precio_unitario > 0`),
-    check('detalle_pedido_nota_check', sql`length(nota) <= 140`),
     check('detalle_anulacion_ck', sql`(anulado_en IS NULL) = (anulado_por IS NULL)`),
+    check('detalle_pedido_cantidad_check', sql`(cantidad >= 1) AND (cantidad <= 99)`),
+    check('detalle_pedido_linea_check', sql`(linea >= 1) AND (linea <= 200)`),
+    check('detalle_pedido_nota_check', sql`length(nota) <= 140`),
+    check('detalle_pedido_precio_unitario_check', sql`precio_unitario > 0`),
   ],
 );
 
@@ -831,11 +927,6 @@ export const pago = gesnoc.table(
       .using('btree', table.fecha.asc().nullsLast().op('date_ops'))
       .where(sql`((medio = 'efectivo'::text) AND (confirmado_en IS NULL))`),
     foreignKey({
-      columns: [table.registradoPor],
-      foreignColumns: [usuario.id],
-      name: 'pago_registrado_por_fkey',
-    }),
-    foreignKey({
       columns: [table.confirmadoPor],
       foreignColumns: [usuario.id],
       name: 'pago_confirmado_por_fkey',
@@ -845,16 +936,21 @@ export const pago = gesnoc.table(
       foreignColumns: [cuenta.fecha, cuenta.numero],
       name: 'pago_cuenta_fk',
     }),
-    primaryKey({ columns: [table.cuentaNumero, table.fecha, table.numero], name: 'pago_pkey' }),
+    foreignKey({
+      columns: [table.registradoPor],
+      foreignColumns: [usuario.id],
+      name: 'pago_registrado_por_fkey',
+    }),
+    primaryKey({ columns: [table.fecha, table.cuentaNumero, table.numero], name: 'pago_pkey' }),
     unique('pago_clave_envio_uq').on(table.claveEnvio),
-    check('pago_monto_check', sql`monto > 0`),
-    check('pago_numero_check', sql`(numero >= 1) AND (numero <= 50)`),
+    check('pago_confirma_efectivo_ck', sql`(medio = 'efectivo'::text) OR (confirmado_en IS NULL)`),
+    check('pago_confirmacion_ck', sql`(confirmado_en IS NULL) = (confirmado_por IS NULL)`),
     check(
       'pago_medio_check',
       sql`medio = ANY (ARRAY['efectivo'::text, 'tarjeta'::text, 'transferencia'::text])`,
     ),
+    check('pago_monto_check', sql`monto > 0`),
+    check('pago_numero_check', sql`(numero >= 1) AND (numero <= 50)`),
     check('pago_propina_check', sql`propina >= 0`),
-    check('pago_confirmacion_ck', sql`(confirmado_en IS NULL) = (confirmado_por IS NULL)`),
-    check('pago_confirma_efectivo_ck', sql`(medio = 'efectivo'::text) OR (confirmado_en IS NULL)`),
   ],
 );

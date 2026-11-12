@@ -6,14 +6,23 @@ import {
   Card,
   Group,
   Modal,
-  NativeSelect,
+  SimpleGrid,
   Stack,
   Text,
   TextInput,
+  ThemeIcon,
   Title,
 } from '@mantine/core';
+import {
+  IconBottle,
+  IconBuildingStore,
+  IconChefHat,
+  IconPlus,
+  type Icon,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import {
   cambiarAmbienteActivo,
@@ -24,16 +33,16 @@ import {
   eliminarEstacion,
 } from './acciones';
 import type { Estacion } from './repositorios/ambientes';
-import type { AmbienteConEstaciones } from './servicios/ambientes';
-import { IconBuildingStore } from '@tabler/icons-react';
-import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
+import type { AmbienteConBarra, LocalConEstaciones } from './servicios/ambientes';
 
 type Dialogo =
-  | { tipo: 'ambiente'; ambiente?: AmbienteConEstaciones }
-  | { tipo: 'estacion'; ambienteId: number; estacion?: Estacion }
+  | { tipo: 'ambiente'; ambiente?: AmbienteConBarra }
+  | { tipo: 'barra'; ambiente: AmbienteConBarra }
+  | { tipo: 'cocina' }
+  | { tipo: 'renombrar'; estacion: Estacion }
   | null;
 
-function CamposAmbiente({ ambiente }: Readonly<{ ambiente?: AmbienteConEstaciones }>) {
+function CamposAmbiente({ ambiente }: Readonly<{ ambiente?: AmbienteConBarra }>) {
   return (
     <>
       <TextInput name="nombre" label="Nombre" defaultValue={ambiente?.nombre} size="md" required />
@@ -61,125 +70,192 @@ function CamposAmbiente({ ambiente }: Readonly<{ ambiente?: AmbienteConEstacione
   );
 }
 
-function CamposEstacion({ estacion }: Readonly<{ estacion?: Estacion }>) {
+const etiqueta = (texto: string) => (
+  <Text size="xs" fw={700} tt="uppercase" c="dimmed" lts={0.5}>
+    {texto}
+  </Text>
+);
+
+/** Una estación con su ícono, para renombrarla o eliminarla. */
+function FilaEstacion({
+  estacion,
+  icono: Icono,
+  color,
+  alRenombrar,
+}: Readonly<{ estacion: Estacion; icono: Icon; color: string; alRenombrar: () => void }>) {
   return (
-    <>
-      <TextInput name="nombre" label="Nombre" defaultValue={estacion?.nombre} size="md" required />
-      <NativeSelect
-        name="tipo"
-        label="Tipo"
-        defaultValue={estacion?.tipo ?? 'barra'}
-        size="md"
-        data={[
-          { value: 'barra', label: 'Barra' },
-          { value: 'cocina', label: 'Cocina' },
-        ]}
-      />
-    </>
+    <Group justify="space-between" wrap="nowrap" gap="xs">
+      <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+        <ThemeIcon variant="light" color={color} size={36} radius="md">
+          <Icono size={20} />
+        </ThemeIcon>
+        <Text fw={600} truncate>
+          {estacion.nombre}
+        </Text>
+      </Group>
+      <Group gap={4} wrap="nowrap">
+        <Button
+          variant="subtle"
+          size="sm"
+          mih={44}
+          px="xs"
+          onClick={alRenombrar}
+          aria-label={`Editar ${estacion.nombre}`}
+        >
+          Editar
+        </Button>
+        <BotonAccion
+          accion={eliminarEstacion}
+          datos={{ id: estacion.id }}
+          etiqueta="Eliminar"
+          variant="subtle"
+          color="red"
+          px="xs"
+          aria-label={`Eliminar ${estacion.nombre}`}
+          confirmar={`¿Eliminar ${estacion.nombre}?`}
+        />
+      </Group>
+    </Group>
   );
 }
 
-export function Ambientes({ ambientes }: Readonly<{ ambientes: AmbienteConEstaciones[] }>) {
+// HU-04: los ambientes, cada uno con su barra (RN-27), y la cocina, que es de todo el local: recibe
+// la comida de los pedidos de todos los ambientes (decisión del Product Owner, 12 nov).
+export function Ambientes({ local }: Readonly<{ local: LocalConEstaciones }>) {
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const cerrar = () => setDialogo(null);
+  const nuevaEstacion = dialogo?.tipo === 'barra' || dialogo?.tipo === 'cocina' ? dialogo : null;
 
   return (
     <Stack gap="md">
       <EncabezadoPagina
         icono={IconBuildingStore}
         titulo="Ambientes y estaciones"
-        descripcion="Cada pedido llega a la barra o cocina que lo prepara."
+        descripcion="Cada ambiente tiene su barra. La cocina es de todo el local: recibe la comida de todos los ambientes."
       >
         <Button size="sm" mih={44} onClick={() => setDialogo({ tipo: 'ambiente' })}>
           Agregar ambiente
         </Button>
       </EncabezadoPagina>
 
-      {ambientes.map((ambiente) => (
-        <Card key={ambiente.id} withBorder padding="sm">
-          <Stack gap="sm">
-            <div>
-              <Group gap="xs">
-                <Title order={3} size="h4">
-                  {ambiente.nombre}
-                </Title>
-                {!ambiente.activo && <Badge color="gray">Desactivado</Badge>}
-              </Group>
-              <Text size="sm" c="dimmed">
-                Plano de {ambiente.planoAncho} × {ambiente.planoAlto}
-              </Text>
-            </div>
-
-            <Stack gap={4}>
-              {ambiente.estaciones.length === 0 && (
-                <Text size="sm" c="dimmed">
-                  Sin estaciones
-                </Text>
-              )}
-              {ambiente.estaciones.map((estacion) => (
-                <Group key={estacion.id} justify="space-between" wrap="nowrap">
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+        {local.ambientes.map((ambiente) => (
+          <Card key={ambiente.id} withBorder padding="md" radius="md">
+            <Stack gap="md">
+              <Group gap="sm" wrap="nowrap">
+                <ThemeIcon variant="light" size={44} radius="md">
+                  <IconBuildingStore size={24} />
+                </ThemeIcon>
+                <div style={{ minWidth: 0 }}>
                   <Group gap="xs">
-                    <Text size="sm">{estacion.nombre}</Text>
-                    <Badge variant="light" color={estacion.tipo === 'barra' ? 'violet' : 'teal'}>
-                      {estacion.tipo === 'barra' ? 'Barra' : 'Cocina'}
-                    </Badge>
+                    <Title order={3} size="h4">
+                      {ambiente.nombre}
+                    </Title>
+                    {!ambiente.activo && <Badge color="gray">Desactivado</Badge>}
                   </Group>
-                  <Group gap={4} wrap="nowrap">
+                  <Text size="sm" c="dimmed">
+                    Plano de {ambiente.planoAncho} × {ambiente.planoAlto}
+                  </Text>
+                </div>
+              </Group>
+
+              <Stack gap={6}>
+                {etiqueta('Barra')}
+                {ambiente.barra ? (
+                  <FilaEstacion
+                    estacion={ambiente.barra}
+                    icono={IconBottle}
+                    color="blue"
+                    alRenombrar={() =>
+                      ambiente.barra && setDialogo({ tipo: 'renombrar', estacion: ambiente.barra })
+                    }
+                  />
+                ) : (
+                  <Group justify="space-between" gap="xs">
+                    <Text size="sm" c="yellow.4">
+                      Sin barra: sus tragos no se pueden pedir.
+                    </Text>
                     <Button
-                      variant="subtle"
                       size="sm"
                       mih={44}
-                      onClick={() =>
-                        setDialogo({ tipo: 'estacion', ambienteId: ambiente.id, estacion })
-                      }
-                      aria-label={`Editar ${estacion.nombre}`}
+                      variant="light"
+                      leftSection={<IconPlus size={16} />}
+                      onClick={() => setDialogo({ tipo: 'barra', ambiente })}
+                      aria-label={`Agregar barra a ${ambiente.nombre}`}
                     >
-                      Editar
+                      Agregar barra
                     </Button>
-                    <BotonAccion
-                      accion={eliminarEstacion}
-                      datos={{ id: estacion.id }}
-                      etiqueta="Eliminar"
-                      variant="subtle"
-                      color="red"
-                      aria-label={`Eliminar ${estacion.nombre}`}
-                      confirmar={`¿Eliminar ${estacion.nombre}?`}
-                    />
                   </Group>
-                </Group>
-              ))}
-            </Stack>
+                )}
+              </Stack>
 
-            <Group gap="xs">
-              <Button
-                variant="default"
-                size="sm"
-                mih={44}
-                onClick={() => setDialogo({ tipo: 'ambiente', ambiente })}
-                aria-label={`Editar ${ambiente.nombre}`}
-              >
-                Editar
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                mih={44}
-                onClick={() => setDialogo({ tipo: 'estacion', ambienteId: ambiente.id })}
-                aria-label={`Agregar estación a ${ambiente.nombre}`}
-              >
-                Agregar estación
-              </Button>
-              <BotonAccion
-                accion={cambiarAmbienteActivo}
-                datos={ambiente.activo ? { id: ambiente.id } : { id: ambiente.id, activo: 'on' }}
-                etiqueta={ambiente.activo ? 'Desactivar' : 'Activar'}
-                color={ambiente.activo ? 'red' : undefined}
-                aria-label={`${ambiente.activo ? 'Desactivar' : 'Activar'} ${ambiente.nombre}`}
-              />
+              <Group gap="xs">
+                <Button
+                  variant="default"
+                  size="sm"
+                  mih={44}
+                  onClick={() => setDialogo({ tipo: 'ambiente', ambiente })}
+                  aria-label={`Editar ${ambiente.nombre}`}
+                >
+                  Editar
+                </Button>
+                <BotonAccion
+                  accion={cambiarAmbienteActivo}
+                  datos={ambiente.activo ? { id: ambiente.id } : { id: ambiente.id, activo: 'on' }}
+                  etiqueta={ambiente.activo ? 'Desactivar' : 'Activar'}
+                  variant="default"
+                  color={ambiente.activo ? 'red' : undefined}
+                  aria-label={`${ambiente.activo ? 'Desactivar' : 'Activar'} ${ambiente.nombre}`}
+                />
+              </Group>
+            </Stack>
+          </Card>
+        ))}
+      </SimpleGrid>
+
+      <Card withBorder padding="md" radius="md">
+        <Stack gap="md">
+          <Group justify="space-between" gap="sm">
+            <Group gap="sm" wrap="nowrap">
+              <ThemeIcon variant="light" color="orange" size={44} radius="md">
+                <IconChefHat size={24} />
+              </ThemeIcon>
+              <div>
+                <Title order={3} size="h4">
+                  Cocina
+                </Title>
+                <Text size="sm" c="dimmed">
+                  De todo el local: recibe la comida de todos los ambientes.
+                </Text>
+              </div>
             </Group>
-          </Stack>
-        </Card>
-      ))}
+            <Button
+              size="sm"
+              mih={44}
+              variant="light"
+              color="orange"
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setDialogo({ tipo: 'cocina' })}
+            >
+              Agregar cocina
+            </Button>
+          </Group>
+          {local.cocinas.length === 0 && (
+            <Text size="sm" c="yellow.4">
+              Sin cocina: la comida no se puede pedir.
+            </Text>
+          )}
+          {local.cocinas.map((cocina) => (
+            <FilaEstacion
+              key={cocina.id}
+              estacion={cocina}
+              icono={IconChefHat}
+              color="orange"
+              alRenombrar={() => setDialogo({ tipo: 'renombrar', estacion: cocina })}
+            />
+          ))}
+        </Stack>
+      </Card>
 
       <Modal
         opened={dialogo?.tipo === 'ambiente'}
@@ -201,24 +277,44 @@ export function Ambientes({ ambientes }: Readonly<{ ambientes: AmbienteConEstaci
       </Modal>
 
       <Modal
-        opened={dialogo?.tipo === 'estacion'}
+        opened={nuevaEstacion !== null}
         onClose={cerrar}
         title={
-          dialogo?.tipo === 'estacion' && dialogo.estacion ? 'Editar estación' : 'Agregar estación'
+          nuevaEstacion?.tipo === 'barra'
+            ? `Agregar barra a ${nuevaEstacion.ambiente.nombre}`
+            : 'Agregar cocina'
         }
       >
-        {dialogo?.tipo === 'estacion' && (
-          <FormularioAccion
-            accion={dialogo.estacion ? editarEstacion : crearEstacion}
-            textoEnviar="Guardar"
-            alTerminar={cerrar}
-          >
-            {dialogo.estacion ? (
-              <input type="hidden" name="id" value={dialogo.estacion.id} />
-            ) : (
-              <input type="hidden" name="ambienteId" value={dialogo.ambienteId} />
+        {nuevaEstacion && (
+          <FormularioAccion accion={crearEstacion} textoEnviar="Guardar" alTerminar={cerrar}>
+            <input type="hidden" name="tipo" value={nuevaEstacion.tipo} />
+            {nuevaEstacion.tipo === 'barra' && (
+              <input type="hidden" name="ambienteId" value={nuevaEstacion.ambiente.id} />
             )}
-            <CamposEstacion estacion={dialogo.estacion} />
+            <TextInput
+              name="nombre"
+              label="Nombre"
+              placeholder={
+                nuevaEstacion.tipo === 'barra' ? `Barra ${nuevaEstacion.ambiente.nombre}` : 'Cocina'
+              }
+              size="md"
+              required
+            />
+          </FormularioAccion>
+        )}
+      </Modal>
+
+      <Modal opened={dialogo?.tipo === 'renombrar'} onClose={cerrar} title="Editar estación">
+        {dialogo?.tipo === 'renombrar' && (
+          <FormularioAccion accion={editarEstacion} textoEnviar="Guardar" alTerminar={cerrar}>
+            <input type="hidden" name="id" value={dialogo.estacion.id} />
+            <TextInput
+              name="nombre"
+              label="Nombre"
+              defaultValue={dialogo.estacion.nombre}
+              size="md"
+              required
+            />
           </FormularioAccion>
         )}
       </Modal>

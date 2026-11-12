@@ -12,10 +12,19 @@ import {
   Text,
   Textarea,
   TextInput,
+  ThemeIcon,
   Title,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconCalendarEvent, IconUserCheck } from '@tabler/icons-react';
+import {
+  IconCalendarEvent,
+  IconChevronRight,
+  IconConfetti,
+  IconListDetails,
+  IconTrophy,
+  IconUserCheck,
+  type Icon,
+} from '@tabler/icons-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -96,6 +105,30 @@ function PersonasDelDia({ noche }: Readonly<{ noche: NocheDelCalendario }>) {
   );
 }
 
+/** Una línea del resumen de la noche en el calendario: premio, eventos o listas. */
+function DatoDeLaNoche({
+  icono: Icono,
+  color,
+  titulo,
+  children,
+}: Readonly<{ icono: Icon; color: string; titulo: string; children: React.ReactNode }>) {
+  return (
+    <Group gap="sm" wrap="nowrap" align="flex-start">
+      <ThemeIcon variant="light" color={color} size={30} radius="md">
+        <Icono size={17} stroke={1.8} />
+      </ThemeIcon>
+      <div style={{ minWidth: 0 }}>
+        <Text size="xs" c="dimmed" lh={1.2}>
+          {titulo}
+        </Text>
+        <Text size="sm" lh={1.3}>
+          {children}
+        </Text>
+      </div>
+    </Group>
+  );
+}
+
 function CamposNoche({ precio, nota }: Readonly<{ precio?: number; nota?: string | null }>) {
   return (
     <>
@@ -151,12 +184,42 @@ function DetalleDia({
   const sinTurno = noche.postulantes.filter(
     (p) => !noche.turnos.some((t) => t.usuarioId === p.usuarioId),
   );
+  const detalles = noche.detalles;
   return (
     <Stack gap="md">
       <div>
         <Text>Entrada {formatearPesos(noche.precioEntrada)}</Text>
         {noche.nota && <Text c="dimmed">{noche.nota}</Text>}
       </div>
+
+      {detalles && (
+        <Stack gap={6}>
+          <DatoDeLaNoche icono={IconTrophy} color="yellow" titulo="Premio">
+            {detalles.premios.length > 0 ? detalles.premios.join(' · ') : 'Sin premio todavía'}
+          </DatoDeLaNoche>
+          <DatoDeLaNoche icono={IconConfetti} color="pink" titulo="Eventos">
+            {detalles.eventos.length > 0
+              ? detalles.eventos
+                  .map((e) => (e.hora ? `${e.nombre} ${e.hora}` : e.nombre))
+                  .join(' · ')
+              : 'Sin eventos'}
+          </DatoDeLaNoche>
+          <DatoDeLaNoche icono={IconListDetails} color="violeta" titulo="Listas e invitados">
+            {`${detalles.listas} ${detalles.listas === 1 ? 'lista' : 'listas'} (${detalles.enListas} personas) · ${detalles.invitados} ${detalles.invitados === 1 ? 'invitado' : 'invitados'}`}
+          </DatoDeLaNoche>
+        </Stack>
+      )}
+
+      <Button
+        component={Link}
+        href={`/admin/calendario/${fecha}`}
+        size="sm"
+        mih={44}
+        variant="light"
+        rightSection={<IconChevronRight size={18} />}
+      >
+        Ver la noche: premio, eventos y listas
+      </Button>
 
       <div>
         <Title order={4} size="h5" mb={6}>
