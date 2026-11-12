@@ -10,6 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "local": "next build && node scripts/servir.ts",
+    "servir": "node scripts/servir.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -24,6 +26,7 @@
     "db:semilla": "node scripts/sembrar.ts",
     "db:reiniciar": "node scripts/reiniciar-demo.ts",
     "host:preparar": "node scripts/preparar-host.ts",
+    "host:migrar": "node scripts/migrar-host.ts",
     "db:esquema": "drizzle-kit pull && node scripts/ajustar-esquema.mjs && prettier --write src/shared/db/esquema"
   },
   "dependencies": {

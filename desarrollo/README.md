@@ -35,22 +35,24 @@ cada persona opere su rol, la administración debe abrir la noche.
 
 ## Comandos
 
-| Comando                                                   | Para qué                                                              |
-| --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `npm run dev`                                             | Servidor de desarrollo                                                |
-| `npm run build`                                           | Build de producción                                                   |
-| `npm run lint` / `npm run typecheck`                      | ESLint / tipos de TypeScript                                          |
-| `npm run format`                                          | Formatear con Prettier                                                |
-| `npm test`                                                | Pruebas unitarias y de integración (usan la base `gesnoc_pruebas`)    |
-| `npm run test:unit`                                       | Solo unitarias                                                        |
-| `npx vitest run tests/unit/dinero.test.ts -t "decimales"` | Un archivo o una sola prueba                                          |
-| `npm run test:e2e`                                        | Playwright (levanta el servidor en :3100 contra `gesnoc_pruebas`)     |
-| `npm run db:migrar`                                       | Aplicar migraciones pendientes                                        |
-| `npm run db:nueva -- nombre`                              | Crear una migración nueva en `db/migrations/`                         |
-| `npm run db:semilla`                                      | Cargar el local de demostración si la base no tiene personal          |
-| `npm run db:reiniciar`                                    | Dejar la base local como recién sembrada (borra todo; solo en local)  |
-| `npm run host:preparar`                                   | Preparar la base del ambiente publicado desde `.env.host` (ver abajo) |
-| `npm run db:esquema`                                      | Regenerar los tipos de Drizzle desde la base migrada                  |
+| Comando                                                   | Para qué                                                                                                              |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                                             | Servidor de desarrollo                                                                                                |
+| `npm run build`                                           | Build de producción                                                                                                   |
+| `npm run local`                                           | Compilar y servir como en producción (más rápido que `dev` en un disco lento; el teléfono entra con la IP del equipo) |
+| `npm run lint` / `npm run typecheck`                      | ESLint / tipos de TypeScript                                                                                          |
+| `npm run format`                                          | Formatear con Prettier                                                                                                |
+| `npm test`                                                | Pruebas unitarias y de integración (usan la base `gesnoc_pruebas`)                                                    |
+| `npm run test:unit`                                       | Solo unitarias                                                                                                        |
+| `npx vitest run tests/unit/dinero.test.ts -t "decimales"` | Un archivo o una sola prueba                                                                                          |
+| `npm run test:e2e`                                        | Playwright (levanta el servidor en :3100 contra `gesnoc_pruebas`)                                                     |
+| `npm run db:migrar`                                       | Aplicar migraciones pendientes                                                                                        |
+| `npm run db:nueva -- nombre`                              | Crear una migración nueva en `db/migrations/`                                                                         |
+| `npm run db:semilla`                                      | Cargar el local de demostración si la base no tiene personal                                                          |
+| `npm run db:reiniciar`                                    | Dejar la base local como recién sembrada (borra todo; solo en local)                                                  |
+| `npm run host:preparar`                                   | Preparar la base del ambiente publicado desde `.env.host` (ver abajo)                                                 |
+| `npm run host:migrar`                                     | Aplicar las migraciones nuevas al ambiente publicado                                                                  |
+| `npm run db:esquema`                                      | Regenerar los tipos de Drizzle desde la base migrada                                                                  |
 
 ## Base de datos
 
@@ -72,8 +74,8 @@ La carta del cliente (`/carta/[token]`) es pública.
 
 Los permisos se deciden en un solo lugar, `src/shared/autorizacion/`: cada servicio llama a `exigir`
 y cada página a `exigirVista`. Los menús están en `src/modules/acceso/roles.ts`; las secciones que
-aún no se construyen se muestran en construcción, y las pantallas de garzón, barra, cocina y guardia
-usan datos de demostración hasta que lleguen sus historias.
+aún no se construyen se muestran en construcción, y la pantalla de la puerta usa datos de
+demostración hasta que llegue HU-30.
 
 ## Ambiente publicado
 
@@ -85,6 +87,8 @@ aplicación corre como imagen Docker en otro servicio, en la misma región.
 2. `npm run host:preparar`: genera las claves que falten, crea los roles, aplica las migraciones,
    carga el local de demostración y deja `HOST_DATABASE_URL` en el mismo archivo. No muestra claves.
 3. En el servicio de la aplicación, definir `DATABASE_URL` con el valor de `HOST_DATABASE_URL`.
+4. Cada vez que haya una migración nueva, `npm run host:migrar` **antes** de subir el código que la
+   usa: si no, la versión publicada consultaría columnas que su base todavía no tiene.
 
 ## Operación de la noche
 
