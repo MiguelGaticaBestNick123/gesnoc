@@ -23,6 +23,8 @@ export default defineConfig({
   projects: [
     { name: 'apertura', testMatch: 'apertura.setup.ts', use: telefono },
     { name: 'movil', dependencies: ['apertura'], use: telefono },
+    // El cierre de la noche va al final: con la noche cerrada, las demás pruebas no podrían operar.
+    { name: 'cierre', testMatch: 'cierre.final.ts', dependencies: ['movil'], use: telefono },
   ],
   webServer: {
     command: enCI ? 'npm run start' : 'npm run dev',
