@@ -15,10 +15,17 @@ export function generateStaticParams() {
 
 export default async function PaginaTurnos({
   params,
-}: Readonly<{ params: Promise<{ rol: string }> }>) {
+  searchParams,
+}: Readonly<{ params: Promise<{ rol: string }>; searchParams: Promise<{ mes?: string }> }>) {
   const { rol } = await params;
   const encontrado = conTurnos.find((r) => r.clave === rol);
   if (!encontrado) notFound();
 
-  return <PantallaTurnos actor={await exigirVista(encontrado.clave)} />;
+  return (
+    <PantallaTurnos
+      actor={await exigirVista(encontrado.clave)}
+      ruta={`/${rol}/turnos`}
+      mes={(await searchParams).mes}
+    />
+  );
 }

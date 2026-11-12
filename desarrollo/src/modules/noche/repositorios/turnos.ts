@@ -1,5 +1,6 @@
 import 'server-only';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
+import type { RolTurno } from '@/shared/autorizacion';
 import { db } from '@/shared/db/cliente';
 import { ambiente, asignacion, disponibilidad, noche, usuario } from '@/shared/db/esquema/schema';
 import type { DatosAsignacion } from '../esquemas';
@@ -77,3 +78,46 @@ export const eliminarTurno = (fecha: string, usuarioId: number) =>
   db()
     .delete(asignacion)
     .where(and(eq(asignacion.fecha, fecha), eq(asignacion.usuarioId, usuarioId)));
+
+/** Cuántas veces tuvo cada persona cada rol, sin contar la noche indicada. */
+export async function historialDeRoles(salvoFecha: string) {
+  const filas = await db().execute<{
+    usuario_id: number;
+    rol: RolTurno;
+    veces: number;
+    ultima: string;
+  }>(sql`
+    select usuario_id, rol, count(*)::int as veces, max(fecha)::text as ultima
+    from gesnoc.asignacion
+    where fecha <> ${salvoFecha}
+    group by usuario_id, rol`);
+  return filas.map((f) => ({
+    usuarioId: f.usuario_id,
+    rol: f.rol,
+    veces: f.veces,
+    ultima: f.ultima,
+  }));
+}
+
+/** Las noches del rango con lo que le corresponde a la persona en cada una. */
+export async function mesDe(usuarioId: number, desde: string, hasta: string) {
+  const filas = await db().execute<{
+    fecha: string;
+    nota: string | null;
+    estado: 'programada' | 'abierta' | 'cerrada';
+    disponible: boolean;
+    rol: RolTurno | null;
+    ambiente: string | null;
+  }>(sql`
+    select n.fecha::text as fecha, n.nota,
+           case when n.cerrada_en is not null then 'cerrada'
+                when n.abierta_en is not null then 'abierta' else 'programada' end as estado,
+           d.usuario_id is not null as disponible, a.rol, amb.nombre as ambiente
+    from gesnoc.noche n
+    left join gesnoc.disponibilidad d on d.fecha = n.fecha and d.usuario_id = ${usuarioId}
+    left join gesnoc.asignacion a on a.fecha = n.fecha and a.usuario_id = ${usuarioId}
+    left join gesnoc.ambiente amb on amb.id = a.ambiente_id
+    where n.fecha between ${desde} and ${hasta}
+    order by n.fecha`);
+  return filas.map((f) => ({ ...f }));
+}

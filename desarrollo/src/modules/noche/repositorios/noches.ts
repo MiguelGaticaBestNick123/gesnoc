@@ -89,3 +89,66 @@ export async function fechaAbierta(): Promise<string | undefined> {
     .where(and(isNotNull(noche.abiertaEn), isNull(noche.cerradaEn)));
   return fila?.fecha;
 }
+
+export type EstadoNoche = 'programada' | 'abierta' | 'cerrada';
+
+const estadoSql = sql<EstadoNoche>`case when ${noche.cerradaEn} is not null then 'cerrada'
+  when ${noche.abiertaEn} is not null then 'abierta' else 'programada' end`;
+
+/** Noches del rango con su estado, para el calendario. */
+export const nochesDelRango = (desde: string, hasta: string) =>
+  db()
+    .select({
+      fecha: noche.fecha,
+      nota: noche.nota,
+      precioEntrada: noche.precioEntrada,
+      estado: estadoSql,
+    })
+    .from(noche)
+    .where(sql`${noche.fecha} between ${desde} and ${hasta}`)
+    .orderBy(asc(noche.fecha));
+
+/** Quién tiene turno cada noche del rango, con su rol y ambiente. */
+export async function turnosDelRango(desde: string, hasta: string) {
+  const filas = await db().execute<{
+    fecha: string;
+    usuario_id: number;
+    nombre: string;
+    rol: string;
+    ambiente: string | null;
+  }>(sql`
+    select a.fecha::text as fecha, u.id as usuario_id, u.nombre, a.rol, amb.nombre as ambiente
+    from gesnoc.asignacion a
+    join gesnoc.usuario u on u.id = a.usuario_id
+    left join gesnoc.ambiente amb on amb.id = a.ambiente_id
+    where a.fecha between ${desde} and ${hasta}
+    order by a.fecha, a.rol, amb.nombre, u.nombre`);
+  return filas.map((f) => ({
+    fecha: f.fecha,
+    usuarioId: f.usuario_id,
+    nombre: f.nombre,
+    rol: f.rol,
+    ambiente: f.ambiente,
+  }));
+}
+
+/** Quién postuló (declaró disponibilidad) a cada noche del rango. */
+export async function postulantesDelRango(desde: string, hasta: string) {
+  const filas = await db().execute<{ fecha: string; usuario_id: number; nombre: string }>(sql`
+    select d.fecha::text as fecha, u.id as usuario_id, u.nombre
+    from gesnoc.disponibilidad d
+    join gesnoc.usuario u on u.id = d.usuario_id
+    where d.fecha between ${desde} and ${hasta}
+    order by d.fecha, u.nombre`);
+  return filas.map((f) => ({ fecha: f.fecha, usuarioId: f.usuario_id, nombre: f.nombre }));
+}
+
+/** Precio de entrada de la última noche programada: el que se propone para una nueva. */
+export async function ultimoPrecio(): Promise<number> {
+  const [fila] = await db()
+    .select({ precio: noche.precioEntrada })
+    .from(noche)
+    .orderBy(sql`${noche.fecha} desc`)
+    .limit(1);
+  return fila?.precio ?? 0;
+}

@@ -1,15 +1,26 @@
-import { Badge, Card, Group, Stack, Text } from '@mantine/core';
+import { Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
 import type { Actor } from '@/shared/autorizacion';
+import { mesDe, mesValido } from '@/shared/utilidades/calendario';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
-import { formatearFecha, tituloDeFecha } from '@/shared/utilidades/fechas';
+import { formatearFecha, hoyEnChile, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { declararDisponibilidad } from './acciones';
 import { nombreDelRol } from './nombres';
-import { misTurnos } from './servicios/turnos';
+import { CalendarioPersonal } from './CalendarioPersonal';
+import { miCalendario, misTurnos } from './servicios/turnos';
 import { IconCalendarEvent } from '@tabler/icons-react';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
-export async function PantallaTurnos({ actor }: Readonly<{ actor: Actor }>) {
-  const noches = await misTurnos(actor);
+/** HU-09: el calendario propio del mes y, debajo, las próximas noches para postular. */
+export async function PantallaTurnos({
+  actor,
+  ruta,
+  mes,
+}: Readonly<{ actor: Actor; ruta: string; mes?: string }>) {
+  const mesElegido = mesValido(mes) ?? mesDe(hoyEnChile());
+  const [noches, calendario] = await Promise.all([
+    misTurnos(actor),
+    miCalendario(actor, mesElegido),
+  ]);
 
   return (
     <Stack gap="md">
@@ -19,6 +30,13 @@ export async function PantallaTurnos({ actor }: Readonly<{ actor: Actor }>) {
         descripcion="Avisa qué noches puedes trabajar y revisa los turnos que te asignaron."
       />
 
+      <Card withBorder padding="sm">
+        <CalendarioPersonal key={mesElegido} datos={calendario} ruta={ruta} />
+      </Card>
+
+      <Title order={3} size="h5">
+        Próximas noches
+      </Title>
       {noches.length === 0 && <Text c="dimmed">No hay noches programadas.</Text>}
 
       {noches.map((noche) => (

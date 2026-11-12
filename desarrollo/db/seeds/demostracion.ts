@@ -189,6 +189,51 @@ export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Prom
         insert into gesnoc.disponibilidad (fecha, usuario_id)
         values (${proxima}, ${id[clavePersona]!})`;
     }
+
+    // Historial: cuatro noches pasadas y cerradas. Con ellas el calendario muestra quién trabajó y
+    // la asignación reconoce el rol habitual de cada persona (el rol rota: Paula y Matías cambian).
+    const pasadas = [-14, -13, -7, -6].map((dias) => sumarDias(hoy, dias));
+    const historial: Record<
+      string,
+      ['garzon' | 'barman' | 'cocinero' | 'guardia', number | null][]
+    > = {
+      garzon: pasadas.map(() => ['garzon', salon]),
+      garzon2: [
+        ['garzon', terraza],
+        ['guardia', null],
+        ['garzon', terraza],
+        ['garzon', terraza],
+      ],
+      barra: pasadas.map(() => ['barman', salon]),
+      barra2: [
+        ['barman', terraza],
+        ['barman', terraza],
+        ['garzon', terraza],
+        ['barman', terraza],
+      ],
+      cocina: pasadas.map(() => ['cocinero', salon]),
+      guardia: pasadas.map(() => ['guardia', null]),
+      sinturno: [
+        ['guardia', null],
+        ['guardia', null],
+        ['garzon', salon],
+        ['guardia', null],
+      ],
+    };
+    for (const [i, fecha] of pasadas.entries()) {
+      await tx`
+        insert into gesnoc.noche (fecha, nota, precio_entrada, abierta_en, cerrada_en)
+        values (${fecha}, null, 5000, ${`${fecha} 22:00:00-03`}, ${`${fecha} 22:00:00-03`}::timestamptz + interval '7 hours')`;
+      await tx`
+        insert into gesnoc.arqueo (fecha, fondo_inicial, efectivo_contado, contado_por)
+        values (${fecha}, 50000, 50000, ${id.admin!})`;
+      for (const [clavePersona, turnos] of Object.entries(historial)) {
+        const [rol, ambiente] = turnos[i]!;
+        await tx`
+          insert into gesnoc.asignacion (fecha, usuario_id, rol, ambiente_id)
+          values (${fecha}, ${id[clavePersona]!}, ${rol}, ${ambiente})`;
+      }
+    }
   });
   return true;
 }

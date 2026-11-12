@@ -53,3 +53,8 @@ export function duracion(segundos: number): string {
   if (horas === 0) return `${minutos} min`;
   return `${horas} h ${String(minutos).padStart(2, '0')} min`;
 }
+
+/** Fecha de hoy en Chile, «2026-11-12»: la noche se piensa en hora local, no en UTC. */
+export function hoyEnChile(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
+}

@@ -1,9 +1,12 @@
 import 'server-only';
 import { listarAmbientes } from '@/modules/local/repositorios/ambientes';
-import { exigir, type Actor } from '@/shared/autorizacion';
+import { exigir, type Actor, type RolTurno } from '@/shared/autorizacion';
 import { ErrorDeNegocio, traducir } from '@/shared/errores';
+import { rangoDelMes } from '@/shared/utilidades/calendario';
+import { hoyEnChile } from '@/shared/utilidades/fechas';
 import type { DatosAsignacion } from '../esquemas';
 import { buscarNoche, listarNoches } from '../repositorios/noches';
+import { rolPrincipal } from '../recomendacion';
 import * as repositorio from '../repositorios/turnos';
 
 export async function misTurnos(actor: Actor) {
@@ -36,17 +39,27 @@ export async function pantallaAsignacion(actor: Actor, fecha?: string) {
   const elegida = noches.find((noche) => noche.fecha === fecha) ?? noches[0];
   if (!elegida) return { noches, elegida, dotacion: [], ambientes: [] };
 
-  const [dotacion, ambientes] = await Promise.all([
+  const [dotacion, ambientes, historial] = await Promise.all([
     repositorio.dotacionDe(elegida.fecha),
     listarAmbientes(),
+    repositorio.historialDeRoles(elegida.fecha),
   ]);
   return {
     noches,
     elegida,
-    dotacion: dotacion.map(({ disponible, ...persona }) => ({
-      ...persona,
-      disponible: disponible !== null,
-    })),
+    dotacion: dotacion.map(({ disponible, rol, ...persona }) => {
+      const propio = historial.filter((h) => h.usuarioId === persona.id);
+      return {
+        ...persona,
+        rol: rol as RolTurno | null,
+        disponible: disponible !== null,
+        // Rol habitual según su historial, para recomendarla al asignar (no se guarda).
+        principal: rolPrincipal(propio),
+        veces: Object.fromEntries(propio.map((h) => [h.rol, h.veces])) as Partial<
+          Record<RolTurno, number>
+        >,
+      };
+    }),
     ambientes: ambientes.filter((ambiente) => ambiente.activo),
   };
 }
@@ -76,3 +89,20 @@ export async function quitar(actor: Actor, fecha: string, usuarioId: number) {
   await exigirNocheVigente(fecha);
   await repositorio.eliminarTurno(fecha, usuarioId);
 }
+
+/**
+ * El calendario del mes de una persona: en qué noches tuvo o tiene turno y de qué rol, a cuáles
+ * postuló y a cuáles todavía puede postular.
+ */
+export async function miCalendario(actor: Actor, mes: string) {
+  exigir(actor, 'personal');
+  const { desde, hasta } = rangoDelMes(mes);
+  const noches = await repositorio.mesDe(actor.id, desde, hasta);
+  return {
+    mes,
+    hoy: hoyEnChile(),
+    noches: Object.fromEntries(noches.map((noche) => [noche.fecha, noche])),
+  };
+}
+
+export type MiCalendario = Awaited<ReturnType<typeof miCalendario>>;

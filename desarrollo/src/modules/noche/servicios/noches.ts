@@ -2,6 +2,8 @@ import 'server-only';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { db, type Transaccion } from '@/shared/db/cliente';
 import { ErrorDeNegocio, traducir } from '@/shared/errores';
+import { rangoDelMes } from '@/shared/utilidades/calendario';
+import { hoyEnChile } from '@/shared/utilidades/fechas';
 import type { DatosNoche } from '../esquemas';
 import * as repositorio from '../repositorios/noches';
 
@@ -65,3 +67,34 @@ export async function abrir(actor: Actor, fecha: string, fondo: number) {
   });
   if (!abierta) throw new ErrorDeNegocio('Esa noche no existe o ya fue abierta');
 }
+
+/**
+ * El calendario del mes para la administración: cada noche con su estado, quién tiene turno y quién
+ * postuló. Los días sin noche se pueden habilitar desde el mismo calendario.
+ */
+export async function calendarioDelMes(actor: Actor, mes: string) {
+  exigir(actor, 'admin');
+  const { desde, hasta } = rangoDelMes(mes);
+  const [noches, turnos, postulantes, precioSugerido] = await Promise.all([
+    repositorio.nochesDelRango(desde, hasta),
+    repositorio.turnosDelRango(desde, hasta),
+    repositorio.postulantesDelRango(desde, hasta),
+    repositorio.ultimoPrecio(),
+  ]);
+  const delDia = <T extends { fecha: string }>(filas: T[], fecha: string) =>
+    filas.filter((fila) => fila.fecha === fecha);
+  return {
+    mes,
+    hoy: hoyEnChile(),
+    precioSugerido,
+    noches: Object.fromEntries(
+      noches.map((n) => [
+        n.fecha,
+        { ...n, turnos: delDia(turnos, n.fecha), postulantes: delDia(postulantes, n.fecha) },
+      ]),
+    ),
+  };
+}
+
+export type CalendarioDelMes = Awaited<ReturnType<typeof calendarioDelMes>>;
+export type NocheDelCalendario = CalendarioDelMes['noches'][string];
