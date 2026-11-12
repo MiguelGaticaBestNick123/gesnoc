@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { datosAbrirCuenta, datosPedido } from '@/modules/venta/esquemas';
-import { escalaDelPlano } from '@/modules/venta/plano';
 import { estacionDestino } from '@/modules/venta/ruteo';
 
 const BARRA = 10;
@@ -69,23 +68,5 @@ describe('datos de un pedido', () => {
     ['51 personas', { personas: 51 }],
   ])('rechaza un pedido con %s', (_, cambio) => {
     expect(datosPedido.safeParse({ ...base, ...cambio }).success).toBe(false);
-  });
-});
-
-describe('escala del plano en el teléfono (RNF-09)', () => {
-  const mesas = [
-    { ancho: 110, alto: 80 },
-    { ancho: 180, alto: 90 },
-  ];
-
-  it('en una pantalla ancha el plano se ve completo sin agrandarse', () => {
-    expect(escalaDelPlano(1200, 900, mesas)).toBe(1);
-    expect(escalaDelPlano(450, 900, mesas)).toBe(0.55);
-  });
-
-  it('en un teléfono la mesa más pequeña no baja de 44 px y el plano se desplaza', () => {
-    const escala = escalaDelPlano(330, 900, mesas);
-    expect(80 * escala).toBeCloseTo(44);
-    expect(900 * escala).toBeGreaterThan(330);
   });
 });

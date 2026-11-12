@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { bloquearCorrelativo, db, type Transaccion } from '@/shared/db/cliente';
-import { ambiente, cuenta, mesa, usuario } from '@/shared/db/esquema/schema';
+import { ambiente, cuenta, mesa } from '@/shared/db/esquema/schema';
 import type { FilaDetalle, PagoDeCuenta } from '../cuenta';
 import type { UbicacionCuenta } from '../esquemas';
 
@@ -28,49 +28,97 @@ export async function buscarMesa(id: number) {
   return fila;
 }
 
-/** Mesas activas del ambiente con su cuenta abierta en la noche, si tienen: ocupada se deduce. */
-export const mesasDe = (fecha: string | undefined, ambienteId: number) =>
-  db()
-    .select({
-      id: mesa.id,
-      numero: mesa.numero,
-      forma: mesa.forma,
-      posX: mesa.posX,
-      posY: mesa.posY,
-      ancho: mesa.ancho,
-      alto: mesa.alto,
-      rotacion: mesa.rotacion,
-      cuenta: cuenta.numero,
-      abiertaEn: cuenta.abiertaEn,
-      garzon: usuario.nombre,
-    })
-    .from(mesa)
-    .leftJoin(
-      cuenta,
-      and(
-        eq(cuenta.mesaId, mesa.id),
-        fecha ? eq(cuenta.fecha, fecha) : sql`false`,
-        isNull(cuenta.cerradaEn),
-      ),
-    )
-    .leftJoin(usuario, eq(usuario.id, cuenta.abiertaPor))
-    .where(and(eq(mesa.ambienteId, ambienteId), eq(mesa.activa, true)))
-    .orderBy(asc(mesa.numero));
+// Lo que el mapa muestra de cada cuenta abierta: total vigente, comandas listas sin entregar y la
+// espera más larga de lo que aún se prepara. Se calcula al consultar; nada de esto se guarda.
+const resumenDeCuenta = sql`
+  left join lateral (
+    select coalesce(sum(d.cantidad * d.precio_unitario), 0)::int as total
+    from gesnoc.pedido p
+    join gesnoc.detalle_pedido d on d.fecha = p.fecha and d.pedido_numero = p.numero
+    where p.fecha = c.fecha and p.cuenta_numero = c.numero and d.anulado_en is null
+  ) t on true
+  left join lateral (
+    select count(*) filter (where co.lista_en is not null)::int as listas,
+           coalesce(max(extract(epoch from now() - p.enviado_en))
+                    filter (where co.lista_en is null), 0)::int as espera_maxima
+    from gesnoc.pedido p
+    join gesnoc.comanda co on co.fecha = p.fecha and co.pedido_numero = p.numero
+    where p.fecha = c.fecha and p.cuenta_numero = c.numero and co.entregada_en is null
+  ) k on true`;
 
-export const cuentasDePie = (fecha: string, ambienteId: number) =>
-  db()
-    .select({
-      numero: cuenta.numero,
-      referencia: cuenta.referencia,
-      abiertaEn: cuenta.abiertaEn,
-      garzon: usuario.nombre,
-    })
-    .from(cuenta)
-    .innerJoin(usuario, eq(usuario.id, cuenta.abiertaPor))
-    .where(
-      and(eq(cuenta.fecha, fecha), eq(cuenta.ambienteId, ambienteId), isNull(cuenta.cerradaEn)),
-    )
-    .orderBy(asc(cuenta.numero));
+type FilaResumen = {
+  cuenta: number | null;
+  abierta_en: string | null;
+  abierta_hace: number | null;
+  garzon: string | null;
+  total: number | null;
+  listas: number | null;
+  espera_maxima: number | null;
+};
+
+const resumen = (f: FilaResumen) => ({
+  cuenta: f.cuenta,
+  abiertaEn: f.abierta_en,
+  /** Segundos desde que se abrió, con el reloj del servidor. */
+  abiertaHace: f.abierta_hace,
+  garzon: f.garzon,
+  total: f.total ?? 0,
+  /** Comandas listas sin entregar: la mesa se pinta verde. */
+  listas: f.listas ?? 0,
+  /** Segundos que lleva esperando lo más antiguo que aún se prepara. */
+  esperaMaxima: f.espera_maxima ?? 0,
+});
+
+/** Mesas activas del ambiente con su cuenta abierta en la noche, si tienen: ocupada se deduce. */
+export async function mesasDe(fecha: string | undefined, ambienteId: number) {
+  const filas = await db().execute<
+    FilaResumen & {
+      id: number;
+      numero: number;
+      forma: 'cuadrada' | 'redonda' | 'rectangular';
+      pos_x: number;
+      pos_y: number;
+      ancho: number;
+      alto: number;
+      rotacion: number;
+    }
+  >(sql`
+    select m.id, m.numero, m.forma, m.pos_x, m.pos_y, m.ancho, m.alto, m.rotacion,
+           c.numero as cuenta, c.abierta_en::text,
+           extract(epoch from now() - c.abierta_en)::int as abierta_hace,
+           u.nombre as garzon, t.total, k.listas, k.espera_maxima
+    from gesnoc.mesa m
+    left join gesnoc.cuenta c
+      on c.mesa_id = m.id and c.fecha = ${fecha ?? null}::date and c.cerrada_en is null
+    left join gesnoc.usuario u on u.id = c.abierta_por
+    ${resumenDeCuenta}
+    where m.ambiente_id = ${ambienteId} and m.activa
+    order by m.numero`);
+  return filas.map((f) => ({
+    id: f.id,
+    numero: f.numero,
+    forma: f.forma,
+    posX: f.pos_x,
+    posY: f.pos_y,
+    ancho: f.ancho,
+    alto: f.alto,
+    rotacion: f.rotacion,
+    ...resumen(f),
+  }));
+}
+
+export async function cuentasDePie(fecha: string, ambienteId: number) {
+  const filas = await db().execute<FilaResumen & { referencia: string }>(sql`
+    select c.numero as cuenta, c.referencia, c.abierta_en::text,
+           extract(epoch from now() - c.abierta_en)::int as abierta_hace,
+           u.nombre as garzon, t.total, k.listas, k.espera_maxima
+    from gesnoc.cuenta c
+    join gesnoc.usuario u on u.id = c.abierta_por
+    ${resumenDeCuenta}
+    where c.fecha = ${fecha} and c.ambiente_id = ${ambienteId} and c.cerrada_en is null
+    order by c.numero`);
+  return filas.map((f) => ({ numero: f.cuenta!, referencia: f.referencia, ...resumen(f) }));
+}
 
 /**
  * Abre una cuenta con el siguiente número de la noche. Si la mesa ya tiene una cuenta abierta, la
@@ -99,6 +147,16 @@ export async function abrirCuenta(
   const numero = (ultima?.numero ?? 0) + 1;
   await tx.insert(cuenta).values({ fecha, numero, abiertaPor, ...ubicacion });
   return { numero, existente: false };
+}
+
+/**
+ * La mesa sigue activa: se bloquea en modo compartido para que el editor del plano (que la bloquea en
+ * exclusivo al guardar) no la retire mientras se le abre una cuenta.
+ */
+export async function mesaActiva(tx: Transaccion, id: number): Promise<boolean> {
+  const [fila] = await tx.execute<{ activa: boolean }>(sql`
+    select activa from gesnoc.mesa where id = ${id} for share`);
+  return fila?.activa ?? false;
 }
 
 /** Lo que muestra la pantalla de una cuenta. */
