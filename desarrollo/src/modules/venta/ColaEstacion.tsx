@@ -12,12 +12,14 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { IconChefHat, IconGlassFull } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { usePantallaEncendida } from '@/shared/navegador/pantalla-encendida';
 import { avisar, useSonido } from '@/shared/navegador/sonido';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import {
   minutos,
   nivelDeEspera,
@@ -86,18 +88,21 @@ export function ColaEstacion({ inicial }: Readonly<{ inicial: ColaDeEstacion }>)
 
   return (
     <Stack gap="md">
-      <div>
-        <Title order={2}>{titulo}</Title>
-        <Text c="dimmed" size="sm">
-          {pendientes.length} por preparar · {datos.listas.length}{' '}
-          {datos.listas.length === 1 ? 'lista' : 'listas'} para retirar
-        </Text>
-        {/* Siempre ocupa la misma línea: si desapareciera al activarse, el primer toque movería la
-            pantalla bajo el dedo y el botón tocado se perdería. */}
-        <Text c="dimmed" size="xs" role="status">
-          {sonido ? 'Sonido activo' : 'Toca la pantalla para activar el sonido'}
-        </Text>
-      </div>
+      <EncabezadoPagina
+        icono={datos.tipo === 'barra' ? IconGlassFull : IconChefHat}
+        titulo={titulo}
+        descripcion={
+          <>
+            {pendientes.length} por preparar · {datos.listas.length}{' '}
+            {datos.listas.length === 1 ? 'lista' : 'listas'} para retirar
+            {/* Siempre ocupa la misma línea: si desapareciera al activarse, el primer toque movería
+                la pantalla bajo el dedo y el botón tocado se perdería. */}
+            <Text component="span" display="block" size="xs" role="status">
+              {sonido ? 'Sonido activo' : 'Toca la pantalla para activar el sonido'}
+            </Text>
+          </>
+        }
+      />
 
       {datos.estaciones.length > 1 && (
         <SegmentedControl

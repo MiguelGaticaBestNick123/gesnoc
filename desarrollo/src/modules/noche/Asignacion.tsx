@@ -11,7 +11,6 @@ import {
   NativeSelect,
   Stack,
   Text,
-  Title,
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -23,6 +22,8 @@ import { asignarTurno, quitarTurno } from './acciones';
 import { nombreDelRol } from './nombres';
 import type { Noche } from './repositorios/noches';
 import type { Dotacion } from './servicios/turnos';
+import { IconUserCheck } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 interface Props {
   noches: Noche[];
@@ -88,12 +89,11 @@ export function Asignacion({ noches, elegida, dotacion, ambientes }: Readonly<Pr
 
   return (
     <Stack gap="md">
-      <div>
-        <Title order={2}>Asignar turnos</Title>
-        <Text c="dimmed" size="sm">
-          Cada persona tiene a lo más un turno por noche.
-        </Text>
-      </div>
+      <EncabezadoPagina
+        icono={IconUserCheck}
+        titulo="Asignar turnos"
+        descripcion="Cada persona tiene a lo más un turno por noche."
+      />
 
       <NativeSelect
         label="Noche"

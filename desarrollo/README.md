@@ -100,6 +100,11 @@ las operaciones en curso y las que llegan después se rechazan (RN-26).
 Barra y cocina ven su cola en `/barra` y `/cocina`, con aviso sonoro al entrar una comanda (se
 activa con el primer toque) y la pantalla siempre encendida, que requiere HTTPS.
 
+El plano de mesas es un SVG (`src/modules/local/PlanoMesas.tsx`, ADR-013) que comparten el mapa del
+garzón y el editor de la administración (`/admin/mapa`, HU-05). Se ajusta al ancho del teléfono, se
+acerca y se abre a pantalla completa. La portada de la administración (`/admin`) muestra las cifras
+reales de la noche, al día cada 3 segundos.
+
 ## Estructura
 
 ```

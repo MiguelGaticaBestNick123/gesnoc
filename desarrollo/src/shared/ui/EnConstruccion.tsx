@@ -1,4 +1,6 @@
-import { Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
+import { Badge, Card, Group, Stack, Text } from '@mantine/core';
+import { IconBarrierBlock } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 interface Props {
   titulo: string;
@@ -11,12 +13,7 @@ interface Props {
 export function EnConstruccion({ titulo, descripcion, historias }: Readonly<Props>) {
   return (
     <Stack gap="md">
-      <div>
-        <Title order={2}>{titulo}</Title>
-        <Text c="dimmed" size="sm">
-          {descripcion}
-        </Text>
-      </div>
+      <EncabezadoPagina icono={IconBarrierBlock} titulo={titulo} descripcion={descripcion} />
       <Card withBorder padding="lg">
         <Stack gap="xs">
           <Text fw={600}>Sección en construcción</Text>

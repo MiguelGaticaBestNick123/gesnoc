@@ -1,17 +1,6 @@
 'use client';
 
-import {
-  Badge,
-  Button,
-  Card,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Badge, Button, Card, Group, Modal, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { CampoPesos } from '@/shared/ui/CampoPesos';
@@ -20,6 +9,8 @@ import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearFecha, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { editarNoche, eliminarNoche, programarNoche } from './acciones';
 import type { Noche } from './repositorios/noches';
+import { IconCalendarEvent } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 type Dialogo = { noche?: Noche } | null;
 
@@ -66,17 +57,15 @@ export function Calendario({ noches }: Readonly<{ noches: Noche[] }>) {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <div>
-          <Title order={2}>Calendario de noches</Title>
-          <Text c="dimmed" size="sm">
-            La fecha operativa se fija aquí y no cambia aunque la noche termine de madrugada.
-          </Text>
-        </div>
+      <EncabezadoPagina
+        icono={IconCalendarEvent}
+        titulo="Calendario de noches"
+        descripcion="La fecha operativa se fija aquí y no cambia aunque la noche termine de madrugada."
+      >
         <Button size="sm" mih={44} onClick={() => setDialogo({})}>
           Programar noche
         </Button>
-      </Group>
+      </EncabezadoPagina>
 
       {noches.length === 0 && <Text c="dimmed">Todavía no hay noches programadas.</Text>}
 

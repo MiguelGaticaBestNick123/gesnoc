@@ -25,6 +25,8 @@ import {
 } from './acciones';
 import type { Estacion } from './repositorios/ambientes';
 import type { AmbienteConEstaciones } from './servicios/ambientes';
+import { IconBuildingStore } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 type Dialogo =
   | { tipo: 'ambiente'; ambiente?: AmbienteConEstaciones }
@@ -83,17 +85,15 @@ export function Ambientes({ ambientes }: Readonly<{ ambientes: AmbienteConEstaci
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <div>
-          <Title order={2}>Ambientes y estaciones</Title>
-          <Text c="dimmed" size="sm">
-            Cada pedido llega a la barra o cocina que lo prepara.
-          </Text>
-        </div>
+      <EncabezadoPagina
+        icono={IconBuildingStore}
+        titulo="Ambientes y estaciones"
+        descripcion="Cada pedido llega a la barra o cocina que lo prepara."
+      >
         <Button size="sm" mih={44} onClick={() => setDialogo({ tipo: 'ambiente' })}>
           Agregar ambiente
         </Button>
-      </Group>
+      </EncabezadoPagina>
 
       {ambientes.map((ambiente) => (
         <Card key={ambiente.id} withBorder padding="sm">

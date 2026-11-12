@@ -11,13 +11,14 @@ import {
   Stack,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { cambiarActivo, crearPersona, editarPersona, restablecerClave } from './acciones';
 import type { Persona } from './repositorios/usuarios';
+import { IconUsers } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 type Dialogo = { tipo: 'nueva' } | { tipo: 'editar' | 'clave'; persona: Persona } | null;
 
@@ -59,17 +60,15 @@ export function Personal({ personas }: Readonly<{ personas: Persona[] }>) {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <div>
-          <Title order={2}>Personal</Title>
-          <Text c="dimmed" size="sm">
-            Solo entran las cuentas creadas aquí.
-          </Text>
-        </div>
+      <EncabezadoPagina
+        icono={IconUsers}
+        titulo="Personal"
+        descripcion="Solo entran las cuentas creadas aquí."
+      >
         <Button size="sm" mih={44} onClick={() => setDialogo({ tipo: 'nueva' })}>
           Agregar persona
         </Button>
-      </Group>
+      </EncabezadoPagina>
 
       {personas.map((persona) => (
         <Card key={persona.id} withBorder padding="sm">

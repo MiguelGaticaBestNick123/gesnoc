@@ -1,22 +1,23 @@
-import { Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
+import { Badge, Card, Group, Stack, Text } from '@mantine/core';
 import type { Actor } from '@/shared/autorizacion';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { formatearFecha, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { declararDisponibilidad } from './acciones';
 import { nombreDelRol } from './nombres';
 import { misTurnos } from './servicios/turnos';
+import { IconCalendarEvent } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 export async function PantallaTurnos({ actor }: Readonly<{ actor: Actor }>) {
   const noches = await misTurnos(actor);
 
   return (
     <Stack gap="md">
-      <div>
-        <Title order={2}>Mis turnos</Title>
-        <Text c="dimmed" size="sm">
-          Avisa qué noches puedes trabajar y revisa los turnos que te asignaron.
-        </Text>
-      </div>
+      <EncabezadoPagina
+        icono={IconCalendarEvent}
+        titulo="Mis turnos"
+        descripcion="Avisa qué noches puedes trabajar y revisa los turnos que te asignaron."
+      />
 
       {noches.length === 0 && <Text c="dimmed">No hay noches programadas.</Text>}
 

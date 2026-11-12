@@ -1,10 +1,13 @@
 'use client';
 
-import { Button, Group, Stack, Text, Title } from '@mantine/core';
+import { Badge, Button, Card, Group, Stack, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { IconChevronRight, IconReceipt2, IconUserPlus } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
+import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora } from '@/shared/utilidades/fechas';
 import { NuevaCuentaDePie } from './NuevaCuentaDePie';
 import type { Mapa } from './servicios/cuentas';
@@ -19,44 +22,58 @@ export function CuentasAbiertas({ inicial }: Readonly<{ inicial: Mapa }>) {
 
   const cuentas = [
     ...datos.mesas.flatMap((mesa) =>
-      mesa.cuenta === null
-        ? []
-        : [{ numero: mesa.cuenta, lugar: `Mesa ${mesa.numero}`, desde: mesa.abiertaEn ?? '' }],
+      mesa.cuenta === null ? [] : [{ ...mesa, numero: mesa.cuenta, lugar: `Mesa ${mesa.numero}` }],
     ),
-    ...datos.dePie.map((cuenta) => ({
-      numero: cuenta.numero,
-      lugar: cuenta.referencia ?? 'De pie',
-      desde: cuenta.abiertaEn,
-    })),
+    ...datos.dePie.map((cuenta) => ({ ...cuenta, lugar: cuenta.referencia ?? 'De pie' })),
   ].toSorted((a, b) => a.numero - b.numero);
+  const total = cuentas.reduce((suma, cuenta) => suma + cuenta.total, 0);
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="flex-end">
-        <div>
-          <Title order={2}>Cuentas abiertas</Title>
-          <Text c="dimmed" size="sm">
-            {datos.ambiente.nombre}: {cuentas.length} abiertas
-          </Text>
-        </div>
-        <Button size="sm" mih={44} variant="light" onClick={nueva.open} disabled={!datos.noche}>
+      <EncabezadoPagina
+        icono={IconReceipt2}
+        titulo="Cuentas abiertas"
+        descripcion={`${datos.ambiente.nombre} · ${cuentas.length} abiertas · ${formatearPesos(total)} en mesa`}
+      >
+        <Button
+          size="sm"
+          mih={44}
+          variant="light"
+          leftSection={<IconUserPlus size={18} />}
+          onClick={nueva.open}
+          disabled={!datos.noche}
+        >
           Cliente de pie
         </Button>
-      </Group>
+      </EncabezadoPagina>
       <AvisoConexion sinConexion={sinConexion} />
 
       {cuentas.length === 0 && <Text c="dimmed">No hay cuentas abiertas en este ambiente.</Text>}
       {cuentas.map((cuenta) => (
-        <Button
+        <Card
           key={cuenta.numero}
           component={Link}
           href={`/garzon/cuenta/${cuenta.numero}`}
-          variant="default"
-          justify="space-between"
-          rightSection={cuenta.desde && formatearHora(cuenta.desde)}
+          padding="sm"
+          withBorder
         >
-          Cuenta {cuenta.numero} · {cuenta.lugar}
-        </Button>
+          <Group justify="space-between" wrap="nowrap">
+            <div style={{ minWidth: 0 }}>
+              <Text fw={700} truncate>
+                {cuenta.lugar}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Cuenta {cuenta.numero} · {cuenta.garzon} · desde{' '}
+                {cuenta.abiertaEn && formatearHora(cuenta.abiertaEn)}
+              </Text>
+            </div>
+            <Group gap="xs" wrap="nowrap">
+              {cuenta.listas > 0 && <Badge color="green">Lista</Badge>}
+              <Text fw={700}>{formatearPesos(cuenta.total)}</Text>
+              <IconChevronRight size={18} color="var(--mantine-color-dimmed)" />
+            </Group>
+          </Group>
+        </Card>
       ))}
 
       <NuevaCuentaDePie

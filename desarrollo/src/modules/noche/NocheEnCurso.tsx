@@ -1,12 +1,14 @@
 'use client';
 
-import { Badge, Card, Group, NativeSelect, Stack, Text, Title } from '@mantine/core';
+import { Badge, Card, Group, NativeSelect, Stack, Text } from '@mantine/core';
 import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { tituloDeFecha } from '@/shared/utilidades/fechas';
 import { abrirNoche } from './acciones';
 import type { nocheAbierta, Noche } from './repositorios/noches';
+import { IconMoon } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 interface Props {
   abierta: Awaited<ReturnType<typeof nocheAbierta>>;
@@ -16,7 +18,11 @@ interface Props {
 export function NocheEnCurso({ abierta, programadas }: Readonly<Props>) {
   return (
     <Stack gap="md">
-      <Title order={2}>Noche en curso</Title>
+      <EncabezadoPagina
+        icono={IconMoon}
+        titulo="Noche en curso"
+        descripcion="Abrir la noche con el fondo de caja habilita la operación del personal."
+      />
 
       {abierta ? (
         <Card withBorder padding="lg">

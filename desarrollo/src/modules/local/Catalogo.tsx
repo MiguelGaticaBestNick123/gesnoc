@@ -11,7 +11,6 @@ import {
   Tabs,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
@@ -28,6 +27,8 @@ import {
 } from './acciones';
 import type { Estacion } from './repositorios/ambientes';
 import type { Categoria, Producto } from './repositorios/catalogo';
+import { IconClipboardList } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 interface Props {
   categorias: Categoria[];
@@ -115,12 +116,11 @@ export function Catalogo({ categorias, productos, estaciones }: Readonly<Props>)
 
   return (
     <Stack gap="md">
-      <div>
-        <Title order={2}>Catálogo</Title>
-        <Text c="dimmed" size="sm">
-          Categorías, productos, precios y dónde se prepara cada cosa.
-        </Text>
-      </div>
+      <EncabezadoPagina
+        icono={IconClipboardList}
+        titulo="Catálogo"
+        descripcion="Categorías, productos, precios y dónde se prepara cada cosa."
+      />
 
       <Tabs defaultValue="productos">
         <Tabs.List>

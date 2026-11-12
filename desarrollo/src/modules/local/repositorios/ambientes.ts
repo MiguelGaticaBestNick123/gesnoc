@@ -28,3 +28,11 @@ export const actualizarEstacion = (id: number, datos: DatosEstacion) =>
   db().update(estacion).set(datos).where(eq(estacion.id, id));
 
 export const eliminarEstacion = (id: number) => db().delete(estacion).where(eq(estacion.id, id));
+
+export async function nombreDeAmbiente(id: number): Promise<string | undefined> {
+  const [fila] = await db()
+    .select({ nombre: ambiente.nombre })
+    .from(ambiente)
+    .where(eq(ambiente.id, id));
+  return fila?.nombre;
+}

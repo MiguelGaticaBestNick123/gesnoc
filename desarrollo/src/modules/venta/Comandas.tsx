@@ -1,7 +1,7 @@
 'use client';
 
 import { Alert, Badge, Box, Button, Card, Group, Paper, Stack, Text, Title } from '@mantine/core';
-import { IconBell } from '@tabler/icons-react';
+import { IconBell, IconListCheck } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -9,12 +9,15 @@ import { avisar, useSonido } from '@/shared/navegador/sonido';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { minutos, nuevos } from './cola';
 import { claveDeComanda, type MiComanda } from './cuenta';
 import type { MisComandas } from './servicios/colas';
 
 const URL_COMANDAS = '/api/vivo/comandas';
 const RUTA_COMANDAS = '/garzon/comandas';
+/** El aviso abierto se achica solo a la campana de la barra superior pasado este tiempo. */
+const ACHICAR_SOLO_MS = 12_000;
 
 const haceCuanto = (segundos: number) =>
   minutos(segundos) === 0 ? 'recién lista' : `lista hace ${minutos(segundos)} min`;
@@ -65,6 +68,14 @@ export function AvisosGarzon({ inicial }: Readonly<{ inicial: MisComandas }>) {
   }, [datos.listas]);
 
   const listas = pendientes(datos.listas);
+  // Como una notificación: avisa, y a los pocos segundos se achica solo para no tapar la pantalla.
+  const claves = listas.map(claveDeComanda).join(',');
+  useEffect(() => {
+    if (!claves) return;
+    const temporizador = setTimeout(() => setPostergadas(claves.split(',')), ACHICAR_SOLO_MS);
+    return () => clearTimeout(temporizador);
+  }, [claves]);
+
   if (ruta === RUTA_COMANDAS || listas.length === 0) return null;
   // «Después» lo achica; una comanda nueva lo vuelve a abrir.
   const achicado = listas.every((c) => postergadas.includes(claveDeComanda(c)));
@@ -73,7 +84,7 @@ export function AvisosGarzon({ inicial }: Readonly<{ inicial: MisComandas }>) {
   // Achicado vive en la barra superior, junto a «Salir»: ahí no tapa ningún botón de la pantalla.
   if (achicado) {
     return (
-      <Box pos="fixed" top={8} right={76} style={{ zIndex: 201 }}>
+      <Box pos="fixed" top={8} right={{ base: 64, xs: 116 }} style={{ zIndex: 201 }}>
         <Button
           radius="xl"
           color="green"
@@ -154,13 +165,11 @@ export function MisComandasVista({ inicial }: Readonly<{ inicial: MisComandas }>
 
   return (
     <Stack gap="md">
-      <div>
-        <Title order={2}>Comandas</Title>
-        <Text c="dimmed" size="sm">
-          {listas.length} {listas.length === 1 ? 'lista' : 'listas'} para retirar ·{' '}
-          {datos.enPreparacion.length} en preparación
-        </Text>
-      </div>
+      <EncabezadoPagina
+        icono={IconListCheck}
+        titulo="Comandas"
+        descripcion={`${listas.length} ${listas.length === 1 ? 'lista' : 'listas'} para retirar · ${datos.enPreparacion.length} en preparación`}
+      />
       <AvisoConexion sinConexion={sinConexion} />
       {error && (
         <Alert color="red" variant="light" role="alert">

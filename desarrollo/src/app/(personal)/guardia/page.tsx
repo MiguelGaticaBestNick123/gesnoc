@@ -1,17 +1,9 @@
-import {
-  Badge,
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Badge, Button, Card, Group, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { entradasNoche, recaudado } from '@/modules/porteria/demostracion';
 import { exigirVista } from '@/shared/sesion';
 import { formatearPesos } from '@/shared/utilidades/dinero';
+import { IconDoorEnter } from '@tabler/icons-react';
+import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 
 export const metadata = { title: 'Entrada · GesNoc' };
 
@@ -22,7 +14,11 @@ export default async function PaginaGuardia() {
 
   return (
     <Stack gap="md">
-      <Title order={2}>Entrada</Title>
+      <EncabezadoPagina
+        icono={IconDoorEnter}
+        titulo="Entrada"
+        descripcion="El registro real de la puerta llega con HU-30."
+      />
 
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
         <Card withBorder>
