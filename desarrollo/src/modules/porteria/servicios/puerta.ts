@@ -8,6 +8,8 @@ import { ErrorDeNegocio } from '@/shared/errores';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import type { DatosEntrada } from '../esquemas';
 import { formaDe, type FormaDeEntrada } from '../formas';
+import { resumenDeReportes } from '../reportes';
+import { reportesDe } from '../repositorios/clientes';
 import * as puerta from '../repositorios/puerta';
 
 // La puerta (HU-30, HU-32 y HU-33, ajustadas por el Product Owner el 12 nov). El guardia ve quién
@@ -16,8 +18,8 @@ import * as puerta from '../repositorios/puerta';
 
 /**
  * HU-30 CA2: lo que sabe la puerta de un documento. Si ya entró esta noche, a qué hora y con qué
- * ticket; si ya vino antes, su nombre y cuántas veces; si está invitado o en una lista, quién lo
- * invitó y si entra gratis (HU-33).
+ * ticket; si ya vino antes, su nombre, cuántas veces y sus reportes (HU-36); si está invitado o en
+ * una lista, quién lo invitó y si entra gratis (HU-33).
  */
 export async function buscar(actor: Actor, documento: string) {
   exigir(actor, 'guardia');
@@ -27,16 +29,25 @@ export async function buscar(actor: Actor, documento: string) {
     puerta.invitacionDe(fecha, documento),
     puerta.precioDeLaNoche(db(), fecha),
   ]);
-  const [entrada, visitas] = cliente
+  const [entrada, visitas, reportes] = cliente
     ? await Promise.all([
         puerta.entradaDe(db(), fecha, cliente.id),
         puerta.visitasAnteriores(cliente.id, fecha),
+        reportesDe(cliente.id),
       ])
-    : [undefined, 0];
+    : [undefined, 0, []];
   return {
     documento,
     precio,
-    cliente: cliente ? { nombre: cliente.nombre, apellido: cliente.apellido, visitas } : null,
+    cliente: cliente
+      ? {
+          nombre: cliente.nombre,
+          apellido: cliente.apellido,
+          visitas,
+          // HU-36 CA2: el historial de reportes aparece al buscar al cliente en la puerta.
+          reportes: resumenDeReportes(reportes),
+        }
+      : null,
     entrada: entrada
       ? {
           ticket: entrada.ticket,

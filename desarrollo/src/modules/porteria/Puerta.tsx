@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   Group,
+  Modal,
   SegmentedControl,
   SimpleGrid,
   Stack,
@@ -18,6 +19,7 @@ import {
 import {
   IconAlertTriangle,
   IconDoorEnter,
+  IconHistory,
   IconListDetails,
   IconSearch,
   IconStar,
@@ -34,6 +36,7 @@ import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { formatearDocumento, normalizarRut, type TipoDocumento } from '@/shared/utilidades/rut';
 import { FORMAS_DE_ENTRADA, formas, type FormaDeEntrada } from './formas';
+import { AvisoReportes, HistorialPorDocumento } from './HistorialCliente';
 import { ListaDeIngresos, TarjetaIngresos } from './Ingresos';
 import type { Busqueda, IngresoRegistrado, IngresosDeLaNoche } from './servicios/puerta';
 import { iniciales } from '@/shared/utilidades/texto';
@@ -54,6 +57,22 @@ type Paso =
   | { tipo: 'registrando'; busqueda: Busqueda; forma: FormaDeEntrada }
   | { tipo: 'incierto'; busqueda: Busqueda; envio: Envio; error: string }
   | { tipo: 'listo'; ingreso: IngresoRegistrado };
+
+/** HU-35 y HU-36: desde la puerta, el historial del cliente y el formulario para reportarlo. */
+function BotonHistorial({ alAbrir }: Readonly<{ alAbrir: () => void }>) {
+  return (
+    <Button
+      variant="light"
+      color="gray"
+      mih={44}
+      fullWidth
+      leftSection={<IconHistory size={18} />}
+      onClick={alAbrir}
+    >
+      Historial y reportes
+    </Button>
+  );
+}
 
 /** Lo que dice la lista o la invitación de la persona, para que el guardia la deje pasar bien. */
 function AvisoInvitacion({
@@ -141,6 +160,7 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
   const [paso, setPaso] = useState<Paso>({ tipo: 'documento' });
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historialAbierto, setHistorialAbierto] = useState(false);
   const campo = useRef<HTMLInputElement>(null);
 
   const reiniciar = () => {
@@ -148,6 +168,7 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
     setNombre('');
     setApellido('');
     setError(null);
+    setHistorialAbierto(false);
     setPaso({ tipo: 'documento' });
   };
 
@@ -370,6 +391,12 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
                 </Button>
               </Alert>
             )}
+            {busqueda?.entrada && busqueda.cliente && (
+              <>
+                <AvisoReportes reportes={busqueda.cliente.reportes} />
+                <BotonHistorial alAbrir={() => setHistorialAbierto(true)} />
+              </>
+            )}
 
             {busqueda && !busqueda.entrada && (
               <Stack gap="sm">
@@ -393,6 +420,7 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
                     </Text>
                   </div>
                 </Group>
+                {busqueda.cliente && <AvisoReportes reportes={busqueda.cliente.reportes} />}
                 {busqueda.invitacion && <AvisoInvitacion invitacion={busqueda.invitacion} />}
                 {!busqueda.cliente && (
                   <Group grow>
@@ -437,6 +465,7 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
                     alElegir={(forma) => void registrar(busqueda, forma)}
                   />
                 )}
+                {busqueda.cliente && <BotonHistorial alAbrir={() => setHistorialAbierto(true)} />}
                 <UnstyledButton onClick={reiniciar} c="dimmed" fz="sm" ta="center" mih={44}>
                   Cancelar
                 </UnstyledButton>
@@ -445,6 +474,17 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
           </Stack>
         </Card>
       )}
+
+      <Modal
+        opened={historialAbierto && busqueda !== null}
+        onClose={() => setHistorialAbierto(false)}
+        title="Historial y reportes"
+        size="lg"
+      >
+        {busqueda && (
+          <HistorialPorDocumento tipoDocumento={tipoDocumento} documento={busqueda.documento} />
+        )}
+      </Modal>
 
       <TarjetaIngresos datos={datos}>
         <ListaDeIngresos ingresos={datos.ingresos} limite={8} />

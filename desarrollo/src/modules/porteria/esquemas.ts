@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { MENSAJE_DOCUMENTO, normalizarDocumento } from '@/shared/utilidades/rut';
 import { FORMAS_DE_ENTRADA } from './formas';
+import { TIPOS_DE_REPORTE } from './reportes';
 
 const tipoDocumento = z.enum(['rut', 'extranjero'], 'Elige el tipo de documento');
 
@@ -46,3 +47,28 @@ export const datosEntrada = z
     };
   });
 export type DatosEntrada = z.output<typeof datosEntrada>;
+
+/**
+ * HU-35: un reporte de un cliente, por su documento. CA1: el tipo y una descripción (autor, noche y
+ * hora los pone el servidor).
+ */
+export const datosReporte = z
+  .object({
+    tipoDocumento,
+    documento: z.string().max(40),
+    tipo: z.enum(TIPOS_DE_REPORTE, 'Elige el tipo de reporte'),
+    descripcion: z
+      .string()
+      .trim()
+      .min(2, 'Describe lo que pasó')
+      .max(1000, 'La descripción admite hasta 1000 caracteres'),
+  })
+  .transform(({ tipoDocumento: tipo, documento, ...datos }, contexto) => {
+    const normalizado = normalizarDocumento(tipo, documento);
+    if (!normalizado) {
+      contexto.addIssue({ code: 'custom', message: MENSAJE_DOCUMENTO[tipo] });
+      return z.NEVER;
+    }
+    return { ...datos, documento: normalizado };
+  });
+export type DatosReporte = z.output<typeof datosReporte>;

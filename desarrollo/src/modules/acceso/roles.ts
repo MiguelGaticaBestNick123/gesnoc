@@ -14,6 +14,7 @@ import {
   IconDoorEnter,
   IconGlassFull,
   IconHistory,
+  IconKey,
   IconLayoutDashboard,
   IconListCheck,
   IconMap2,
@@ -63,6 +64,16 @@ const misTurnos: Seccion = {
   grupo: 'Mi cuenta',
   descripcion: 'Calendario de turnos asignados y declaración de disponibilidad.',
   historias: ['HU-09'],
+  construida: true,
+};
+
+// Brecha 5: cada persona cambia su propia contraseña; la administración ya no la conoce.
+const miClave: Seccion = {
+  ruta: 'clave',
+  etiqueta: 'Mi contraseña',
+  icono: IconKey,
+  grupo: 'Mi cuenta',
+  descripcion: 'Cambiar la contraseña propia; las demás sesiones abiertas se cierran.',
   construida: true,
 };
 
@@ -204,12 +215,14 @@ export const roles: Rol[] = [
         grupo: 'Personas',
         descripcion: 'Historial de visitas y reportes de cada cliente.',
         historias: ['HU-36'],
+        construida: true,
       },
       operarComo('garzon', 'Garzón', IconClipboardList),
       operarComo('barra', 'Barra', IconBottle),
       operarComo('cocina', 'Cocina', IconChefHat),
       operarComo('guardia', 'Guardia', IconShieldCheck),
       misTurnos,
+      miClave,
     ],
   },
   {
@@ -260,6 +273,7 @@ export const roles: Rol[] = [
         construida: true,
       },
       misTurnos,
+      miClave,
     ],
   },
   {
@@ -276,6 +290,7 @@ export const roles: Rol[] = [
         construida: true,
       },
       misTurnos,
+      miClave,
     ],
   },
   {
@@ -292,6 +307,7 @@ export const roles: Rol[] = [
         construida: true,
       },
       misTurnos,
+      miClave,
     ],
   },
   {
@@ -322,6 +338,7 @@ export const roles: Rol[] = [
         icono: IconHistory,
         descripcion: 'Historial de visitas y reportes de cada cliente.',
         historias: ['HU-35', 'HU-36'],
+        construida: true,
       },
       {
         ruta: 'sorteo',
@@ -332,6 +349,7 @@ export const roles: Rol[] = [
         construida: true,
       },
       misTurnos,
+      miClave,
     ],
   },
   {
@@ -339,7 +357,7 @@ export const roles: Rol[] = [
     nombre: 'Sin turno',
     descripcion: 'Quien no tiene turno en la noche abierta solo ve su calendario.',
     icono: IconCalendarUser,
-    secciones: [{ ...misTurnos, ruta: '', grupo: undefined }],
+    secciones: [{ ...misTurnos, ruta: '', grupo: undefined }, miClave],
   },
 ];
 
