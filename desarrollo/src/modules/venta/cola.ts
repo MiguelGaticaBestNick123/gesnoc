@@ -82,6 +82,10 @@ export const colorDeEspera: Record<NivelDeEspera, string> = {
 export const haceCuanto = (segundos: number) =>
   minutos(segundos) === 0 ? 'recién lista' : `lista hace ${minutos(segundos)} min`;
 
+/** Cuánto lleva esperando el llamado de una mesa (HU-40). */
+export const llamaDesde = (segundos: number) =>
+  minutos(segundos) === 0 ? 'recién' : `hace ${minutos(segundos)} min`;
+
 export function armarCola(comandas: FilaComanda[], lineas: FilaLinea[]): Cola {
   const lineasDe = new Map<number, FilaLinea[]>();
   for (const linea of lineas) {

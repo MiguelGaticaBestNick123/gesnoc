@@ -1,10 +1,10 @@
 import 'server-only';
-import { randomBytes } from 'node:crypto';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { db, type Transaccion } from '@/shared/db/cliente';
 import { mesa } from '@/shared/db/esquema/schema';
 import type { FormaMesa } from '../geometria';
 import type { DatosPlano } from '../esquemas';
+import { nuevoCodigoDeMesa } from './carta';
 
 const columnas = {
   id: mesa.id,
@@ -91,8 +91,8 @@ export async function guardarPlano(tx: Transaccion, { ambienteId, mesas, retirad
         rotacion: datos.rotacion,
         sillas: datos.sillas,
         ambienteId,
-        // Código opaco del QR de la mesa (RF-33); se podrá regenerar con HU-07.
-        tokenQr: randomBytes(16).toString('base64url'),
+        // Código opaco del QR de la mesa (RF-33); se regenera desde los códigos QR (HU-07).
+        tokenQr: nuevoCodigoDeMesa(),
       })),
     );
   }

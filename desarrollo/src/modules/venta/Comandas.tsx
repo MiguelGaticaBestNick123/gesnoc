@@ -12,10 +12,10 @@ import { AvisoConexion } from '@/shared/ui/AvisoConexion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { minutos, nivelDeEspera, nuevos, colorDeEspera, haceCuanto } from './cola';
 import { claveDeComanda, type MiComanda } from './cuenta';
+import { AvisoLlamados, RUTA_LLAMADOS, URL_COMANDAS, useAtender } from './Llamados';
 import type { MisComandas } from './servicios/colas';
 import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
-const URL_COMANDAS = '/api/vivo/comandas';
 const RUTA_COMANDAS = '/garzon/comandas';
 /** El aviso abierto se achica solo a la campana de la barra superior pasado este tiempo. */
 const ACHICAR_SOLO_MS = 12_000;
@@ -48,14 +48,15 @@ function useEntregar(actualizar: () => Promise<void>) {
 }
 
 /**
- * HU-20: el aviso de comanda lista, en todas las pantallas del garzón. Flota sobre la pantalla sin
- * moverla (un aviso que empuja el contenido haría perder el toque que el garzón estaba dando) y suena
- * cuando llega una nueva.
+ * HU-20 y HU-40: los avisos de comanda lista y de llamado de una mesa, en todas las pantallas del
+ * garzón. Flotan sobre la pantalla sin moverla (un aviso que empuja el contenido haría perder el
+ * toque que el garzón estaba dando) y suenan cuando llega uno nuevo.
  */
 export function AvisosGarzon({ inicial }: Readonly<{ inicial: MisComandas }>) {
   const ruta = usePathname();
   const { datos, actualizar } = useTiempoReal(URL_COMANDAS, inicial);
   const { entregar, entregando, error, pendientes } = useEntregar(actualizar);
+  const atencion = useAtender(actualizar);
   const [postergadas, setPostergadas] = useState<string[]>([]);
   useSonido();
 
@@ -66,7 +67,17 @@ export function AvisosGarzon({ inicial }: Readonly<{ inicial: MisComandas }>) {
     vistas.current = actuales;
   }, [datos.listas]);
 
+  // El llamado suena más grave y más largo que la comanda: se distinguen sin mirar.
+  const llamadosVistos = useRef(inicial.llamados.map((l) => l.numero));
+  useEffect(() => {
+    const actuales = datos.llamados.map((l) => l.numero);
+    if (nuevos(llamadosVistos.current, actuales).length > 0) avisar(660, [300, 150, 300, 150, 300]);
+    llamadosVistos.current = actuales;
+  }, [datos.llamados]);
+
   const listas = pendientes(datos.listas);
+  const llamados = ruta === RUTA_LLAMADOS ? [] : atencion.pendientes(datos.llamados);
+  const avisoLlamados = <AvisoLlamados llamados={llamados} atencion={atencion} />;
   // Como una notificación: avisa, y a los pocos segundos se achica solo para no tapar la pantalla.
   const claves = listas.map(claveDeComanda).join(',');
   useEffect(() => {
@@ -75,27 +86,32 @@ export function AvisosGarzon({ inicial }: Readonly<{ inicial: MisComandas }>) {
     return () => clearTimeout(temporizador);
   }, [claves]);
 
-  if (ruta === RUTA_COMANDAS || listas.length === 0) return null;
-  // «Después» lo achica; una comanda nueva lo vuelve a abrir.
-  const achicado = listas.every((c) => postergadas.includes(claveDeComanda(c)));
+  if (ruta === RUTA_COMANDAS || listas.length === 0) return avisoLlamados;
+  // «Después» lo achica; una comanda nueva lo vuelve a abrir. Un llamado pendiente tiene prioridad:
+  // mientras se ve, la comanda espera achicada.
+  const achicado =
+    llamados.length > 0 || listas.every((c) => postergadas.includes(claveDeComanda(c)));
   const primera = listas[0]!;
 
   // Achicado vive en la barra superior, junto a «Salir»: ahí no tapa ningún botón de la pantalla.
   if (achicado) {
     return (
-      <Box pos="fixed" top={8} right={{ base: 64, xs: 116 }} style={{ zIndex: 201 }}>
-        <Button
-          radius="xl"
-          color="green"
-          size="sm"
-          mih={40}
-          leftSection={<IconBell size={16} />}
-          onClick={() => setPostergadas([])}
-          aria-label={`${listas.length} ${listas.length === 1 ? 'comanda lista' : 'comandas listas'} para retirar`}
-        >
-          {listas.length}
-        </Button>
-      </Box>
+      <>
+        {avisoLlamados}
+        <Box pos="fixed" top={8} right={{ base: 64, xs: 116 }} style={{ zIndex: 201 }}>
+          <Button
+            radius="xl"
+            color="green"
+            size="sm"
+            mih={40}
+            leftSection={<IconBell size={16} />}
+            onClick={() => setPostergadas([])}
+            aria-label={`${listas.length} ${listas.length === 1 ? 'comanda lista' : 'comandas listas'} para retirar`}
+          >
+            {listas.length}
+          </Button>
+        </Box>
+      </>
     );
   }
 

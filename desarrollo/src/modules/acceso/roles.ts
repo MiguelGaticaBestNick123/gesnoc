@@ -177,6 +177,7 @@ export const roles: Rol[] = [
         grupo: 'Local',
         descripcion: 'Generar, regenerar y descargar el código QR de cada mesa.',
         historias: ['HU-07'],
+        construida: true,
       },
       {
         ruta: 'catalogo',
@@ -256,6 +257,7 @@ export const roles: Rol[] = [
         icono: IconBell,
         descripcion: 'Llamados de los clientes desde la carta digital de su mesa.',
         historias: ['HU-40'],
+        construida: true,
       },
       misTurnos,
     ],

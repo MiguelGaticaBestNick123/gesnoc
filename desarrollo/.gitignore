@@ -17,3 +17,6 @@ next-env.d.ts
 
 .DS_Store
 Thumbs.db
+
+# Respaldos de la base publicada: traen datos de clientes.
+/respaldos/

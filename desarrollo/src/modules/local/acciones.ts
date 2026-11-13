@@ -17,6 +17,7 @@ import {
 import * as ambientes from './servicios/ambientes';
 import * as catalogo from './servicios/catalogo';
 import * as mapa from './servicios/mapa';
+import * as qr from './servicios/qr';
 
 type MesaGuardada = Awaited<ReturnType<typeof mapa.guardarPlano>>[number];
 
@@ -101,4 +102,9 @@ export async function guardarPlano(
   });
   if (estado.ok) revalidatePath('/', 'layout');
   return { ...estado, mesas };
+}
+
+/** HU-07 CA2: un código nuevo para la mesa; el impreso deja de abrir la carta (RN-28). */
+export async function regenerarCodigoQr(_: EstadoAccion, datos: FormData) {
+  return ejecutar((actor) => qr.regenerarCodigo(actor, idDe(datos)));
 }

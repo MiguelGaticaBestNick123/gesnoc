@@ -18,8 +18,18 @@ const error = (mensaje: string, status: number) =>
 export async function operar(operacion: (actor: Actor) => Promise<unknown>) {
   const actor = await actorActual();
   if (!actor) return error('La sesión expiró: vuelve a ingresar', 401);
+  return responder(() => operacion(actor));
+}
+
+/**
+ * Marco de las rutas públicas, sin sesión (la carta de la mesa): el mismo contrato de respuestas que
+ * `operar`, sin el 401 ni el 403.
+ */
+export const publico = (operacion: () => Promise<unknown>) => responder(operacion);
+
+async function responder(operacion: () => Promise<unknown>) {
   try {
-    return NextResponse.json(await operacion(actor), { headers: sinCache });
+    return NextResponse.json(await operacion(), { headers: sinCache });
   } catch (falla) {
     if (falla instanceof NoAutorizado) return error(falla.message, 403);
     if (falla instanceof ErrorDeNegocio) return error(falla.message, 409);

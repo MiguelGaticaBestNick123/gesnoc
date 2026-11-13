@@ -6,6 +6,8 @@ import { ErrorDeNegocio, NoAutorizado } from '@/shared/errores';
 import { armarCola, type TipoEstacion } from '../cola';
 import { ordenarMisComandas } from '../cuenta';
 import * as colas from '../repositorios/colas';
+import type { LlamadoPendiente } from '../repositorios/llamados';
+import { llamadosPendientes } from './llamados';
 
 const permisoDe: Record<TipoEstacion, Permiso> = { barra: 'barra', cocina: 'cocina' };
 
@@ -62,8 +64,15 @@ export async function marcarLista(actor: Actor, pedido: number, estacionId: numb
 export async function misComandas(actor: Actor) {
   exigir(actor, 'garzon');
   const fecha = (await fechaAbierta()) ?? null;
-  if (!fecha) return { noche: null, listas: [], enPreparacion: [] };
-  return { noche: fecha, ...ordenarMisComandas(await colas.comandasDelGarzon(fecha, actor.id)) };
+  if (!fecha)
+    return { noche: null, listas: [], enPreparacion: [], llamados: [] as LlamadoPendiente[] };
+  // HU-40: los llamados de las mesas viajan en esta misma consulta, que acompaña al garzón en todas
+  // sus pantallas; así llegan en 5 s o menos (RNF-05) sin sumar otro sondeo por teléfono.
+  const [comandas, llamados] = await Promise.all([
+    colas.comandasDelGarzon(fecha, actor.id),
+    llamadosPendientes(actor, fecha),
+  ]);
+  return { noche: fecha, ...ordenarMisComandas(comandas), llamados };
 }
 
 export type MisComandas = Awaited<ReturnType<typeof misComandas>>;

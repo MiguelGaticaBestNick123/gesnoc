@@ -33,6 +33,9 @@ export const datosComanda = z.object({
   estacionId: id('Estación no válida'),
 });
 
+/** Un llamado de una mesa, por su correlativo en la noche (HU-40). */
+export const datosLlamado = z.object({ numero: id('Llamado no válido') });
+
 /** Una línea de un pedido de la cuenta (HU-22). */
 export const datosLinea = z.object({
   cuenta: id('Cuenta no válida'),

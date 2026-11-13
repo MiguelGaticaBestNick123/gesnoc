@@ -24,8 +24,11 @@ export default defineConfig({
   projects: [
     { name: 'apertura', testMatch: 'apertura.setup.ts', use: telefono },
     { name: 'movil', dependencies: ['apertura'], use: telefono },
+    // Las pruebas que no pueden convivir con otras (el llamado de una mesa avisa en todas las pantallas
+    // del garzón) corren solas, después de las demás.
+    { name: 'secuencial', testMatch: '*.secuencial.ts', dependencies: ['movil'], use: telefono },
     // El cierre de la noche va al final: con la noche cerrada, las demás pruebas no podrían operar.
-    { name: 'cierre', testMatch: 'cierre.final.ts', dependencies: ['movil'], use: telefono },
+    { name: 'cierre', testMatch: 'cierre.final.ts', dependencies: ['secuencial'], use: telefono },
   ],
   webServer: {
     command: enCI ? 'npm run start' : 'npm run dev',
