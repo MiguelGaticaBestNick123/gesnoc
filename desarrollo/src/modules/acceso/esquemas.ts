@@ -35,3 +35,23 @@ export const datosEdicion = datosPersona.extend({ id: identificador });
 export const datosClave = z.object({ id: identificador, clave });
 
 export const datosActivacion = z.object({ id: identificador, activo: marcado });
+
+/**
+ * Brecha 5: cada persona cambia su propia contraseña. Se repite la nueva para no quedar fuera por un
+ * error de tipeo, y debe ser distinta de la actual.
+ */
+export const datosMiClave = z
+  .object({
+    actual: z.string().min(1, 'Ingresa tu contraseña actual'),
+    nueva: clave,
+    repetida: z.string(),
+  })
+  .refine((datos) => datos.nueva === datos.repetida, {
+    message: 'La contraseña nueva no coincide al repetirla',
+    path: ['repetida'],
+  })
+  .refine((datos) => datos.nueva !== datos.actual, {
+    message: 'La contraseña nueva debe ser distinta de la actual',
+    path: ['nueva'],
+  });
+export type DatosMiClave = z.output<typeof datosMiClave>;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { cerrarSesion, iniciarSesion } from '@/modules/acceso/servicios/autenticacion';
+import { datosMiClave } from '@/modules/acceso/esquemas';
+import {
+  cambiarMiClave,
+  cerrarSesion,
+  iniciarSesion,
+} from '@/modules/acceso/servicios/autenticacion';
 import * as personal from '@/modules/acceso/servicios/personal';
 import { NoAutorizado } from '@/shared/errores';
 import { actorDeToken, hashDeToken } from '@/shared/sesion/actor';
@@ -232,5 +237,58 @@ describe('HU-03 administrar el personal', () => {
         NoAutorizado,
       );
     }
+  });
+});
+
+describe('brecha 5: cada persona cambia su propia contraseña', () => {
+  const NUEVA = 'otra-clave-propia';
+  const cambio = (actual: string, nueva = NUEVA) => ({ actual, nueva, repetida: nueva });
+
+  it('con la actual correcta la cambia, cierra las demás sesiones y conserva la propia', async () => {
+    await crearPersona(correo);
+    const enEste = await iniciarSesion(correo, CLAVE);
+    const enOtro = await iniciarSesion(correo, CLAVE);
+    const actor = (await actorDeToken(enEste))!;
+
+    await cambiarMiClave(actor, enEste, cambio(CLAVE));
+
+    expect(await actorDeToken(enEste)).toMatchObject({ id: actor.id });
+    expect(await actorDeToken(enOtro)).toBeNull();
+    await expect(iniciarSesion(correo, CLAVE)).rejects.toThrow(INCORRECTAS);
+    expect(await actorDeToken(await iniciarSesion(correo, NUEVA))).toMatchObject({ id: actor.id });
+  });
+
+  it('con la actual equivocada no cambia nada, y los errores cuentan para el bloqueo', async () => {
+    const id = await crearPersona(correo);
+    const token = await iniciarSesion(correo, CLAVE);
+    const actor = (await actorDeToken(token))!;
+    const antes = await claveDe(id);
+
+    for (let intento = 1; intento <= 4; intento++) {
+      await expect(cambiarMiClave(actor, token, cambio('equivocada'))).rejects.toThrow(
+        'La contraseña actual no es correcta',
+      );
+    }
+    await expect(cambiarMiClave(actor, token, cambio('equivocada'))).rejects.toThrow(BLOQUEADA);
+    // Bloqueada, ni la actual correcta sirve hasta que pase el bloqueo.
+    await expect(cambiarMiClave(actor, token, cambio(CLAVE))).rejects.toThrow(BLOQUEADA);
+    expect(await claveDe(id)).toBe(antes);
+  });
+
+  it('la nueva se repite igual, cumple el mínimo y es distinta de la actual', () => {
+    expect(() => datosMiClave.parse({ actual: CLAVE, nueva: NUEVA, repetida: 'otra' })).toThrow(
+      'no coincide al repetirla',
+    );
+    expect(() => datosMiClave.parse(cambio(CLAVE, 'corta'))).toThrow('al menos 8 caracteres');
+    expect(() => datosMiClave.parse(cambio(CLAVE, CLAVE))).toThrow('distinta de la actual');
+  });
+
+  it('la administración no la ve: solo guarda el hash', async () => {
+    const id = await crearPersona(correo);
+    const token = await iniciarSesion(correo, CLAVE);
+    await cambiarMiClave((await actorDeToken(token))!, token, cambio(CLAVE));
+    const guardada = await claveDe(id);
+    expect(guardada).not.toContain(NUEVA);
+    expect(await verificarClave(guardada, NUEVA)).toBe(true);
   });
 });

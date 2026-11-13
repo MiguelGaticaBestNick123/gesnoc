@@ -25,6 +25,11 @@ export async function sacarCookieDeSesion(): Promise<string | undefined> {
   return token;
 }
 
+/** El token de la sesión de esta petición, para operar sobre ella (por ejemplo, conservarla). */
+export async function tokenDeSesion(): Promise<string | undefined> {
+  return (await cookies()).get(COOKIE)?.value;
+}
+
 // `cache` evita repetir la consulta entre el layout y la página de una misma petición.
 export const actorActual = cache(async (): Promise<Actor | null> => {
   const token = (await cookies()).get(COOKIE)?.value;

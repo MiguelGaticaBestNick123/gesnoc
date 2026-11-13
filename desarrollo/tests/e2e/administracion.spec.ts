@@ -26,6 +26,16 @@ test('HU-03: una cuenta creada entra al sistema y deja de entrar al desactivarla
   await ingresar(telefono, 'marta@gesnoc.test', 'clave-inicial-1');
   await expect(telefono).toHaveURL(/\/personal$/);
 
+  // Brecha 5: la persona cambia la contraseña que le dio la administración y sigue dentro.
+  await telefono.goto('/personal/clave');
+  await telefono.getByLabel('Contraseña actual').fill('clave-inicial-1');
+  await telefono.getByLabel('Contraseña nueva', { exact: true }).fill('clave-propia-1');
+  await telefono.getByLabel('Repite la contraseña nueva').fill('clave-propia-1');
+  await telefono.getByRole('button', { name: 'Cambiar contraseña' }).click();
+  await expect(telefono.getByText('Listo: tu contraseña cambió.', { exact: false })).toBeVisible();
+  await expect(telefono.getByLabel('Contraseña actual')).toHaveValue('');
+  await expect(telefono).toHaveURL(/\/personal\/clave$/);
+
   await page.getByRole('button', { name: 'Desactivar a Marta Lagos' }).click();
   await expect(page.getByText('Desactivada')).toBeVisible();
 

@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, lte, sql } from 'drizzle-orm';
+import { and, eq, lte, ne, sql } from 'drizzle-orm';
 import { db } from '@/shared/db/cliente';
 import { sesion, usuario } from '@/shared/db/esquema/schema';
 import { HORAS_DE_SESION } from '@/shared/sesion/actor';
@@ -92,6 +92,29 @@ export async function reemplazarClave(id: number, claveHash: string) {
       .set({ claveHash, intentosFallidos: 0, bloqueadoHasta: null })
       .where(eq(usuario.id, id));
     await tx.delete(sesion).where(eq(sesion.usuarioId, id));
+  });
+}
+
+/** La contraseña guardada de una persona activa, para verificar la actual antes de cambiarla. */
+export async function claveDe(id: number) {
+  const [fila] = await db()
+    .select({ claveHash: usuario.claveHash, bloqueado: estaBloqueado })
+    .from(usuario)
+    .where(and(eq(usuario.id, id), eq(usuario.activo, true)));
+  return fila;
+}
+
+/**
+ * Brecha 5: la persona cambia su propia contraseña. Se cierran sus demás sesiones (una sesión robada
+ * no sobrevive al cambio) y se conserva la del teléfono desde el que la cambió.
+ */
+export async function reemplazarClavePropia(id: number, claveHash: string, tokenHash: Buffer) {
+  await db().transaction(async (tx) => {
+    await tx
+      .update(usuario)
+      .set({ claveHash, intentosFallidos: 0, bloqueadoHasta: null })
+      .where(eq(usuario.id, id));
+    await tx.delete(sesion).where(and(eq(sesion.usuarioId, id), ne(sesion.tokenHash, tokenHash)));
   });
 }
 
