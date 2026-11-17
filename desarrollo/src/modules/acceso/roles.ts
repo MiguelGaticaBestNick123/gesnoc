@@ -9,6 +9,7 @@ import {
   IconCalendarUser,
   IconCash,
   IconChartBar,
+  IconChartDots,
   IconChefHat,
   IconClipboardList,
   IconDoorEnter,
@@ -98,6 +99,14 @@ export const roles: Rol[] = [
     icono: IconSettings,
     secciones: [
       { ruta: '', etiqueta: 'Resumen', icono: IconLayoutDashboard, construida: true },
+      {
+        ruta: 'indicadores',
+        etiqueta: 'Indicadores',
+        icono: IconChartDots,
+        descripcion:
+          'Ventas e ingresos por hora, tiempos de preparación por estación y respuesta a los llamados.',
+        construida: true,
+      },
       {
         ruta: 'noche',
         etiqueta: 'Noche en curso',

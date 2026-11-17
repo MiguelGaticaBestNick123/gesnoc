@@ -26,3 +26,11 @@ test('una sección de otro rol no existe', async ({ page }) => {
   const respuesta = await page.goto('/cocina/sorteo');
   expect(respuesta?.status()).toBe(404);
 });
+
+test('la administración ve los indicadores de la noche', async ({ page }) => {
+  await entrarComo(page, 'admin');
+  await page.goto('/admin/indicadores');
+  await expect(page.getByRole('heading', { name: 'Indicadores' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Ventas por hora' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Tiempo de preparación' })).toBeVisible();
+});
