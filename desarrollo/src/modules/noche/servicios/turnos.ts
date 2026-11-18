@@ -31,11 +31,19 @@ export async function declararDisponibilidad(actor: Actor, fecha: string, dispon
   else await repositorio.retirarDisponible(fecha, actor.id);
 }
 
-/** Lo que necesita la pantalla de asignación para una noche; sin fecha, toma la primera vigente. */
+/**
+ * Lo que necesita la pantalla de asignación para una noche. Sin fecha, la que se está trabajando:
+ * la abierta; si no hay, la de hoy o la próxima, y si solo quedan pasadas sin abrir, la última.
+ */
 export async function pantallaAsignacion(actor: Actor, fecha?: string) {
   exigir(actor, 'admin');
   const noches = (await listarNoches()).filter((noche) => !noche.cerradaEn);
-  const elegida = noches.find((noche) => noche.fecha === fecha) ?? noches[0];
+  const hoy = hoyEnChile();
+  const elegida =
+    noches.find((noche) => noche.fecha === fecha) ??
+    noches.find((noche) => noche.abiertaEn) ??
+    noches.find((noche) => noche.fecha >= hoy) ??
+    noches.at(-1);
   if (!elegida) return { noches, elegida, dotacion: [], ambientes: [] };
 
   const [dotacion, ambientes, historial] = await Promise.all([

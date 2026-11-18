@@ -129,10 +129,20 @@ function TarjetaPersona({
   alEditar: () => void;
 }>) {
   const nombreAmbiente = ambientes.find((a) => a.id === persona.ambienteId)?.nombre;
-  // HU-10 CA2: sin disponibilidad declarada se pregunta antes de asignar.
-  const confirmar = persona.disponible
-    ? undefined
-    : `${persona.nombre} no declaró disponibilidad para esta noche. ¿Asignar de todos modos?`;
+  const turnoActual = persona.rol
+    ? [nombreDelRol[persona.rol], nombreAmbiente].filter(Boolean).join(' · ')
+    : null;
+  // CU-09 4a: si ya tiene turno, se le dice cuál y se confirma el cambio. HU-10 CA2: sin
+  // disponibilidad declarada, también se pregunta antes de asignar.
+  const confirmar = (nuevo: string) => {
+    if (turnoActual) {
+      const sinDisponibilidad = persona.disponible ? '' : ' (no declaró disponibilidad)';
+      return `${persona.nombre}${sinDisponibilidad} ya tiene turno esta noche: ${turnoActual}. ¿Cambiarlo a ${nuevo}?`;
+    }
+    return persona.disponible
+      ? undefined
+      : `${persona.nombre} no declaró disponibilidad para esta noche. ¿Asignar de todos modos?`;
+  };
   const datos = {
     fecha,
     usuarioId: persona.id,
@@ -186,7 +196,7 @@ function TarjetaPersona({
                 accion={asignarTurno}
                 datos={datos}
                 etiqueta={`Asignar como ${nombreDelRol[rol]!.toLowerCase()}`}
-                confirmar={confirmar}
+                confirmar={confirmar(nombreDelRol[rol]!)}
                 aria-label={`Asignar a ${persona.nombre} como ${nombreDelRol[rol]}`}
               />
             )
@@ -201,7 +211,7 @@ function TarjetaPersona({
                   accion={asignarTurno}
                   datos={{ ...datos, ambienteId: ambiente.id }}
                   etiqueta={ambiente.nombre}
-                  confirmar={confirmar}
+                  confirmar={confirmar(`${nombreDelRol[rol]} · ${ambiente.nombre}`)}
                   aria-label={`Asignar a ${persona.nombre} como ${nombreDelRol[rol]} en ${ambiente.nombre}`}
                 />
               ),
@@ -211,7 +221,11 @@ function TarjetaPersona({
           size="sm"
           mih={44}
           onClick={alEditar}
-          aria-label={`Asignar turno a ${persona.nombre}`}
+          aria-label={
+            persona.rol
+              ? `Cambiar turno de ${persona.nombre}`
+              : `Más opciones para asignar a ${persona.nombre}`
+          }
         >
           {persona.rol ? 'Cambiar turno' : 'Más opciones'}
         </Button>

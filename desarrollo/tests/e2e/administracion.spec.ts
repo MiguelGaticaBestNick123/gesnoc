@@ -137,7 +137,7 @@ test('HU-08 a HU-10: se programa una noche, la persona se declara y queda con tu
   await page.goto('/admin/asignacion?fecha=2030-03-15');
   const lucia = page.locator('.mantine-Card-root', { hasText: 'Lucía Díaz' });
   await expect(lucia.getByText('Disponible')).toBeVisible();
-  await page.getByRole('button', { name: 'Asignar turno a Lucía Díaz' }).click();
+  await page.getByRole('button', { name: 'Más opciones para asignar a Lucía Díaz' }).click();
   await modal(page).getByLabel('Rol').selectOption('garzon');
   await modal(page).getByLabel('Ambiente').selectOption({ label: 'Terraza' });
   await modal(page).getByRole('button', { name: 'Asignar' }).click();
@@ -152,7 +152,7 @@ test('HU-10: asignar a quien no declaró disponibilidad exige confirmar', async 
   await entrarComo(page, 'admin');
   await page.goto('/admin/asignacion');
 
-  await page.getByRole('button', { name: 'Asignar turno a Lucía Díaz' }).click();
+  await page.getByRole('button', { name: 'Más opciones para asignar a Lucía Díaz' }).click();
   await expect(modal(page).getByText('no declaró disponibilidad')).toBeVisible();
   await modal(page).getByRole('button', { name: 'Asignar' }).click();
   await expect(modal(page).getByText('confirma para asignarla')).toBeVisible();

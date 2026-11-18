@@ -44,6 +44,10 @@ const resumenDeCuenta = sql`
     from gesnoc.pedido p
     join gesnoc.comanda co on co.fecha = p.fecha and co.pedido_numero = p.numero
     where p.fecha = c.fecha and p.cuenta_numero = c.numero and co.entregada_en is null
+      -- Una comanda anulada completa no se prepara ni se entrega: no pinta la mesa.
+      and exists (select 1 from gesnoc.detalle_pedido d
+                  where d.fecha = co.fecha and d.pedido_numero = co.pedido_numero
+                    and d.estacion_id = co.estacion_id and d.anulado_en is null)
   ) k on true
   left join lateral (
     select coalesce(sum(pg.monto), 0)::int as pagado

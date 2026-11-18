@@ -3,6 +3,7 @@ import { exigir, type Actor } from '@/shared/autorizacion';
 import { CLAVE_FORANEA, ErrorDeNegocio, traducir } from '@/shared/errores';
 import type { DatosAmbiente, DatosEstacion } from '../esquemas';
 import * as repositorio from '../repositorios/ambientes';
+import { mesasActivas } from '../repositorios/mapa';
 
 const nombreRepetido = { ambiente_nombre_uq: 'Ya existe un ambiente con ese nombre' };
 
@@ -42,6 +43,19 @@ export async function crear(actor: Actor, datos: DatosAmbiente) {
 
 export async function editar(actor: Actor, id: number, datos: DatosAmbiente) {
   exigir(actor, 'admin');
+  // Achicar el plano no puede dejar mesas afuera: el mapa del garzón las recortaría y el editor ya
+  // no podría guardar el plano.
+  const fuera = (await mesasActivas(id)).filter(
+    (m) => m.posX + m.ancho > datos.planoAncho || m.posY + m.alto > datos.planoAlto,
+  );
+  if (fuera.length > 0) {
+    const numeros = fuera.map((m) => m.numero).join(', ');
+    throw new ErrorDeNegocio(
+      fuera.length === 1
+        ? `La mesa ${numeros} quedaría fuera del plano: muévela antes de achicarlo`
+        : `Las mesas ${numeros} quedarían fuera del plano: muévelas antes de achicarlo`,
+    );
+  }
   await traducir(repositorio.actualizarAmbiente(id, datos), nombreRepetido);
 }
 

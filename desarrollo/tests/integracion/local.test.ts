@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DatosProducto } from '@/modules/local/esquemas';
 import * as ambientes from '@/modules/local/servicios/ambientes';
 import * as catalogo from '@/modules/local/servicios/catalogo';
+import { guardarPlano } from '@/modules/local/servicios/mapa';
 import { NoAutorizado } from '@/shared/errores';
 import { administracion, conBaseVacia, conTurno } from './apoyo';
 
@@ -52,6 +53,35 @@ describe('HU-04 ambientes y estaciones', () => {
       ambientes: [ambiente],
     } = await local();
     expect(ambiente).toMatchObject({ nombre: 'Salón principal', activo: false });
+  });
+
+  it('el plano no se achica si deja mesas afuera: el mapa las escondería', async () => {
+    const id = await crearSalon();
+    await guardarPlano(administracion, {
+      ambienteId: id,
+      mesas: [
+        {
+          numero: 8,
+          forma: 'rectangular',
+          posX: 800,
+          posY: 40,
+          ancho: 90,
+          alto: 80,
+          rotacion: 0,
+          sillas: null,
+        },
+      ],
+      retiradas: [],
+    });
+    await expect(
+      ambientes.editar(administracion, id, { ...salon, planoAncho: 600 }),
+    ).rejects.toThrow('La mesa 8 quedaría fuera del plano: muévela antes de achicarlo');
+    // Lo que no toca ninguna mesa se puede achicar.
+    await ambientes.editar(administracion, id, { ...salon, planoAlto: 200 });
+    const {
+      ambientes: [ambiente],
+    } = await local();
+    expect(ambiente).toMatchObject({ planoAncho: 900, planoAlto: 200 });
   });
 
   it('el nombre del ambiente no se repite, sin distinguir mayúsculas', async () => {
