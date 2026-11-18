@@ -5,6 +5,7 @@ import {
   cerrarSesion,
   iniciarSesion,
 } from '@/modules/acceso/servicios/autenticacion';
+import { reservarIntento } from '@/modules/acceso/repositorios/usuarios';
 import * as personal from '@/modules/acceso/servicios/personal';
 import { NoAutorizado } from '@/shared/errores';
 import { actorDeToken, hashDeToken } from '@/shared/sesion/actor';
@@ -79,6 +80,24 @@ describe('HU-01 iniciar sesión', () => {
     await agotarIntentos();
     await consultar`update gesnoc.usuario set bloqueado_hasta = now() - interval '1 second'`;
     expect(await iniciarSesion(correo, CLAVE)).toBeTruthy();
+  });
+
+  it('RNF-02: con muchos intentos a la vez, a lo más cinco llegan a verificar la contraseña', async () => {
+    const id = await crearPersona(correo);
+    const reservas = await Promise.all(Array.from({ length: 20 }, () => reservarIntento(id)));
+    expect(reservas.filter(Boolean)).toHaveLength(5);
+    // El sexto bloqueó la cuenta: ni la clave buena entra durante los 15 minutos.
+    await expect(iniciarSesion(correo, CLAVE)).rejects.toThrow(BLOQUEADA);
+  });
+
+  it('RNF-02: veinte claves equivocadas a la vez dejan la cuenta bloqueada', async () => {
+    await crearPersona(correo);
+    const intentos = await Promise.allSettled(
+      Array.from({ length: 20 }, (_, i) => iniciarSesion(correo, `equivocada-${i}`)),
+    );
+    const motivos = intentos.map((r) => String((r as PromiseRejectedResult).reason));
+    expect(motivos.filter((m) => m.includes(INCORRECTAS)).length).toBeLessThanOrEqual(4);
+    await expect(iniciarSesion(correo, CLAVE)).rejects.toThrow(BLOQUEADA);
   });
 
   it('entrar reinicia la cuenta de intentos: deben ser seguidos', async () => {

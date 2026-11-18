@@ -22,15 +22,35 @@ export async function buscarParaIngreso(correo: string) {
   return fila;
 }
 
-// Una sola sentencia: dos intentos simultáneos no pueden contarse como uno.
-export async function registrarIntentoFallido(id: number): Promise<boolean> {
-  const siguiente = sql`${usuario.intentosFallidos} + 1`;
+const intentosAgotados = sql`${usuario.intentosFallidos} >= ${INTENTOS_PERMITIDOS}`;
+const bloqueoNuevo = sql`case when ${intentosAgotados}
+  then now() + make_interval(mins => ${MINUTOS_DE_BLOQUEO}) else ${usuario.bloqueadoHasta} end`;
+
+/**
+ * RNF-02: cada intento se reserva antes de verificar la contraseña, en una sola sentencia. Así, aunque
+ * lleguen muchos intentos a la vez, a lo más cinco se verifican; el siguiente bloquea la cuenta 15
+ * minutos. Sin la reserva, todos leían «no bloqueada» antes de que se registrara el quinto fallo y
+ * cada uno probaba su contraseña. Devuelve si el intento puede verificarse.
+ */
+export async function reservarIntento(id: number): Promise<boolean> {
   const [fila] = await db()
     .update(usuario)
     .set({
-      intentosFallidos: sql`case when ${siguiente} >= ${INTENTOS_PERMITIDOS} then 0 else ${siguiente} end`,
-      bloqueadoHasta: sql`case when ${siguiente} >= ${INTENTOS_PERMITIDOS}
-        then now() + make_interval(mins => ${MINUTOS_DE_BLOQUEO}) else ${usuario.bloqueadoHasta} end`,
+      intentosFallidos: sql`case when ${intentosAgotados} then 0 else ${usuario.intentosFallidos} + 1 end`,
+      bloqueadoHasta: bloqueoNuevo,
+    })
+    .where(and(eq(usuario.id, id), sql`not ${estaBloqueado}`))
+    .returning({ bloqueado: estaBloqueado });
+  return fila !== undefined && !fila.bloqueado;
+}
+
+/** El intento reservado falló: con el quinto, la cuenta se bloquea 15 minutos (HU-01 CA2). */
+export async function registrarIntentoFallido(id: number): Promise<boolean> {
+  const [fila] = await db()
+    .update(usuario)
+    .set({
+      intentosFallidos: sql`case when ${intentosAgotados} then 0 else ${usuario.intentosFallidos} end`,
+      bloqueadoHasta: bloqueoNuevo,
     })
     .where(eq(usuario.id, id))
     .returning({ bloqueado: estaBloqueado });
@@ -121,6 +141,16 @@ export async function reemplazarClavePropia(id: number, claveHash: string, token
 export async function fijarActivo(id: number, activo: boolean) {
   await db().transaction(async (tx) => {
     await tx.update(usuario).set({ activo }).where(eq(usuario.id, id));
-    if (!activo) await tx.delete(sesion).where(eq(sesion.usuarioId, id));
+    if (activo) return;
+    await tx.delete(sesion).where(eq(sesion.usuarioId, id));
+    // Sus turnos y postulaciones de las noches que aún no se abren dejan de valer: ya no trabaja en
+    // el local, y un turno suyo contaría en la dotación y en el reparto de propinas. En la noche
+    // abierta y en las cerradas, el turno queda como registro de quién trabajó.
+    await tx.execute(sql`
+      delete from gesnoc.asignacion a using gesnoc.noche n
+      where a.usuario_id = ${id} and n.fecha = a.fecha and n.abierta_en is null`);
+    await tx.execute(sql`
+      delete from gesnoc.disponibilidad d using gesnoc.noche n
+      where d.usuario_id = ${id} and n.fecha = d.fecha and n.abierta_en is null`);
   });
 }

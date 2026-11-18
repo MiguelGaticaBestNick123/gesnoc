@@ -22,7 +22,8 @@ export async function iniciarSesion(correo: string, clave: string): Promise<stri
     await verificarClave(await señuelo, clave);
     throw credencialesInvalidas();
   }
-  if (persona.bloqueado) throw cuentaBloqueada();
+  // RNF-02: el intento se reserva antes de verificar; con cinco en curso o fallidos, no hay sexto.
+  if (persona.bloqueado || !(await usuarios.reservarIntento(persona.id))) throw cuentaBloqueada();
 
   if (!(await verificarClave(persona.claveHash, clave))) {
     const bloqueado = await usuarios.registrarIntentoFallido(persona.id);
@@ -48,7 +49,7 @@ export async function cambiarMiClave(actor: Actor, token: string, { actual, nuev
   exigir(actor, 'personal');
   const persona = await usuarios.claveDe(actor.id);
   if (!persona) throw new ErrorDeNegocio('La sesión expiró: vuelve a ingresar');
-  if (persona.bloqueado) throw cuentaBloqueada();
+  if (persona.bloqueado || !(await usuarios.reservarIntento(actor.id))) throw cuentaBloqueada();
   if (!(await verificarClave(persona.claveHash, actual))) {
     const bloqueado = await usuarios.registrarIntentoFallido(actor.id);
     throw bloqueado ? cuentaBloqueada() : new ErrorDeNegocio('La contraseña actual no es correcta');

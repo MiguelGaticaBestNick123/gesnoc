@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import * as personal from '@/modules/acceso/servicios/personal';
 import type { DatosAsignacion } from '@/modules/noche/esquemas';
 import * as noches from '@/modules/noche/servicios/noches';
 import * as turnos from '@/modules/noche/servicios/turnos';
@@ -246,6 +247,24 @@ describe('HU-10 asignar turnos', () => {
   it('las cuentas desactivadas no aparecen en la dotación', async () => {
     await consultar`update gesnoc.usuario set activo = false where id = ${usuarioId}`;
     expect(await dotacion()).toEqual([]);
+  });
+
+  it('al desactivar una cuenta se van sus turnos y postulaciones de las noches sin abrir', async () => {
+    await programar(otraFecha);
+    for (const dia of [fecha, otraFecha]) {
+      await turnos.declararDisponibilidad(sinTurno(usuarioId), dia, true);
+      await turnos.asignar(administracion, { ...turno, fecha: dia });
+    }
+    await noches.abrir(administracion, fecha, 0);
+    await personal.cambiarActivo(administracion, usuarioId, false);
+
+    // El turno de la noche abierta queda como registro de quién trabajó; el de la próxima, no.
+    const turnosQueQuedan = await consultar<{ fecha: string }[]>`
+      select fecha::text as fecha from gesnoc.asignacion where usuario_id = ${usuarioId}`;
+    expect(turnosQueQuedan).toEqual([{ fecha }]);
+    const postulaciones = await consultar<{ fecha: string }[]>`
+      select fecha::text as fecha from gesnoc.disponibilidad where usuario_id = ${usuarioId}`;
+    expect(postulaciones).toEqual([{ fecha }]);
   });
 
   it('solo la administración asigna turnos (RNF-01)', async () => {
