@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  consumoDeLaCuenta,
   guardarCobroPendiente,
   leerCobroPendiente,
   llaveDeCobro,
@@ -21,6 +22,36 @@ function dividir(saldo: number, personas: number): number[] {
   }
   return pagos;
 }
+
+describe('CU-18 paso 1: lo consumido a la vista del cobro', () => {
+  it('suma el mismo producto al mismo precio y deja fuera lo anulado', () => {
+    const linea = (
+      producto: string,
+      cantidad: number,
+      precioUnitario: number,
+      anulada = false,
+    ) => ({
+      producto,
+      cantidad,
+      precioUnitario,
+      anulada: anulada ? { en: '01:00', por: 'Diego' } : null,
+    });
+    expect(
+      consumoDeLaCuenta([
+        { lineas: [linea('Piscola', 2, 6000), linea('Papas fritas', 1, 6500)] },
+        { lineas: [linea('Piscola', 1, 6000), linea('Mojito', 1, 6500, true)] },
+        // El Schop subió de precio entre un pedido y otro: cada precio en su línea (RN-09).
+        { lineas: [linea('Schop', 1, 3500)] },
+        { lineas: [linea('Schop', 2, 3800)] },
+      ]),
+    ).toEqual([
+      { clave: 'Piscola|6000', producto: 'Piscola', cantidad: 3, importe: 18_000 },
+      { clave: 'Papas fritas|6500', producto: 'Papas fritas', cantidad: 1, importe: 6500 },
+      { clave: 'Schop|3500', producto: 'Schop', cantidad: 1, importe: 3500 },
+      { clave: 'Schop|3800', producto: 'Schop', cantidad: 2, importe: 7600 },
+    ]);
+  });
+});
 
 describe('HU-25: dividir el saldo en partes', () => {
   it('la última parte ajusta el saldo exacto', () => {

@@ -5,6 +5,7 @@ import {
   Alert,
   Box,
   Button,
+  Collapse,
   Divider,
   Group,
   Paper,
@@ -18,6 +19,7 @@ import {
 } from '@mantine/core';
 import {
   IconAlertTriangle,
+  IconChevronDown,
   IconCircleCheck,
   IconMinus,
   IconPlus,
@@ -32,6 +34,7 @@ import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearHora } from '@/shared/utilidades/fechas';
 import {
+  consumoDeLaCuenta,
   DIVISIONES,
   guardarCobroPendiente,
   leerCobroPendiente,
@@ -245,6 +248,7 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
             </Text>
           </Text>
         </Group>
+        <LoConsumido pedidos={datos.pedidos} />
       </Paper>
 
       {hecho && (
@@ -462,6 +466,53 @@ function BotonMedio({
   );
 }
 
+/** CU-18 paso 1: lo consumido, a un toque, para responder «¿qué me están cobrando?». */
+function LoConsumido({ pedidos }: Readonly<{ pedidos: DetalleCuenta['pedidos'] }>) {
+  const [abierto, setAbierto] = useState(false);
+  const lineas = consumoDeLaCuenta(pedidos);
+  if (lineas.length === 0) return null;
+  const unidades = lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
+  return (
+    <Box mt={4}>
+      <Button
+        variant="subtle"
+        size="sm"
+        mih={44}
+        px={0}
+        aria-expanded={abierto}
+        onClick={() => setAbierto((antes) => !antes)}
+        rightSection={
+          <IconChevronDown
+            size={16}
+            style={{
+              transform: abierto ? 'rotate(180deg)' : undefined,
+              transition: 'transform 150ms',
+            }}
+          />
+        }
+      >
+        {abierto
+          ? 'Ocultar lo consumido'
+          : `Ver lo consumido (${unidades} ${unidades === 1 ? 'ítem' : 'ítems'})`}
+      </Button>
+      <Collapse expanded={abierto}>
+        <Stack gap={4} pt={4}>
+          {lineas.map((linea) => (
+            <Group key={linea.clave} justify="space-between" wrap="nowrap" gap="xs">
+              <Text size="sm" truncate>
+                {linea.cantidad} × {linea.producto}
+              </Text>
+              <Text size="sm" fw={600} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {formatearPesos(linea.importe)}
+              </Text>
+            </Group>
+          ))}
+        </Stack>
+      </Collapse>
+    </Box>
+  );
+}
+
 function PagosDeLaCuenta({ pagos }: Readonly<{ pagos: DetalleCuenta['pagos'] }>) {
   if (pagos.length === 0) return null;
   return (
@@ -511,8 +562,9 @@ function CuentaCerrada({
   saldo: number;
   total: number;
 }>) {
-  // La administración puede cerrar una cuenta con saldo (HU-27): no se le dice al cliente que pagó.
-  const conSaldo = !hecho && saldo > 0;
+  // La administración puede cerrar una cuenta con saldo (HU-27): no se le dice al cliente que pagó,
+  // aunque antes se haya cobrado una parte desde este teléfono.
+  const conSaldo = saldo > 0;
   const titulo = conSaldo
     ? `Cerrada con saldo de ${formatearPesos(saldo)}`
     : total === 0

@@ -49,6 +49,34 @@ export interface FormaDelCobro {
 }
 
 /**
+ * CU-18 paso 1 (incluye CU-15): lo consumido en la cuenta, para responder «¿qué me están cobrando?»
+ * sin salir del cobro. Sin lo anulado, y con el mismo producto al mismo precio en una sola línea.
+ */
+export function consumoDeLaCuenta(
+  pedidos: readonly {
+    lineas: readonly {
+      producto: string;
+      cantidad: number;
+      precioUnitario: number;
+      anulada: unknown;
+    }[];
+  }[],
+) {
+  const porProducto = new Map<string, { producto: string; cantidad: number; importe: number }>();
+  for (const linea of pedidos.flatMap((pedido) => pedido.lineas)) {
+    if (linea.anulada) continue;
+    const clave = `${linea.producto}|${linea.precioUnitario}`;
+    const previo = porProducto.get(clave) ?? { producto: linea.producto, cantidad: 0, importe: 0 };
+    porProducto.set(clave, {
+      ...previo,
+      cantidad: previo.cantidad + linea.cantidad,
+      importe: previo.importe + linea.cantidad * linea.precioUnitario,
+    });
+  }
+  return [...porProducto].map(([clave, linea]) => ({ clave, ...linea }));
+}
+
+/**
  * Cobro por ítems: lo que suman las unidades elegidas de cada línea. Lo ya pagado no queda marcado
  * por ítem (el modelo registra montos), así que el tope sigue siendo el saldo.
  */
