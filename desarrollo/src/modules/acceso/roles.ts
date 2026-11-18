@@ -24,6 +24,7 @@ import {
   IconReceipt2,
   IconSettings,
   IconShieldCheck,
+  IconTimelineEvent,
   IconTrophy,
   IconUserCheck,
   IconUsers,
@@ -134,6 +135,14 @@ export const roles: Rol[] = [
         grupo: 'Noche',
         descripcion: 'Asignar rol y ambiente a cada persona viendo quién declaró disponibilidad.',
         historias: ['HU-10'],
+        construida: true,
+      },
+      {
+        ruta: 'bitacora',
+        etiqueta: 'Bitácora',
+        icono: IconTimelineEvent,
+        grupo: 'Noche',
+        descripcion: 'Quién hizo qué y cuándo en cada noche, con filtros por tipo y persona.',
         construida: true,
       },
       {
