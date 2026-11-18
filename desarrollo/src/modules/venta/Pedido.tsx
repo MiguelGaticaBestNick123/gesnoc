@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { enviarJson, nuevaClaveDeEnvio } from '@/shared/red';
 import { paraBuscar } from '@/shared/utilidades/buscar';
+import { agregarANota, ALERGIAS, LARGO_NOTA, NOTAS_RAPIDAS } from './notas';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import {
   agregar,
@@ -355,22 +356,56 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
                   </Group>
                 </Group>
                 {conNota && (
-                  <TextInput
-                    aria-label={`Nota para ${nombre}`}
-                    placeholder="Sin hielo, alergia…"
-                    value={linea.nota}
-                    maxLength={140}
-                    disabled={congelado}
-                    onChange={(evento) => {
-                      const nota = evento.currentTarget.value;
-                      cambiar((actual) => ({
-                        ...actual,
-                        lineas: actual.lineas.map((l) =>
-                          l.productoId === linea.productoId ? { ...l, nota } : l,
-                        ),
-                      }));
-                    }}
-                  />
+                  <>
+                    <TextInput
+                      aria-label={`Nota para ${nombre}`}
+                      placeholder="Sin hielo, alergia…"
+                      value={linea.nota}
+                      maxLength={LARGO_NOTA}
+                      disabled={congelado}
+                      onChange={(evento) => {
+                        const nota = evento.currentTarget.value;
+                        cambiar((actual) => ({
+                          ...actual,
+                          lineas: actual.lineas.map((l) =>
+                            l.productoId === linea.productoId ? { ...l, nota } : l,
+                          ),
+                        }));
+                      }}
+                    />
+                    {/* Atajos: escriben la nota con un toque; una alergia sale en rojo en la estación. */}
+                    <Group gap={8} aria-label={`Atajos de nota para ${nombre}`}>
+                      {[
+                        ...NOTAS_RAPIDAS.map((texto) => ({ texto, alergia: false })),
+                        ...ALERGIAS.map((alergia) => ({
+                          texto: `Alergia: ${alergia}`,
+                          alergia: true,
+                        })),
+                      ].map(({ texto, alergia }) => (
+                        <Button
+                          key={texto}
+                          size="compact-sm"
+                          mih={44}
+                          radius="xl"
+                          variant="light"
+                          color={alergia ? 'red' : 'gray'}
+                          disabled={congelado}
+                          onClick={() =>
+                            cambiar((actual) => ({
+                              ...actual,
+                              lineas: actual.lineas.map((l) =>
+                                l.productoId === linea.productoId
+                                  ? { ...l, nota: agregarANota(l.nota, texto) }
+                                  : l,
+                              ),
+                            }))
+                          }
+                        >
+                          {texto}
+                        </Button>
+                      ))}
+                    </Group>
+                  </>
                 )}
               </Stack>
             );

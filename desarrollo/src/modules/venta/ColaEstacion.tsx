@@ -12,7 +12,7 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconChefHat, IconGlassFull } from '@tabler/icons-react';
+import { IconAlertTriangle, IconChefHat, IconGlassFull } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { usePantallaEncendida } from '@/shared/navegador/pantalla-encendida';
 import { avisar, useSonido } from '@/shared/navegador/sonido';
@@ -29,6 +29,7 @@ import {
   colorDeEspera,
   haceCuanto,
 } from './cola';
+import { esAlergia } from './notas';
 import type { ColaDeEstacion } from './servicios/colas';
 import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
@@ -224,11 +225,26 @@ function TarjetaComanda({
                 {linea.cantidad} × {linea.producto}
                 {linea.anulada && ' (anulado)'}
               </Text>
-              {linea.nota && (
-                <Text size="sm" c="yellow.4" td={linea.anulada ? 'line-through' : undefined}>
-                  Nota: {linea.nota}
-                </Text>
-              )}
+              {linea.nota &&
+                (esAlergia(linea.nota) ? (
+                  <Text
+                    size="sm"
+                    fw={700}
+                    c="red.4"
+                    td={linea.anulada ? 'line-through' : undefined}
+                  >
+                    <IconAlertTriangle
+                      size={14}
+                      aria-hidden
+                      style={{ verticalAlign: '-2px', marginRight: 4 }}
+                    />
+                    {linea.nota}
+                  </Text>
+                ) : (
+                  <Text size="sm" c="yellow.4" td={linea.anulada ? 'line-through' : undefined}>
+                    Nota: {linea.nota}
+                  </Text>
+                ))}
             </div>
           ))}
         </Stack>
