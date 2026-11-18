@@ -20,6 +20,7 @@ import { IconLogout, IconMoonStars } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { salir } from '@/modules/acceso/acciones';
+import { AyudaRol } from '@/modules/acceso/AyudaRol';
 import { gruposDe, rolDeRuta, rutaDe } from '@/modules/acceso/roles';
 import { fechaCorta } from '@/shared/utilidades/fechas';
 import { iniciales } from '@/shared/utilidades/texto';
@@ -135,6 +136,7 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
                 Mi pantalla
               </Anchor>
             )}
+            <AyudaRol rol={rol} />
             <form action={salir}>
               <ActionIcon
                 type="submit"

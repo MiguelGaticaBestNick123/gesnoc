@@ -98,12 +98,12 @@ export function AvisosGarzon({ inicial }: Readonly<{ inicial: MisComandas }>) {
     return (
       <>
         {avisoLlamados}
-        <Box pos="fixed" top={8} right={{ base: 64, xs: 116 }} style={{ zIndex: 201 }}>
+        <Box pos="fixed" top={6} right={{ base: 116, xs: 168 }} style={{ zIndex: 201 }}>
           <Button
             radius="xl"
             color="green"
             size="sm"
-            mih={40}
+            mih={44}
             leftSection={<IconBell size={16} />}
             onClick={() => setPostergadas([])}
             aria-label={`${listas.length} ${listas.length === 1 ? 'comanda lista' : 'comandas listas'} para retirar`}

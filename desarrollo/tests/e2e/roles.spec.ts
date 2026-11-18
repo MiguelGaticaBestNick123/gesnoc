@@ -34,3 +34,20 @@ test('la administración ve los indicadores de la noche', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Ventas por hora' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Tiempo de preparación' })).toBeVisible();
 });
+
+test('la administración revisa la bitácora de la noche', async ({ page }) => {
+  await entrarComo(page, 'admin');
+  await page.goto('/admin/bitacora');
+  await expect(page.getByRole('heading', { name: 'Bitácora' })).toBeVisible();
+  await page.getByRole('button', { name: 'Noche', exact: true }).click();
+  await expect(page.getByText('Se abrió la noche')).toBeVisible();
+  await page.getByRole('button', { name: 'Puerta', exact: true }).click();
+  await expect(page.getByText('Se abrió la noche')).toBeHidden();
+});
+
+test('la ayuda «?» explica la pantalla de cada rol', async ({ page }) => {
+  await entrarComo(page, 'cocina');
+  await page.getByRole('button', { name: 'Ayuda: cómo se usa esta pantalla' }).click();
+  await expect(page.getByText('Cómo se usa · Cocina')).toBeVisible();
+  await expect(page.getByText(/Una nota en rojo es una alergia/)).toBeVisible();
+});
