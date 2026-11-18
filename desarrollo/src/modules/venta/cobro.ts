@@ -16,12 +16,15 @@ export const nombreDelMedio = (medio: MedioDePago) =>
 /** En Chile ya no circulan monedas de $1 ni de $5: las partes y las propinas van a la decena. */
 const DECENA = 10;
 
-/** HU-25 CA1: el saldo completo, una fracción o un monto libre. */
-export type FormaDelMonto = 'saldo' | 'libre' | 2 | 3 | 4;
+/**
+ * HU-25 CA1: el saldo completo, una fracción, un monto libre o la suma de los ítems que alguien paga
+ * («yo pago mis dos piscolas»).
+ */
+export type FormaDelMonto = 'saldo' | 'libre' | 'items' | 2 | 3 | 4;
 export const DIVISIONES = [2, 3, 4] as const;
 
-/** CU-18 paso 2: sin propina, 10 %, 15 % o un monto. */
-export type FormaDePropina = 'sin' | 10 | 15 | 'monto';
+/** CU-18 paso 2: sin propina, 10 %, 15 %, 30 % o un monto. */
+export type FormaDePropina = 'sin' | 10 | 15 | 30 | 'monto';
 
 /**
  * La parte de cada persona cuando el saldo se divide entre las que aún no pagan. Se redondea hacia
@@ -41,6 +44,24 @@ export interface FormaDelCobro {
   pagadas: number;
   /** Dígitos del monto libre. */
   libre: string;
+  /** Lo que suman los ítems elegidos, si se cobra por ítems. */
+  porItems?: number;
+}
+
+/**
+ * Cobro por ítems: lo que suman las unidades elegidas de cada línea. Lo ya pagado no queda marcado
+ * por ítem (el modelo registra montos), así que el tope sigue siendo el saldo.
+ */
+export function montoDeItems(
+  lineas: readonly { clave: string; precioUnitario: number; cantidad: number }[],
+  elegidas: Readonly<Record<string, number>>,
+): number {
+  return lineas.reduce(
+    (suma, linea) =>
+      suma +
+      linea.precioUnitario * Math.min(linea.cantidad, Math.max(0, elegidas[linea.clave] ?? 0)),
+    0,
+  );
 }
 
 /** Personas que faltan por pagar en la división elegida; 1 si se cobra el saldo o un monto. */
@@ -50,6 +71,7 @@ export const personasQueFaltan = ({ forma, pagadas }: Pick<FormaDelCobro, 'forma
 export function montoACobrar(cobro: FormaDelCobro, saldo: number): number {
   if (cobro.forma === 'saldo') return Math.max(0, saldo);
   if (cobro.forma === 'libre') return Number(cobro.libre || 0);
+  if (cobro.forma === 'items') return Math.min(Math.max(0, saldo), cobro.porItems ?? 0);
   return partePorPersona(saldo, personasQueFaltan(cobro));
 }
 

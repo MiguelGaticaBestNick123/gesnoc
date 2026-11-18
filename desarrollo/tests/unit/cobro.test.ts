@@ -4,6 +4,7 @@ import {
   leerCobroPendiente,
   llaveDeCobro,
   montoACobrar,
+  montoDeItems,
   partePorPersona,
   personasQueFaltan,
   problemaDelCobro,
@@ -138,5 +139,31 @@ describe('cobro sin confirmar (CU-18 4c)', () => {
     };
     expect(leerCobroPendiente(roto, '2026-11-07', 3)).toBeNull();
     expect(() => guardarCobroPendiente(roto, '2026-11-07', 3, pendiente)).not.toThrow();
+  });
+});
+
+describe('HU-25: cobro por ítems', () => {
+  const lineas = [
+    { clave: '1-1', precioUnitario: 5000, cantidad: 2 },
+    { clave: '1-2', precioUnitario: 6500, cantidad: 1 },
+  ];
+
+  it('suma las unidades elegidas de cada línea, sin pasarse de lo pedido', () => {
+    expect(montoDeItems(lineas, {})).toBe(0);
+    expect(montoDeItems(lineas, { '1-1': 1 })).toBe(5000);
+    expect(montoDeItems(lineas, { '1-1': 2, '1-2': 1 })).toBe(16500);
+    expect(montoDeItems(lineas, { '1-1': 5, '1-2': -1 })).toBe(10000);
+  });
+
+  it('el monto por ítems nunca supera el saldo', () => {
+    const cobro = { forma: 'items' as const, pagadas: 0, libre: '', porItems: 16500 };
+    expect(montoACobrar(cobro, 20000)).toBe(16500);
+    expect(montoACobrar(cobro, 10000)).toBe(10000);
+  });
+});
+
+describe('propina del 30 %', () => {
+  it('se calcula y se redondea a la decena', () => {
+    expect(propinaDe(30, '', 12345)).toBe(3700);
   });
 });

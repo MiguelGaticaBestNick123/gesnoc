@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  ActionIcon,
   Alert,
   Box,
   Button,
@@ -15,9 +16,15 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core';
-import { IconAlertTriangle, IconCircleCheck, type Icon } from '@tabler/icons-react';
+import {
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconMinus,
+  IconPlus,
+  type Icon,
+} from '@tabler/icons-react';
 import Link from 'next/link';
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
 import { enviarJson, nuevaClaveDeEnvio } from '@/shared/red';
 import { AvisoConexion } from '@/shared/ui/AvisoConexion';
@@ -30,6 +37,7 @@ import {
   leerCobroPendiente,
   MEDIOS,
   montoACobrar,
+  montoDeItems,
   nombreDelMedio,
   personasQueFaltan,
   problemaDelCobro,
@@ -49,6 +57,7 @@ const SIN_CONFIRMAR = 'Este cobro quedó sin confirmar. Reintenta: no se cobra d
 const opcionesDelMonto = [
   { value: 'saldo', label: 'Todo' },
   ...DIVISIONES.map((partes) => ({ value: String(partes), label: `÷${partes}` })),
+  { value: 'items', label: 'Ítems' },
   { value: 'libre', label: 'Otro' },
 ];
 
@@ -56,6 +65,7 @@ const opcionesDePropina = [
   { value: 'sin', label: 'Sin' },
   { value: '10', label: '10 %' },
   { value: '15', label: '15 %' },
+  { value: '30', label: '30 %' },
   { value: 'monto', label: 'Otra' },
 ];
 
@@ -63,7 +73,9 @@ const opcionesDePropina = [
 const COLUMNA = { maw: 720, mx: 'auto', w: '100%' } as const;
 
 const leerForma = (valor: string): FormaDelMonto =>
-  valor === 'saldo' || valor === 'libre' ? valor : (Number(valor) as FormaDelMonto);
+  valor === 'saldo' || valor === 'libre' || valor === 'items'
+    ? valor
+    : (Number(valor) as FormaDelMonto);
 
 const leerPropina = (valor: string): FormaDePropina =>
   valor === 'sin' || valor === 'monto' ? valor : (Number(valor) as FormaDePropina);
@@ -86,6 +98,7 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
   const [forma, setForma] = useState<FormaDelMonto>('saldo');
   const [pagadas, setPagadas] = useState(0);
   const [libre, setLibre] = useState('');
+  const [elegidas, setElegidas] = useState<Record<string, number>>({});
   const [formaPropina, setFormaPropina] = useState<FormaDePropina>('sin');
   const [propinaLibre, setPropinaLibre] = useState('');
   const [medio, setMedio] = useState<MedioDePago | null>(null);
@@ -103,7 +116,23 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
   const pagado = datos.total - saldo;
   const cerrada = datos.cuenta.cerradaEn !== null || (hecho?.cerrada ?? false);
 
-  const monto = pendiente?.monto ?? montoACobrar({ forma, pagadas, libre }, saldo);
+  // Cobro por ítems: las líneas vigentes de la cuenta, cada una con las unidades que se eligen.
+  const lineas = useMemo(
+    () =>
+      datos.pedidos.flatMap((pedido) =>
+        pedido.lineas
+          .filter((linea) => linea.anulada === null)
+          .map((linea) => ({
+            clave: `${pedido.numero}-${linea.linea}`,
+            producto: linea.producto,
+            cantidad: linea.cantidad,
+            precioUnitario: linea.precioUnitario,
+          })),
+      ),
+    [datos.pedidos],
+  );
+  const porItems = montoDeItems(lineas, elegidas);
+  const monto = pendiente?.monto ?? montoACobrar({ forma, pagadas, libre, porItems }, saldo);
   const propina = pendiente?.propina ?? propinaDe(formaPropina, propinaLibre, monto);
   const medioElegido = pendiente?.medio ?? medio;
   const problema = problemaDelCobro(monto, saldo, medioElegido);
@@ -141,6 +170,7 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
       // HU-25: en una división, la parte siguiente se calcula con el saldo nuevo y las que faltan.
       if (typeof forma === 'number') setPagadas((anteriores) => anteriores + 1);
       setLibre('');
+      setElegidas({});
       setFormaPropina('sin');
       setPropinaLibre('');
       setMedio(null);
@@ -264,6 +294,17 @@ export function Cobrar({ inicial }: Readonly<{ inicial: DetalleCuenta }>) {
                 valor={libre}
                 alCambiar={setLibre}
                 autoFocus
+              />
+            )}
+            {forma === 'items' && (
+              <ItemsQuePaga
+                lineas={lineas}
+                elegidas={elegidas}
+                alCambiar={(clave, unidades) =>
+                  setElegidas((actuales) => ({ ...actuales, [clave]: unidades }))
+                }
+                suma={porItems}
+                saldo={saldo}
               />
             )}
           </Paso>
@@ -508,5 +549,71 @@ function CuentaCerrada({
         </Stack>
       </Stack>
     </Paper>
+  );
+}
+
+/**
+ * HU-25: cobro por ítems («yo pago mis dos piscolas»). Se eligen las unidades de cada línea y la
+ * suma es el monto. Lo ya cobrado no queda marcado por ítem, así que el tope sigue siendo el saldo.
+ */
+function ItemsQuePaga({
+  lineas,
+  elegidas,
+  alCambiar,
+  suma,
+  saldo,
+}: Readonly<{
+  lineas: { clave: string; producto: string; cantidad: number; precioUnitario: number }[];
+  elegidas: Record<string, number>;
+  alCambiar: (clave: string, unidades: number) => void;
+  suma: number;
+  saldo: number;
+}>) {
+  return (
+    <Stack gap={6}>
+      {lineas.map((linea) => {
+        const unidades = elegidas[linea.clave] ?? 0;
+        return (
+          <Group key={linea.clave} justify="space-between" wrap="nowrap" gap="xs">
+            <div style={{ minWidth: 0 }}>
+              <Text size="sm" fw={600} truncate>
+                {linea.producto}
+              </Text>
+              <Text size="xs" c="dimmed">
+                {linea.cantidad} × {formatearPesos(linea.precioUnitario)}
+              </Text>
+            </div>
+            <Group gap={4} wrap="nowrap">
+              <ActionIcon
+                size={44}
+                variant="default"
+                disabled={unidades === 0}
+                onClick={() => alCambiar(linea.clave, unidades - 1)}
+                aria-label={`Quitar una unidad de ${linea.producto}`}
+              >
+                <IconMinus size={18} />
+              </ActionIcon>
+              <Text w={36} ta="center" fw={700} aria-live="polite">
+                {unidades}
+              </Text>
+              <ActionIcon
+                size={44}
+                variant="default"
+                disabled={unidades >= linea.cantidad}
+                onClick={() => alCambiar(linea.clave, unidades + 1)}
+                aria-label={`Sumar una unidad de ${linea.producto}`}
+              >
+                <IconPlus size={18} />
+              </ActionIcon>
+            </Group>
+          </Group>
+        );
+      })}
+      <Text size="sm" c="dimmed">
+        Suman {formatearPesos(suma)}
+        {suma > saldo && ` · supera el saldo: se cobra ${formatearPesos(saldo)}`}. Lo ya cobrado se
+        descuenta del saldo, no de cada ítem.
+      </Text>
+    </Stack>
   );
 }
