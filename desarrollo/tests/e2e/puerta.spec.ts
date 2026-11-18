@@ -25,13 +25,13 @@ test('HU-30 y HU-33: la lista trae el nombre, la entrada pagada recibe ticket y 
     page.getByText('Viene en la lista «Cumpleaños de Camila», de Camila Rojas.'),
   ).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Camila');
-  await page.getByRole('button', { name: 'EF, efectivo, $5.000' }).click();
+  await page.getByRole('button', { name: 'EF Efectivo $5.000' }).click();
   await expect(page.getByLabel('Ticket 1', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Siguiente persona' }).click();
   await buscar(page, '19876543-0');
   await expect(page.getByText('Entra gratis')).toBeVisible();
-  await page.getByRole('button', { name: 'Gratis, sin ticket' }).click();
+  await page.getByRole('button', { name: 'Gratis Sin ticket' }).click();
   await expect(page.getByText('Entrada gratis')).toBeVisible();
 
   // Una persona nueva: se escribe su nombre y queda pendiente (PN), con ticket.
@@ -40,7 +40,7 @@ test('HU-30 y HU-33: la lista trae el nombre, la entrada pagada recibe ticket y 
   await expect(page.getByText('Persona nueva')).toBeVisible();
   await page.getByRole('textbox', { name: 'Nombre' }).fill('Tomás');
   await page.getByRole('textbox', { name: 'Apellido' }).fill('Ruiz');
-  await page.getByRole('button', { name: 'PN, pendiente, $5.000' }).click();
+  await page.getByRole('button', { name: 'PN Pendiente $5.000' }).click();
   await expect(page.getByLabel('Ticket 2', { exact: true })).toBeVisible();
 
   const ingresos = page.getByRole('list', { name: 'Ingresos de esta noche' });
@@ -57,7 +57,7 @@ test('HU-30 CA2 (RN-21): quien ya entró no entra de nuevo y se ve con qué tick
   await buscar(page, '156782343');
   await expect(page.getByText('Ya entró esta noche')).toBeVisible();
   await expect(page.getByText(/con el ticket 1 \(EF\)/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /^EF,/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^EF Efectivo/ })).toHaveCount(0);
 });
 
 test('un RUT mal escrito no se busca', async ({ page }) => {

@@ -193,6 +193,27 @@ export async function yaInvitados(fecha: string, documentos: string[]) {
   return filas.map((f) => f.documento);
 }
 
+/**
+ * Cuántas personas de una lista, o con ese documento, ya entraron esa noche. Su invitación es el
+ * único rastro de cómo entraron (la entrada se cruza con ella por el documento): no se borra.
+ */
+export async function yaEntraron(
+  fecha: string,
+  quienes: { listaNumero: number } | { documento: string },
+) {
+  const filtro =
+    'listaNumero' in quienes
+      ? sql`i.lista_numero = ${quienes.listaNumero}`
+      : sql`i.documento = ${quienes.documento}`;
+  const [fila] = await db().execute<{ entraron: number }>(sql`
+    select count(*)::int as entraron
+    from gesnoc.invitacion i
+    join gesnoc.cliente c on c.documento = i.documento
+    join gesnoc.entrada e on e.fecha = i.fecha and e.cliente_id = c.id
+    where i.fecha = ${fecha} and ${filtro}`);
+  return fila?.entraron ?? 0;
+}
+
 export const quitarInvitacion = (fecha: string, documento: string) =>
   db()
     .delete(invitacion)

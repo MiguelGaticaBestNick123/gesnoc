@@ -15,7 +15,7 @@ test('HU-35 y HU-36: el guardia reporta a un cliente y el reporte aparece al bus
   await page.getByRole('button', { name: 'Buscar' }).click();
   await page.getByRole('textbox', { name: 'Nombre' }).fill('Iván');
   await page.getByRole('textbox', { name: 'Apellido' }).fill('Mora');
-  await page.getByRole('button', { name: 'Gratis, sin ticket' }).click();
+  await page.getByRole('button', { name: 'Gratis Sin ticket' }).click();
   await page.getByRole('button', { name: 'Siguiente persona' }).click();
 
   // HU-35: ya adentro, el guardia lo busca y lo reporta desde la puerta.

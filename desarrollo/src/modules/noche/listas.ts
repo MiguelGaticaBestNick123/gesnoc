@@ -6,8 +6,9 @@ export interface PersonaDeLista {
   apellido: string;
 }
 
-// Un RUT escrito como sea: con o sin puntos, con o sin guion.
-const PATRON_RUT = /\d{1,2}\.?\d{3}\.?\d{3}\s*-?\s*[\dkK]\b/;
+// Un RUT escrito como sea: con o sin puntos, con o sin guion, de 6 a 8 dígitos antes del verificador
+// (los mismos que acepta `normalizarRut`).
+const PATRON_RUT = /(?:\d{1,2}\.?)?\d{3}\.?\d{3}\s*-?\s*[\dkK]\b/;
 
 /**
  * Lee la lista que envía quien organiza (por ejemplo, copiada de un mensaje): una persona por línea,

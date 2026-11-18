@@ -17,7 +17,7 @@ import { useState } from 'react';
 import { enviarJson } from '@/shared/red';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { fechaCorta } from '@/shared/utilidades/fechas';
-import { formatearDocumento, normalizarRut, type TipoDocumento } from '@/shared/utilidades/rut';
+import { formatearDocumento, type TipoDocumento } from '@/shared/utilidades/rut';
 import { plural } from '@/shared/utilidades/texto';
 import { HistorialPorDocumento } from './HistorialCliente';
 import type { buscarClientes } from './servicios/clientes';
@@ -25,9 +25,13 @@ import type { buscarClientes } from './servicios/clientes';
 type Modo = TipoDocumento | 'nombre';
 type Encontrado = Awaited<ReturnType<typeof buscarClientes>>[number];
 
-/** El tipo del documento de una ficha ya guardada: un RUT válido es RUT; lo demás, extranjero. */
+/**
+ * El tipo del documento de una ficha ya guardada, sin adivinarlo (RN-21): el RUT se guarda con guion
+ * y el documento extranjero sin signos. Un pasaporte de solo números puede parecer un RUT válido, y
+ * leerlo como RUT abriría la ficha de otra persona.
+ */
 const tipoDe = (documento: string): TipoDocumento =>
-  normalizarRut(documento) !== null ? 'rut' : 'extranjero';
+  documento.includes('-') ? 'rut' : 'extranjero';
 
 /**
  * HU-35 y HU-36: buscar a un cliente por su documento o por su nombre para ver su historial o

@@ -113,6 +113,12 @@ export async function guardarLista(actor: Actor, { fecha, numero, ...datos }: Da
 export async function quitarLista(actor: Actor, fecha: string, numero: number) {
   exigir(actor, 'admin');
   await exigirNocheVigente(fecha);
+  const entraron = await repositorio.yaEntraron(fecha, { listaNumero: numero });
+  if (entraron > 0) {
+    throw new ErrorDeNegocio(
+      `${entraron === 1 ? 'Una persona de esta lista ya entró' : `${entraron} personas de esta lista ya entraron`}: la lista queda como registro de cómo entraron`,
+    );
+  }
   await repositorio.quitarLista(fecha, numero);
 }
 
@@ -152,5 +158,10 @@ export async function pegarLista(
 export async function quitarInvitacion(actor: Actor, fecha: string, documento: string) {
   exigir(actor, 'admin');
   await exigirNocheVigente(fecha);
+  if ((await repositorio.yaEntraron(fecha, { documento })) > 0) {
+    throw new ErrorDeNegocio(
+      'Esta persona ya entró esta noche: su invitación queda como registro de cómo entró',
+    );
+  }
   await repositorio.quitarInvitacion(fecha, documento);
 }

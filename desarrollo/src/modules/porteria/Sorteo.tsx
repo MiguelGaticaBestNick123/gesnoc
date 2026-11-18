@@ -127,7 +127,9 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
         descripcion={`${tituloDeFecha(inicial.noche)} · un sorteo por ambiente entre los tickets de la noche`}
       >
         <Badge size="lg" variant="light" tt="none">
-          Participan {inicial.participantes} {inicial.participantes === 1 ? 'ticket' : 'tickets'}
+          {inicial.participantes === 1
+            ? 'Participa 1 ticket'
+            : `Participan ${inicial.participantes} tickets`}
         </Badge>
       </EncabezadoPagina>
       {error && (

@@ -15,6 +15,7 @@ import {
   Text,
   TextInput,
   UnstyledButton,
+  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconAlertTriangle,
@@ -127,19 +128,16 @@ function BotonesDeEntrada({
               loading={enviando === forma}
               disabled={enviando !== null && enviando !== forma}
               onClick={() => alElegir(forma)}
-              aria-label={
-                forma === 'gratis'
-                  ? 'Gratis, sin ticket'
-                  : `${datos.codigo}, ${datos.nombre.toLowerCase()}, ${monto}`
-              }
               styles={{ label: { flexDirection: 'column', gap: 2 } }}
             >
+              {/* El nombre accesible contiene lo que se ve, más el monto: «EF Efectivo $5.000». */}
               <Text component="span" fw={800} fz={24} lh={1}>
                 {datos.codigo}
-              </Text>
+              </Text>{' '}
               <Text component="span" size="xs" fw={500} lh={1.2}>
                 {forma === 'gratis' ? 'Sin ticket' : datos.nombre}
               </Text>
+              {forma !== 'gratis' && <VisuallyHidden>{monto}</VisuallyHidden>}
             </Button>
           );
         })}
@@ -214,7 +212,10 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
       return;
     }
     setError(respuesta.error);
-    setPaso({ tipo: 'persona', busqueda });
+    // El precio pudo cambiar mientras el guardia miraba («El precio de la entrada cambió…»): se
+    // vuelve a buscar para mostrar el vigente, y el siguiente toque cobra ese.
+    const actual = await enviarJson<Busqueda>('/api/puerta/buscar', { tipoDocumento, documento });
+    setPaso({ tipo: 'persona', busqueda: actual.ok ? actual.datos : busqueda });
   }
 
   const registrar = (busqueda: Busqueda, forma: FormaDeEntrada) =>
@@ -335,12 +336,12 @@ export function Puerta({ inicial }: Readonly<{ inicial: IngresosDeLaNoche }>) {
                   autoComplete="off"
                   size="lg"
                   styles={{ input: { fontSize: 24, fontWeight: 700, letterSpacing: 1 } }}
-                  rightSectionWidth={52}
+                  rightSectionWidth={56}
                   rightSection={
                     tipoDocumento === 'rut' && (
                       <ActionIcon
                         variant="light"
-                        size={40}
+                        size={44}
                         onClick={() => {
                           setDocumento((actual) => `${actual}K`);
                           campo.current?.focus();

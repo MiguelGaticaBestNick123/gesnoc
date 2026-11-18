@@ -66,6 +66,7 @@ describe('lista pegada', () => {
         '',
         '- RUT: 18.234.567-9 Fernanda Lagos',
         '3) 19876543-0 Javiera Soto',
+        '123.456-0 Ana Pérez',
       ].join('\n'),
     );
     expect(errores).toEqual([]);
@@ -74,6 +75,7 @@ describe('lista pegada', () => {
       { documento: '17654321-3', nombre: 'Ignacio', apellido: 'Bravo Soto' },
       { documento: '18234567-9', nombre: 'Fernanda', apellido: 'Lagos' },
       { documento: '19876543-0', nombre: 'Javiera', apellido: 'Soto' },
+      { documento: '123456-0', nombre: 'Ana', apellido: 'Pérez' },
     ]);
   });
 

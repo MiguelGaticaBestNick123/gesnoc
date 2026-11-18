@@ -2,6 +2,7 @@
 
 import { Box, Button, Stack, Text } from '@mantine/core';
 import { useEffect } from 'react';
+import { nombrePublico } from './ganador';
 import type { Ganador } from './servicios/sorteo';
 
 export type FaseSorteo =
@@ -138,8 +139,11 @@ export function Espectaculo({
             >
               {fase.ganador.ticket}
             </Text>
+            {/* Se proyecta en el local: el nombre y la inicial del apellido bastan para que el
+                ganador se reconozca, sin exponer sus datos (RN-25). La ficha completa queda en la
+                pantalla del guardia. */}
             <Text fw={700} fz={36} c="white">
-              {fase.ganador.nombre} {fase.ganador.apellido}
+              {nombrePublico(fase.ganador.nombre, fase.ganador.apellido)}
             </Text>
             <Text size="xl" c="white" mt="xs">
               {fase.ganador.premio}
