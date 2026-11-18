@@ -24,6 +24,7 @@ import { Cifra } from '@/shared/ui/Cifra';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { tituloDeFecha } from '@/shared/utilidades/fechas';
+import { BarrasHorizontales } from './BarrasHorizontales';
 import { ColumnasPorHora } from './ColumnasPorHora';
 import { formatoEspera } from './indicadores';
 import type { IndicadoresDeLaNoche } from './servicios/indicadores';
@@ -160,6 +161,38 @@ export function PanelIndicadores({ datos }: Readonly<{ datos: IndicadoresDeLaNoc
                   </Text>
                 ))}
               </Group>
+            </Indicador>
+          </SimpleGrid>
+
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            <Indicador
+              titulo="Ventas por garzón"
+              paraQue="Lo que vendió cada garzón con los pedidos que tomó, y las propinas que cobró."
+            >
+              <BarrasHorizontales
+                filas={detalle.porGarzon.map((fila) => ({
+                  etiqueta: fila.garzon,
+                  valor: fila.vendido,
+                  detalle: `${cantidad(fila.pedidos, 'pedido', 'pedidos')} · ${formatearPesos(fila.propinas)} de propina`,
+                }))}
+                formato={formatearPesos}
+                vacio="Ningún garzón ha vendido esta noche."
+              />
+            </Indicador>
+
+            <Indicador
+              titulo="Ventas por categoría"
+              paraQue="Qué se vende más: para la compra de la semana y para armar la carta."
+            >
+              <BarrasHorizontales
+                filas={detalle.porCategoria.map((fila) => ({
+                  etiqueta: fila.categoria,
+                  valor: fila.vendido,
+                  detalle: cantidad(fila.unidades, 'unidad', 'unidades'),
+                }))}
+                formato={formatearPesos}
+                vacio="Sin ventas esta noche."
+              />
             </Indicador>
           </SimpleGrid>
 

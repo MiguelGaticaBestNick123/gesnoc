@@ -91,6 +91,11 @@ describe('panel de indicadores de la noche', () => {
     expect(detalle!.ingresos).toBe(1);
     expect(detalle!.ingresosPorForma).toEqual({ efectivo: 1, tarjeta: 0, pendiente: 0, gratis: 0 });
     expect(detalle!.ingresosPorHora.reduce((suma, p) => suma + p.total, 0)).toBe(1);
+    // Ventas por garzón (sin lo anulado) y por categoría.
+    expect(detalle!.porGarzon).toEqual([
+      { garzon: 'Diego Soto', pedidos: 1, vendido, propinas: 0 },
+    ]);
+    expect(detalle!.porCategoria).toEqual([{ categoria: 'Tragos', unidades: 2, vendido }]);
   });
 
   it('solo la administración ve los indicadores', async () => {

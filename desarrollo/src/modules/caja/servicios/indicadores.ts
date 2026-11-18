@@ -16,14 +16,17 @@ export async function indicadoresDeLaNoche(actor: Actor, fecha?: string) {
   const elegida = noches.find((n) => n.fecha === fecha) ?? noches[0] ?? null;
   if (!elegida) return { noches, elegida: null, detalle: null };
 
-  const [ventas, ingresos, medios, preparacion, llamados, cuentas] = await Promise.all([
-    indicadores.ventasPorHora(elegida.fecha),
-    indicadores.ingresosPorHora(elegida.fecha),
-    indicadores.ingresosPorMedio(elegida.fecha),
-    indicadores.preparacionPorEstacion(elegida.fecha),
-    indicadores.llamados(elegida.fecha),
-    indicadores.cuentas(elegida.fecha),
-  ]);
+  const [ventas, ingresos, medios, preparacion, llamados, cuentas, porGarzon, porCategoria] =
+    await Promise.all([
+      indicadores.ventasPorHora(elegida.fecha),
+      indicadores.ingresosPorHora(elegida.fecha),
+      indicadores.ingresosPorMedio(elegida.fecha),
+      indicadores.preparacionPorEstacion(elegida.fecha),
+      indicadores.llamados(elegida.fecha),
+      indicadores.cuentas(elegida.fecha),
+      indicadores.ventasPorGarzon(elegida.fecha),
+      indicadores.ventasPorCategoria(elegida.fecha),
+    ]);
 
   const porForma = Object.fromEntries(FORMAS_DE_ENTRADA.map((forma) => [forma, 0])) as Record<
     (typeof FORMAS_DE_ENTRADA)[number],
@@ -41,6 +44,8 @@ export async function indicadoresDeLaNoche(actor: Actor, fecha?: string) {
       ingresos: Object.values(porForma).reduce((a, b) => a + b, 0),
       preparacion,
       llamados,
+      porGarzon,
+      porCategoria,
       cuentas: {
         total: cuentas.cuentas,
         vendido: cuentas.vendido,

@@ -106,3 +106,50 @@ export async function cuentas(fecha: string) {
              as duracion_mediana`);
   return fila!;
 }
+
+/**
+ * Lo vendido por cada garzón (los pedidos que tomó, sin lo anulado) y las propinas de los cobros que
+ * registró. El orden es por lo vendido: así se lee como un ranking de la noche.
+ */
+export async function ventasPorGarzon(fecha: string) {
+  const filas = await db().execute<{
+    garzon: string;
+    pedidos: number;
+    vendido: number;
+    propinas: number;
+  }>(sql`
+    with vendido as (
+      select p.tomado_por as usuario, count(distinct p.numero)::int as pedidos,
+             coalesce(sum(d.cantidad * d.precio_unitario) filter (where d.anulado_en is null), 0)::int
+               as vendido
+      from gesnoc.pedido p
+      join gesnoc.detalle_pedido d on d.fecha = p.fecha and d.pedido_numero = p.numero
+      where p.fecha = ${fecha}
+      group by p.tomado_por
+    ), propinas as (
+      select registrado_por as usuario, sum(propina)::int as propinas
+      from gesnoc.pago where fecha = ${fecha}
+      group by registrado_por
+    )
+    select u.nombre as garzon, coalesce(v.pedidos, 0) as pedidos, coalesce(v.vendido, 0) as vendido,
+           coalesce(pr.propinas, 0) as propinas
+    from vendido v
+    full join propinas pr on pr.usuario = v.usuario
+    join gesnoc.usuario u on u.id = coalesce(v.usuario, pr.usuario)
+    order by coalesce(v.vendido, 0) desc, u.nombre`);
+  return [...filas];
+}
+
+/** Lo vendido por categoría del catálogo, con las unidades, de mayor a menor. */
+export async function ventasPorCategoria(fecha: string) {
+  const filas = await db().execute<{ categoria: string; unidades: number; vendido: number }>(sql`
+    select c.nombre as categoria, sum(d.cantidad)::int as unidades,
+           sum(d.cantidad * d.precio_unitario)::int as vendido
+    from gesnoc.detalle_pedido d
+    join gesnoc.producto pr on pr.id = d.producto_id
+    join gesnoc.categoria c on c.id = pr.categoria_id
+    where d.fecha = ${fecha} and d.anulado_en is null
+    group by c.nombre
+    order by vendido desc, c.nombre`);
+  return [...filas];
+}
