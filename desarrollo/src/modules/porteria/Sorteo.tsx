@@ -13,15 +13,22 @@ import {
 } from '@mantine/core';
 import { IconConfetti, IconTicket, IconTrophy } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { enviarJson } from '@/shared/red';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { formatearHora, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { formatearDocumento } from '@/shared/utilidades/rut';
+import { Espectaculo, type FaseSorteo } from './Espectaculo';
 import type { Ganador, PantallaSorteo } from './servicios/sorteo';
 import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
+
+/** El giro frena de a poco: cada número dura un poco más que el anterior (~1,6 s en total). */
+const PAUSAS_DEL_GIRO = [50, 50, 55, 60, 65, 75, 85, 100, 120, 145, 175, 210, 250, 300];
+
+/** Un número cualquiera para el giro; el ganador real lo elige el servidor. */
+const numeroDelGiro = (tope: number) => 1 + Math.floor(Math.random() * tope);
 
 type Resultado = NonNullable<PantallaSorteo['ambientes'][number]['ganador']>;
 
@@ -51,14 +58,19 @@ function Ganadora({ ganador }: Readonly<{ ganador: Resultado }>) {
   );
 }
 
-// HU-37: el guardia sortea el premio de cada ambiente. El ganador lo elige el servidor; en el
-// teléfono el número gira mientras tanto, para que el sorteo se vea en el local.
+// HU-37: el guardia sortea el premio de cada ambiente. El ganador lo elige el servidor; mientras
+// tanto, una pantalla completa hace la cuenta regresiva y gira el número, para proyectarlo en el local.
 export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
   const router = useRouter();
   const [rodando, setRodando] = useState<number | null>(null);
-  const [numero, setNumero] = useState(1);
   const [resultados, setResultados] = useState<Record<number, Ganador>>({});
   const [error, setError] = useState<string | null>(null);
+  const [espectaculo, setEspectaculo] = useState<{
+    ambiente: string;
+    participantes: number;
+    fase: FaseSorteo;
+  } | null>(null);
+  const cerrarEspectaculo = useCallback(() => setEspectaculo(null), []);
 
   if (!inicial.noche) {
     return (
@@ -75,17 +87,26 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
       `¿Sortear el premio de ${nombre} entre ${inicial.participantes} ${inicial.participantes === 1 ? 'ticket' : 'tickets'}? El sorteo no se repite.`,
     );
     if (!confirmado) return;
+    // Los que participaron: al refrescar, el ganador ya no cuenta entre los que pueden ganar.
+    const participantes = inicial.participantes;
+    const mostrar = (fase: FaseSorteo) => setEspectaculo({ ambiente: nombre, participantes, fase });
     setError(null);
     setRodando(ambienteId);
+    // El servidor elige al ganador mientras la pantalla cuenta y gira.
+    const pedido = enviarJson<Ganador>('/api/puerta/sorteo', { ambienteId });
+    for (const valor of [3, 2, 1]) {
+      mostrar({ tipo: 'cuenta', valor });
+      await esperar(700);
+    }
     const tope = Math.max(9, inicial.ultimoTicket);
-    const giro = setInterval(() => setNumero(1 + Math.floor(Math.random() * tope)), 70);
-    const [respuesta] = await Promise.all([
-      enviarJson<Ganador>('/api/puerta/sorteo', { ambienteId }),
-      esperar(2000),
-    ]);
-    clearInterval(giro);
+    for (const pausa of PAUSAS_DEL_GIRO) {
+      mostrar({ tipo: 'giro', valor: numeroDelGiro(tope) });
+      await esperar(pausa);
+    }
+    const respuesta = await pedido;
     setRodando(null);
     if (!respuesta.ok) {
+      setEspectaculo(null);
       setError(
         respuesta.incierto
           ? `${respuesta.error} Volver a sortear es seguro: si ya salió un ganador, se muestra el mismo.`
@@ -94,6 +115,7 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
       return;
     }
     setResultados((anteriores) => ({ ...anteriores, [ambienteId]: respuesta.datos }));
+    mostrar({ tipo: 'ganador', ganador: respuesta.datos });
     router.refresh();
   }
 
@@ -137,16 +159,8 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
                 {ganador ? (
                   <Ganadora ganador={ganador} />
                 ) : rodando === ambiente.id ? (
-                  <Text
-                    fw={800}
-                    fz={64}
-                    lh={1}
-                    ta="center"
-                    c="violeta.3"
-                    aria-hidden
-                    style={{ fontVariantNumeric: 'tabular-nums' }}
-                  >
-                    {numero}
+                  <Text ta="center" c="dimmed">
+                    Sorteando…
                   </Text>
                 ) : (
                   <Button
@@ -165,6 +179,14 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
           );
         })}
       </SimpleGrid>
+      {espectaculo && (
+        <Espectaculo
+          ambiente={espectaculo.ambiente}
+          participantes={espectaculo.participantes}
+          fase={espectaculo.fase}
+          alCerrar={cerrarEspectaculo}
+        />
+      )}
     </Stack>
   );
 }
