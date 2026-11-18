@@ -29,6 +29,7 @@
     "host:migrar": "node scripts/migrar-host.ts",
     "host:respaldo": "node scripts/respaldar-host.ts",
     "respaldo:probar": "node scripts/probar-respaldo.ts",
+    "carga": "node scripts/carga.ts",
     "db:esquema": "drizzle-kit pull && node scripts/ajustar-esquema.mjs && prettier --write src/shared/db/esquema"
   },
   "dependencies": {

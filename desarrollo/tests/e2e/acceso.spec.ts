@@ -42,6 +42,25 @@ test('cada rol vuelve a su pantalla si intenta entrar a otra (RF-04)', async ({ 
   }
 });
 
+test('por HTTP, sin sesión responde 401 y fuera del rol 403, sin entregar datos (RNF-01, RN-25)', async ({
+  page,
+}) => {
+  const documento = { tipoDocumento: 'rut', documento: '12345678-5' };
+  const sinSesion = await page.request.post('/api/clientes/historial', { data: documento });
+  expect(sinSesion.status()).toBe(401);
+
+  // Un garzón no ve los datos de los clientes ni quién entró por la puerta.
+  await entrarComo(page, 'garzon');
+  for (const ruta of ['/api/clientes/historial', '/api/puerta/buscar', '/api/clientes/buscar']) {
+    const respuesta = await page.request.post(ruta, { data: { ...documento, texto: 'Rojas' } });
+    expect(respuesta.status(), ruta).toBe(403);
+    expect(await respuesta.json()).toEqual({ error: expect.any(String) });
+  }
+  expect((await page.request.get('/api/vivo/puerta')).status()).toBe(403);
+  // Ni la caja de la administración.
+  expect((await page.request.get('/api/vivo/resumen')).status()).toBe(403);
+});
+
 test('una contraseña errónea muestra el error y conserva el correo', async ({ page }) => {
   await ingresar(page, correoDe('barra'), 'contraseña-equivocada');
   await expect(page.getByText('Correo o contraseña incorrectos')).toBeVisible();
@@ -66,7 +85,9 @@ test('tras cinco intentos fallidos la cuenta se bloquea (HU-01 CA2)', async ({ p
   const correo = correoDe('apoyo');
   await page.goto('/ingresar');
   await page.getByLabel('Correo').fill(correo);
-  await page.getByLabel('Contraseña').fill('contraseña-equivocada');
+  await page
+    .getByRole('textbox', { name: 'Contraseña', exact: true })
+    .fill('contraseña-equivocada');
   for (let intento = 1; intento <= 4; intento++) {
     await page.getByRole('button', { name: 'Ingresar' }).click();
     await expect(page.getByText('Correo o contraseña incorrectos')).toBeVisible();
