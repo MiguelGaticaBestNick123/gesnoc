@@ -4,7 +4,8 @@ import { enLaNoche } from '@/modules/noche/servicios/noches';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { db } from '@/shared/db/cliente';
 import { ErrorDeNegocio, traducir } from '@/shared/errores';
-import type { DatosReporte } from '../esquemas';
+import { paraBuscar } from '@/shared/utilidades/buscar';
+import type { DatosFicha, DatosReporte } from '../esquemas';
 import { formaDe } from '../formas';
 import * as clientes from '../repositorios/clientes';
 import * as puerta from '../repositorios/puerta';
@@ -68,4 +69,25 @@ export async function reportar(actor: Actor, datos: DatosReporte) {
     }),
     { reporte_numero_check: 'El cliente llegó al máximo de reportes que se pueden guardar' },
   );
+}
+
+/**
+ * Buscar clientes por nombre o apellido, sin importar tildes ni mayúsculas: en la puerta no siempre
+ * se tiene el documento a mano. RN-25: solo el guardia y la administración.
+ */
+export async function buscarClientes(actor: Actor, texto: string) {
+  exigir(actor, 'guardia');
+  return clientes.buscarPorNombre(paraBuscar(texto));
+}
+
+/**
+ * La administración corrige el nombre de una ficha (por ejemplo, un error al escribirlo en la
+ * puerta). El documento no cambia: es la identidad del cliente (RN-21).
+ */
+export async function corregirFicha(actor: Actor, datos: DatosFicha) {
+  exigir(actor, 'admin');
+  if (!(await clientes.corregirNombre(datos.documento, datos.nombre, datos.apellido))) {
+    throw new ErrorDeNegocio('Ese documento no tiene una ficha que se pueda corregir');
+  }
+  return { corregida: true as const };
 }

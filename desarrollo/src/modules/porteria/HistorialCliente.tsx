@@ -11,6 +11,7 @@ import {
   Stack,
   Text,
   Textarea,
+  TextInput,
   Title,
 } from '@mantine/core';
 import { IconAlertTriangle } from '@tabler/icons-react';
@@ -129,14 +130,96 @@ function NuevoReporte({
 }
 
 /** HU-36 CA1: las noches en que entró y sus reportes, del más reciente al más antiguo. */
+/** La administración corrige el nombre de la ficha (un error al escribirlo en la puerta). */
+function CorregirNombre({
+  tipoDocumento,
+  documento,
+  nombre,
+  apellido,
+  alGuardar,
+}: Readonly<{
+  tipoDocumento: TipoDocumento;
+  documento: string;
+  nombre: string;
+  apellido: string;
+  alGuardar: () => Promise<void>;
+}>) {
+  const [abierto, setAbierto] = useState(false);
+  const [datos, setDatos] = useState({ nombre, apellido });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!abierto) {
+    return (
+      <Button variant="subtle" size="sm" mih={44} onClick={() => setAbierto(true)}>
+        Corregir el nombre
+      </Button>
+    );
+  }
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    const respuesta = await enviarJson('/api/clientes/ficha', {
+      tipoDocumento,
+      documento,
+      ...datos,
+    });
+    setGuardando(false);
+    if (!respuesta.ok) {
+      setError(respuesta.error);
+      return;
+    }
+    setAbierto(false);
+    await alGuardar();
+  }
+  return (
+    <form
+      onSubmit={(evento) => {
+        evento.preventDefault();
+        void guardar();
+      }}
+    >
+      <Stack gap="xs">
+        <Group grow>
+          <TextInput
+            label="Nombre"
+            value={datos.nombre}
+            onChange={(evento) => setDatos({ ...datos, nombre: evento.currentTarget.value })}
+          />
+          <TextInput
+            label="Apellido"
+            value={datos.apellido}
+            onChange={(evento) => setDatos({ ...datos, apellido: evento.currentTarget.value })}
+          />
+        </Group>
+        {error && (
+          <Alert color="red" variant="light" role="alert">
+            {error}
+          </Alert>
+        )}
+        <Group gap="xs">
+          <Button type="submit" mih={44} loading={guardando}>
+            Guardar nombre
+          </Button>
+          <Button variant="default" mih={44} onClick={() => setAbierto(false)}>
+            Cancelar
+          </Button>
+        </Group>
+      </Stack>
+    </form>
+  );
+}
+
 function HistorialCliente({
   historial,
   tipoDocumento,
   alReportar,
+  puedeCorregir,
 }: Readonly<{
   historial: Historial;
   tipoDocumento: TipoDocumento;
   alReportar: () => Promise<void>;
+  puedeCorregir: boolean;
 }>) {
   const { cliente, visitas, reportes } = historial;
   if (!cliente) {
@@ -157,6 +240,16 @@ function HistorialCliente({
           {formatearDocumento(historial.documento)} · {plural(visitas.length, 'visita', 'visitas')}{' '}
           · {plural(reportes.length, 'reporte', 'reportes')}
         </Text>
+        {puedeCorregir && (
+          <CorregirNombre
+            key={`${cliente.nombre} ${cliente.apellido}`}
+            tipoDocumento={tipoDocumento}
+            documento={historial.documento}
+            nombre={cliente.nombre}
+            apellido={cliente.apellido}
+            alGuardar={alReportar}
+          />
+        )}
       </div>
 
       {historial.nocheAbierta ? (
@@ -240,7 +333,8 @@ function HistorialCliente({
 export function HistorialPorDocumento({
   tipoDocumento,
   documento,
-}: Readonly<{ tipoDocumento: TipoDocumento; documento: string }>) {
+  puedeCorregir = false,
+}: Readonly<{ tipoDocumento: TipoDocumento; documento: string; puedeCorregir?: boolean }>) {
   const [historial, setHistorial] = useState<Historial | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -275,6 +369,11 @@ export function HistorialPorDocumento({
     );
   }
   return (
-    <HistorialCliente historial={historial} tipoDocumento={tipoDocumento} alReportar={cargar} />
+    <HistorialCliente
+      historial={historial}
+      tipoDocumento={tipoDocumento}
+      alReportar={cargar}
+      puedeCorregir={puedeCorregir}
+    />
   );
 }

@@ -76,3 +76,56 @@ export async function insertarReporte(
     returning numero`);
   return fila!.numero;
 }
+
+/** «contiene el texto», con los comodines de LIKE (% y _) tomados como letras. */
+const patron = (texto: string) => `%${texto.replace(/[!%_]/g, '!$&')}%`;
+
+// Nombre y apellido en minúsculas y sin tildes, para buscar como lo escribe el guardia.
+const nombreSinTildes = sql`translate(lower(c.nombre || ' ' || c.apellido),
+  'áéíóúüñ', 'aeiouun')`;
+
+/**
+ * Clientes cuyo nombre o apellido contiene el texto (ya normalizado: minúsculas y sin tildes), con
+ * sus visitas y reportes. No incluye a los anonimizados (RN-25).
+ */
+export async function buscarPorNombre(texto: string) {
+  const filas = await db().execute<{
+    documento: string;
+    nombre: string;
+    apellido: string;
+    visitas: number;
+    reportes: number;
+    expulsado: boolean;
+    ultima_visita: string | null;
+  }>(sql`
+    select c.documento, c.nombre, c.apellido,
+           (select count(*)::int from gesnoc.entrada e where e.cliente_id = c.id) as visitas,
+           (select count(*)::int from gesnoc.reporte r where r.cliente_id = c.id) as reportes,
+           exists (select 1 from gesnoc.reporte r
+                   where r.cliente_id = c.id and r.tipo = 'expulsion') as expulsado,
+           (select max(e.fecha)::text from gesnoc.entrada e where e.cliente_id = c.id)
+             as ultima_visita
+    from gesnoc.cliente c
+    where c.documento not like 'ANON%'
+      and ${nombreSinTildes} like ${patron(texto)} escape '!'
+    order by ultima_visita desc nulls last, c.apellido, c.nombre
+    limit 20`);
+  return filas.map((f) => ({
+    documento: f.documento,
+    nombre: f.nombre,
+    apellido: f.apellido,
+    visitas: f.visitas,
+    reportes: f.reportes,
+    expulsado: f.expulsado,
+    ultimaVisita: f.ultima_visita,
+  }));
+}
+
+/** Corrige el nombre de una ficha; una anonimizada no se toca (RN-25). */
+export async function corregirNombre(documento: string, nombre: string, apellido: string) {
+  const filas = await db().execute<{ documento: string }>(sql`
+    update gesnoc.cliente set nombre = ${nombre}, apellido = ${apellido}
+    where documento = ${documento} and documento not like 'ANON%'
+    returning documento`);
+  return filas.length > 0;
+}

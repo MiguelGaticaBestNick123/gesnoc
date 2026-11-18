@@ -72,3 +72,30 @@ export const datosReporte = z
     return { ...datos, documento: normalizado };
   });
 export type DatosReporte = z.output<typeof datosReporte>;
+
+/** Buscar clientes por nombre o apellido, por ejemplo cuando el guardia no tiene el documento. */
+export const datosBusquedaNombre = z.object({
+  texto: z
+    .string()
+    .trim()
+    .min(2, 'Escribe al menos 2 letras del nombre o el apellido')
+    .max(60, 'Admite hasta 60 caracteres'),
+});
+
+/** Corregir el nombre de la ficha de un cliente (la administración). */
+export const datosFicha = z
+  .object({
+    tipoDocumento,
+    documento: z.string().max(40),
+    nombre: nombrePropio('Escribe el nombre'),
+    apellido: nombrePropio('Escribe el apellido'),
+  })
+  .transform(({ tipoDocumento: tipo, documento, ...datos }, contexto) => {
+    const normalizado = normalizarDocumento(tipo, documento);
+    if (!normalizado) {
+      contexto.addIssue({ code: 'custom', message: MENSAJE_DOCUMENTO[tipo] });
+      return z.NEVER;
+    }
+    return { ...datos, documento: normalizado };
+  });
+export type DatosFicha = z.output<typeof datosFicha>;

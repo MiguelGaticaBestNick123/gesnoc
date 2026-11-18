@@ -50,8 +50,11 @@ test('HU-35 y HU-36: el guardia reporta a un cliente y el reporte aparece al bus
   const admin = await contexto.newPage();
   await entrarComo(admin, 'admin');
   await admin.goto('/admin/clientes');
-  await admin.getByRole('textbox', { name: 'Documento' }).fill(RUT);
+  // Sin el documento a mano: se busca por el apellido, sin importar mayúsculas.
+  await admin.getByText('Nombre', { exact: true }).click();
+  await admin.getByRole('textbox', { name: 'Nombre o apellido' }).fill('MORA');
   await admin.getByRole('button', { name: 'Buscar' }).click();
+  await admin.getByRole('button', { name: 'Ver el historial de Iván Mora' }).click();
   await expect(admin.getByRole('heading', { name: 'Iván Mora' })).toBeVisible();
   await expect(admin.getByText(/1 visita · 1 reporte/)).toBeVisible();
   await expect(admin.getByRole('article', { name: 'Reporte 1: Expulsión' })).toBeVisible();

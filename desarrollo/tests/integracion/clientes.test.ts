@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { datosEntrada, datosReporte, type DatosReporte } from '@/modules/porteria/esquemas';
-import { historial, reportar } from '@/modules/porteria/servicios/clientes';
+import {
+  datosEntrada,
+  datosFicha,
+  datosReporte,
+  type DatosReporte,
+} from '@/modules/porteria/esquemas';
+import {
+  buscarClientes,
+  corregirFicha,
+  historial,
+  reportar,
+} from '@/modules/porteria/servicios/clientes';
 import { buscar, registrar } from '@/modules/porteria/servicios/puerta';
 import { NoAutorizado } from '@/shared/errores';
 import { administracion, conBaseVacia, consultar } from './apoyo';
@@ -107,6 +117,48 @@ describe('HU-35 y HU-36 con la noche abierta', () => {
     }
     expect((await historial(administracion, RUT)).cliente).not.toBeNull();
     expect(await total('reporte')).toBe(0);
+  });
+
+  it('busca por nombre o apellido sin importar tildes ni mayúsculas, y sin anonimizados', async () => {
+    await reportar(guardia(), reporte('expulsion', 'Comenzó a buscar pelea'));
+    const encontrados = await buscarClientes(guardia(), 'ivan');
+    expect(encontrados).toEqual([
+      expect.objectContaining({
+        documento: RUT,
+        nombre: 'Iván',
+        apellido: 'Mora',
+        visitas: 1,
+        reportes: 1,
+        expulsado: true,
+        ultimaVisita: fecha,
+      }),
+    ]);
+    expect(await buscarClientes(guardia(), 'MORA')).toHaveLength(1);
+    // Los comodines de LIKE se buscan como letras.
+    expect(await buscarClientes(guardia(), 'i%')).toEqual([]);
+    await consultar`update gesnoc.cliente set documento = 'ANON' || id, nombre = 'Anónimo'`;
+    expect(await buscarClientes(guardia(), 'mora')).toEqual([]);
+  });
+
+  it('la administración corrige el nombre de la ficha; el guardia no', async () => {
+    const ficha = datosFicha.parse({
+      tipoDocumento: 'rut',
+      documento: RUT,
+      nombre: 'Iván Andrés',
+      apellido: 'Mora',
+    });
+    await expect(corregirFicha(guardia(), ficha)).rejects.toThrow(NoAutorizado);
+    expect(await corregirFicha(local.persona('admin'), ficha)).toEqual({ corregida: true });
+    expect((await historial(guardia(), RUT)).cliente).toEqual({
+      nombre: 'Iván Andrés',
+      apellido: 'Mora',
+    });
+    await expect(
+      corregirFicha(
+        local.persona('admin'),
+        datosFicha.parse({ ...ficha, documento: '11111111-1', tipoDocumento: 'rut' }),
+      ),
+    ).rejects.toThrow('no tiene una ficha');
   });
 
   it('la descripción es obligatoria y tiene un largo máximo', () => {
