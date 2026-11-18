@@ -10,6 +10,20 @@ export async function pendienteDeMesa(conexion: Conexion, fecha: string, mesaId:
   return fila?.numero;
 }
 
+/**
+ * RN-29: los segundos enteros desde el último llamado de la mesa en la noche, atendido o no; sin
+ * llamados, `undefined`. Usa `llamado_mesa_ix` (mesa_id, creado_en) y el reloj de la base.
+ */
+export async function segundosDesdeElUltimo(tx: Transaccion, fecha: string, mesaId: number) {
+  const [fila] = await tx.execute<{ segundos: number }>(sql`
+    select floor(extract(epoch from now() - creado_en))::int as segundos
+    from gesnoc.llamado
+    where mesa_id = ${mesaId} and fecha = ${fecha}
+    order by creado_en desc
+    limit 1`);
+  return fila?.segundos;
+}
+
 /** Registra un llamado con el siguiente correlativo de la noche (el llamador bloquea antes). */
 export async function registrar(tx: Transaccion, fecha: string, mesaId: number) {
   const [fila] = await tx.execute<{ numero: number }>(sql`

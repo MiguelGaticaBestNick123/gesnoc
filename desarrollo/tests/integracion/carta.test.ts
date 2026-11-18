@@ -6,6 +6,7 @@ import { mapa } from '@/modules/venta/servicios/cuentas';
 import {
   atender,
   CODIGO_SIN_CARTA,
+  esperaParaLlamar,
   LOCAL_SIN_ATENCION,
   llamar,
 } from '@/modules/venta/servicios/llamados';
@@ -174,9 +175,32 @@ describe('HU-39 y HU-40 llamados', () => {
     expect(fila!.atendido_en).toEqual(antes!.atendido_en);
     expect((await misComandas(garzon)).llamados).toEqual([]);
     expect((await cartaDeMesa(codigo))!.llamadoPendiente).toBe(false);
+  });
 
-    // Ya atendida, la mesa puede volver a llamar.
+  it('RN-29 (CU-28 2b): ya atendida, la mesa vuelve a llamar 60 s después del llamado anterior', async () => {
     await llamar(codigo);
+    const garzon = local.persona('garzon');
+    const [pendiente] = (await misComandas(garzon)).llamados;
+    await atender(garzon, pendiente!.numero);
+
+    // Antes de 60 s se le informa cuánto falta y no se registra otro.
+    await expect(llamar(codigo)).rejects.toThrow(/puedes volver a llamarlo en (60|59) s\.$/);
+    await consultar`update gesnoc.llamado set creado_en = now() - interval '45 seconds'`;
+    await expect(llamar(codigo)).rejects.toThrow(esperaParaLlamar(15));
+    expect(await total('llamado')).toBe(1);
+
+    // Pasado el minuto, el llamado nuevo queda pendiente.
+    await consultar`update gesnoc.llamado set creado_en = now() - interval '60 seconds'`;
+    expect(await llamar(codigo)).toEqual({ avisado: true });
+    expect(await total('llamado')).toBe(2);
+    expect((await cartaDeMesa(codigo))!.llamadoPendiente).toBe(true);
+  });
+
+  it('RN-29: el intervalo es por mesa: otra mesa llama aunque esta acabe de llamar', async () => {
+    await llamar(codigo);
+    const [pendiente] = (await misComandas(local.persona('garzon'))).llamados;
+    await atender(local.persona('garzon'), pendiente!.numero);
+    expect(await llamar(await codigoDe(local.mesa(local.salon, 5)))).toEqual({ avisado: true });
     expect(await total('llamado')).toBe(2);
   });
 

@@ -12,11 +12,19 @@ export const CODIGO_SIN_CARTA =
   'Este código ya no abre la carta. Pide ayuda al garzón para ver la carta de tu mesa.';
 export const LOCAL_SIN_ATENCION = 'El local no está atendiendo en este momento.';
 
+/** RN-29: entre dos llamados de la misma mesa pasan al menos 60 segundos. */
+export const SEGUNDOS_ENTRE_LLAMADOS = 60;
+
+/** CU-28 2b: lo que lee el cliente si vuelve a llamar antes de tiempo. */
+export const esperaParaLlamar = (segundos: number) =>
+  `El garzón acaba de atender tu mesa. Si necesitas algo más, puedes volver a llamarlo en ${segundos} s.`;
+
 /**
  * HU-39: el cliente llama al garzón desde la carta, sin sesión; el código del QR es la única llave.
  * CA2 (RN-29): con un llamado pendiente, otro toque no crea otro y recibe la misma confirmación: el
- * cliente hizo lo esperado y no debe ver un error. El correlativo se serializa como los demás de la
- * noche, y el índice único `llamado_pendiente_uq` respalda la regla en la base.
+ * cliente hizo lo esperado y no debe ver un error. Ya atendido, la mesa vuelve a llamar solo 60 s
+ * después del llamado anterior (CU-28 2b). El correlativo se serializa como los demás de la noche,
+ * y el índice único `llamado_pendiente_uq` respalda la regla en la base.
  */
 export async function llamar(codigo: string): Promise<{ avisado: true }> {
   if (!esCodigoDeMesa(codigo)) throw new ErrorDeNegocio(CODIGO_SIN_CARTA);
@@ -26,9 +34,14 @@ export async function llamar(codigo: string): Promise<{ avisado: true }> {
     const mesa = await mesaDelCodigo(tx, codigo);
     if (!mesa) throw new ErrorDeNegocio(CODIGO_SIN_CARTA);
     await bloquearCorrelativo(tx, 'llamado', fecha);
-    if ((await llamados.pendienteDeMesa(tx, fecha, mesa.id)) === undefined) {
-      await llamados.registrar(tx, fecha, mesa.id);
+    if ((await llamados.pendienteDeMesa(tx, fecha, mesa.id)) !== undefined) {
+      return { avisado: true as const };
     }
+    const desde = await llamados.segundosDesdeElUltimo(tx, fecha, mesa.id);
+    if (desde !== undefined && desde < SEGUNDOS_ENTRE_LLAMADOS) {
+      throw new ErrorDeNegocio(esperaParaLlamar(SEGUNDOS_ENTRE_LLAMADOS - desde));
+    }
+    await llamados.registrar(tx, fecha, mesa.id);
     return { avisado: true as const };
   });
 }
