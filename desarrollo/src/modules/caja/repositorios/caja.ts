@@ -79,12 +79,18 @@ export const guardarConteo = (
 /**
  * Un conteo de caja vale para el esperado con que se hizo. Si después entra efectivo (se confirma un
  * pago o una entrada EF), el conteo se borra y hay que volver a contar: una nota escrita para una
- * diferencia de $2.000 no puede quedar explicando otra de $62.000.
+ * diferencia de $2.000 no puede quedar explicando otra de $62.000. Escribe la fila aunque no haya
+ * conteo: así toma el candado del arqueo y, si alguien está contando en ese momento, espera a que
+ * termine y borra ese conteo, que ya no incluye este efectivo.
  */
 export const anularConteo = (tx: Transaccion, fecha: string) =>
   tx.execute(sql`
     update gesnoc.arqueo set efectivo_contado = null, nota = null, contado_por = null
-    where fecha = ${fecha} and efectivo_contado is not null`);
+    where fecha = ${fecha}`);
+
+/** El arqueo de la noche, bloqueado mientras se cuenta (ver `anularConteo`). */
+export const bloquearArqueo = (tx: Transaccion, fecha: string) =>
+  tx.execute(sql`select 1 from gesnoc.arqueo where fecha = ${fecha} for update`);
 
 /** RN-17: el efectivo de los pagos que la administración aún no confirma, de cada garzón. */
 export async function efectivoSinConfirmar(fecha: string) {
@@ -228,8 +234,8 @@ export async function bloquearNocheParaCerrar(tx: Transaccion, fecha: string) {
 /**
  * RN-25: al cerrar se anonimizan los clientes sin visitas en los 12 meses anteriores a la fecha de la
  * noche (no al reloj): documento «ANON» seguido de su id y nombre «Anónimo», y la descripción de sus
- * reportes. Las invitaciones de esas noches también se borran: ya cumplieron su función y guardan
- * nombre y documento.
+ * reportes. Las listas e invitaciones de esas noches también se borran: ya cumplieron su función y
+ * guardan nombres y documentos (RNF-11).
  */
 export async function anonimizar(tx: Transaccion, fecha: string): Promise<number> {
   const [fila] = await tx.execute<{ anonimizados: number }>(sql`
@@ -240,6 +246,10 @@ export async function anonimizar(tx: Transaccion, fecha: string): Promise<number
         and not exists (select 1 from gesnoc.entrada e
                         where e.cliente_id = c.id
                           and e.fecha > ${fecha}::date - interval '12 months')
+        -- Quien llegó a la puerta y no entró (por ejemplo, un expulsado) también vino esa noche.
+        and not exists (select 1 from gesnoc.reporte r
+                        where r.cliente_id = c.id
+                          and r.fecha > ${fecha}::date - interval '12 months')
       returning c.id
     ), reportes as (
       update gesnoc.reporte set descripcion = 'Anonimizado'
@@ -248,6 +258,8 @@ export async function anonimizar(tx: Transaccion, fecha: string): Promise<number
     select count(*)::int as anonimizados from anonimos`);
   await tx.execute(sql`
     delete from gesnoc.invitacion where fecha <= ${fecha}::date - interval '12 months'`);
+  await tx.execute(sql`
+    delete from gesnoc.lista where fecha <= ${fecha}::date - interval '12 months'`);
   return fila?.anonimizados ?? 0;
 }
 

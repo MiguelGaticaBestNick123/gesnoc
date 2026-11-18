@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { CampoPesos } from '@/shared/ui/CampoPesos';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
+import { RefrescoPeriodico } from '@/shared/ui/RefrescoPeriodico';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { contarCaja } from './acciones';
 import { describirDiferencia } from './calculos';
@@ -78,6 +79,8 @@ export function Arqueo({ datos }: Readonly<{ datos: PantallaArqueo }>) {
   const diferencia = digitos === '' ? null : Number(digitos) - esperado.total;
   return (
     <Stack gap="md" maw={720}>
+      {/* RNF-05: el esperado cambia cuando entra efectivo en la puerta o se confirma un pago. */}
+      <RefrescoPeriodico segundos={3} />
       <EncabezadoPagina
         icono={IconCalculator}
         titulo="Arqueo"
@@ -89,7 +92,7 @@ export function Arqueo({ datos }: Readonly<{ datos: PantallaArqueo }>) {
           {datos.sinConfirmar === 1
             ? 'Hay 1 pago en efectivo sin confirmar: no está en el esperado hasta que lo recibas.'
             : `Hay ${datos.sinConfirmar} pagos en efectivo sin confirmar: no están en el esperado hasta que los recibas.`}{' '}
-          <Anchor component={Link} href="/admin/efectivo" size="sm">
+          <Anchor component={Link} href="/admin/efectivo" c="inherit" fw={700} underline="always">
             Confirmar efectivo
           </Anchor>
         </Alert>
@@ -104,6 +107,8 @@ export function Arqueo({ datos }: Readonly<{ datos: PantallaArqueo }>) {
 
       <Card withBorder padding="md">
         <FormularioAccion accion={contarCaja} textoEnviar="Guardar conteo">
+          {/* El esperado a la vista: si cambió al guardar, el servidor pide revisar el conteo. */}
+          <input type="hidden" name="esperado" value={esperado.total} />
           <CampoPesos
             name="contado"
             label="Efectivo contado"

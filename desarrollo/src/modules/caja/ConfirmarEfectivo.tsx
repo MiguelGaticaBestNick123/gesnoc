@@ -17,7 +17,7 @@ import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 export function ConfirmarEfectivo({ datos }: Readonly<{ datos: PantallaEfectivo }>) {
   return (
     <Stack gap="md" maw={900}>
-      <RefrescoPeriodico segundos={5} />
+      <RefrescoPeriodico segundos={3} />
       <EncabezadoPagina
         icono={IconCash}
         titulo="Confirmar efectivo"

@@ -16,6 +16,7 @@ import {
 import {
   IconCalculator,
   IconChartBar,
+  IconCircleCheck,
   IconCoin,
   IconDoorEnter,
   IconReceipt2,
@@ -40,9 +41,13 @@ import { FilasDeEntradas } from '@/modules/porteria/FilasDeEntradas';
 // HU-29: lo vendido y lo cobrado por medio de pago, las propinas de cada ambiente con la parte de
 // cada persona, las entradas y la caja. Las cifras de la caja son las del arqueo (CA2) y se cumple
 // vendido = cobrado + por cobrar + cerrado con saldo.
-export function VentasYPropinas({ datos }: Readonly<{ datos: Datos }>) {
+export function VentasYPropinas({
+  datos,
+  recienCerrada = null,
+}: Readonly<{ datos: Datos; recienCerrada?: { anonimizados: number } | null }>) {
   const router = useRouter();
   const { detalle, elegida } = datos;
+  const conteo = detalle?.conteo?.contado ?? null;
 
   return (
     <Stack gap="md" maw={1100}>
@@ -51,6 +56,31 @@ export function VentasYPropinas({ datos }: Readonly<{ datos: Datos }>) {
         titulo="Ventas y propinas"
         descripcion="Las cifras de cada noche, por medio de pago y por ambiente."
       />
+      {/* CU-11 paso 6: recién cerrada, el resultado del arqueo va primero. */}
+      {recienCerrada && elegida && (
+        <Alert
+          color="green"
+          variant="light"
+          icon={<IconCircleCheck size={22} />}
+          title={`La noche del ${tituloDeFecha(elegida.fecha)} quedó cerrada`}
+        >
+          <Stack gap={4}>
+            {detalle?.esperado && conteo !== null && (
+              <Text size="sm">
+                Esperado {formatearPesos(detalle.esperado.total)} · contado {formatearPesos(conteo)}{' '}
+                · {describirDiferencia(conteo - detalle.esperado.total)}
+                {detalle.conteo?.nota && ` · nota: «${detalle.conteo.nota}»`}.
+              </Text>
+            )}
+            <Text size="sm">
+              {recienCerrada.anonimizados === 0
+                ? 'Ningún cliente cumplió 12 meses sin venir.'
+                : `Se anonimizaron ${recienCerrada.anonimizados} ${recienCerrada.anonimizados === 1 ? 'cliente que no venía' : 'clientes que no venían'} hace 12 meses.`}{' '}
+              Desde ahora la noche no admite operaciones.
+            </Text>
+          </Stack>
+        </Alert>
+      )}
       {elegida && (
         <NativeSelect
           label="Noche"

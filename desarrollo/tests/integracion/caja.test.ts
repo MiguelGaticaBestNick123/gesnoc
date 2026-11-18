@@ -267,6 +267,34 @@ describe('HU-12 cerrar la noche', () => {
     expect((await caja.pantallaArqueo(admin)).conteo?.contado).toBe(FONDO + 11_500);
   });
 
+  it('si el esperado cambió desde que la administración lo vio, se le pide revisar el conteo', async () => {
+    // La administración ve el esperado (el fondo) y cuenta; antes de guardar entra una EF.
+    const visto = (await caja.pantallaArqueo(admin)).esperado!.total;
+    await registrar(await guardia(), entrada('12345678-5', 'efectivo'));
+    await expect(caja.contar(admin, visto - 1000, 'Faltó un vuelto', visto)).rejects.toThrow(
+      'El esperado cambió a $55.000 mientras contabas: revisa el conteo',
+    );
+    expect((await caja.pantallaArqueo(admin)).conteo?.contado).toBeNull();
+    // Con el esperado al día, la nota explica la diferencia que corresponde.
+    await caja.contar(admin, FONDO + 4000, 'Faltó un vuelto', FONDO + 5000);
+    expect((await caja.pantallaArqueo(admin)).conteo).toMatchObject({ contado: FONDO + 4000 });
+  });
+
+  it('un conteo y una entrada en efectivo a la vez no dejan un conteo de otro esperado', async () => {
+    const visto = (await caja.pantallaArqueo(admin)).esperado!.total;
+    const [conteo, ingreso] = await Promise.allSettled([
+      caja.contar(admin, visto, null, visto),
+      registrar(await guardia(), entrada('12345678-5', 'efectivo')),
+    ]);
+    expect(ingreso.status).toBe('fulfilled');
+    // O el conteo terminó antes y la entrada lo borró, o la entrada fue primero y el conteo se
+    // rechazó: nunca queda un conteo hecho con el esperado anterior.
+    const { esperado, conteo: guardado } = await caja.pantallaArqueo(admin);
+    if (conteo.status === 'fulfilled') expect(guardado?.contado).toBeNull();
+    else expect(String(conteo.reason)).toMatch('El esperado cambió');
+    expect(esperado!.total).toBe(visto + 5000);
+  });
+
   it('cierra, anonimiza a quien no vino en 12 meses y después nada se registra (RN-25, RN-26)', async () => {
     // Un cliente de hace dos años y otro que vino hace un mes.
     await consultar`
@@ -401,5 +429,22 @@ describe('ajustes de la auditoría (12 nov)', () => {
     });
     // Otra persona con la clave no recibe el pago.
     await expect(cobrar({ ...paula, turno: null }, cobro)).rejects.toThrow(NoAutorizado);
+  });
+
+  it('un reintento de pedido recibe el pedido registrado aunque la noche ya se cerró (RN-13)', async () => {
+    const { numero: mesa4 } = await abrir(diego, { mesaId: local.mesa(local.salon, 4) });
+    const envio = pedido(mesa4, [linea(local.producto('Mojito'))]);
+    const primero = await enviar(diego, envio);
+    await pagar(diego, mesa4, 'tarjeta', 6500);
+    await caja.contar(admin, FONDO, null);
+    await caja.cerrarNoche(admin, fecha);
+    // La respuesta se perdió: ya sin turno, el mismo garzón reintenta y no se le dice que falló.
+    await expect(enviar({ ...diego, turno: null }, envio)).resolves.toEqual({
+      numero: primero.numero,
+      estaciones: primero.estaciones,
+      repetido: true,
+    });
+    // Otra persona con la clave no recibe el pedido.
+    await expect(enviar({ ...paula, turno: null }, envio)).rejects.toThrow(NoAutorizado);
   });
 });

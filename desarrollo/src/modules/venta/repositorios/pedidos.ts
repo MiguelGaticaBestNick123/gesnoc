@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { db, type Transaccion } from '@/shared/db/cliente';
+import { db, type Conexion, type Transaccion } from '@/shared/db/cliente';
 import {
   categoria,
   comanda,
@@ -64,19 +64,24 @@ export async function barraDe(tx: Transaccion, ambienteId: number): Promise<numb
 }
 
 /** El pedido que ya se registró con esta clave de envío, con las estaciones a las que fue. */
-export async function pedidoPorClave(tx: Transaccion, claveEnvio: string) {
-  const [registrado] = await tx
-    .select({ fecha: pedido.fecha, numero: pedido.numero })
+export async function pedidoPorClave(conexion: Conexion, claveEnvio: string) {
+  const [registrado] = await conexion
+    .select({
+      fecha: pedido.fecha,
+      numero: pedido.numero,
+      cuenta: pedido.cuentaNumero,
+      tomadoPor: pedido.tomadoPor,
+    })
     .from(pedido)
     .where(eq(pedido.claveEnvio, claveEnvio));
   if (!registrado) return undefined;
-  const destinos = await tx
+  const destinos = await conexion
     .select({ nombre: estacion.nombre })
     .from(comanda)
     .innerJoin(estacion, eq(estacion.id, comanda.estacionId))
     .where(and(eq(comanda.fecha, registrado.fecha), eq(comanda.pedidoNumero, registrado.numero)))
     .orderBy(asc(estacion.nombre));
-  return { numero: registrado.numero, estaciones: destinos.map((d) => d.nombre) };
+  return { ...registrado, estaciones: destinos.map((d) => d.nombre) };
 }
 
 export async function siguientePedido(tx: Transaccion, fecha: string): Promise<number> {

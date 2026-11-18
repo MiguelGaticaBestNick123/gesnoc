@@ -4,6 +4,7 @@ import { Card, Group, Stack, Text, ThemeIcon, Button } from '@mantine/core';
 import { IconCheck, IconX } from '@tabler/icons-react';
 import Link from 'next/link';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
+import { RefrescoPeriodico } from '@/shared/ui/RefrescoPeriodico';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { formatearFecha } from '@/shared/utilidades/fechas';
 import { cerrarNoche } from './acciones';
@@ -32,7 +33,14 @@ function Pendiente({
         </div>
       </Group>
       {!listo && (
-        <Button component={Link} href={enlace} size="sm" mih={44} variant="subtle">
+        <Button
+          component={Link}
+          href={enlace}
+          size="sm"
+          mih={44}
+          variant="subtle"
+          style={{ flexShrink: 0 }}
+        >
           Resolver
         </Button>
       )}
@@ -55,6 +63,8 @@ export function CierreDeNoche({ estado }: Readonly<{ estado: EstadoDelCierre }>)
 
   return (
     <Card withBorder padding="lg">
+      {/* Los pendientes cambian mientras se resuelven en otras pantallas o teléfonos (RNF-05). */}
+      <RefrescoPeriodico segundos={3} />
       <Stack gap="md">
         <div>
           <Text fw={700} size="lg">
@@ -89,11 +99,14 @@ export function CierreDeNoche({ estado }: Readonly<{ estado: EstadoDelCierre }>)
           <Pendiente
             listo={!pendientes.sinContar && cuadraONota}
             titulo="Arqueo"
-            detalle={
+            detalle={[
+              esperado && `Esperado ${formatearPesos(esperado.total)}`,
               contado === null || diferencia === null
-                ? 'Falta contar la caja'
-                : `Contado ${formatearPesos(contado)} · ${describirDiferencia(diferencia)}${conteo?.nota ? ' · con nota' : ''}`
-            }
+                ? 'falta contar la caja'
+                : `contado ${formatearPesos(contado)} · ${describirDiferencia(diferencia)}${conteo?.nota ? ' · con nota' : ''}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
             enlace="/admin/arqueo"
           />
         </Stack>

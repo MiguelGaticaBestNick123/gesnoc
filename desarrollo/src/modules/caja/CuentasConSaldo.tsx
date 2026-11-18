@@ -19,7 +19,7 @@ export function CuentasConSaldo({ datos }: Readonly<{ datos: PantallaSaldos }>) 
   const saldo = datos.cuentas.reduce((suma, cuenta) => suma + cuenta.saldo, 0);
   return (
     <Stack gap="md" maw={900}>
-      <RefrescoPeriodico segundos={5} />
+      <RefrescoPeriodico segundos={3} />
       <EncabezadoPagina
         icono={IconReceipt2}
         titulo="Cuentas con saldo"

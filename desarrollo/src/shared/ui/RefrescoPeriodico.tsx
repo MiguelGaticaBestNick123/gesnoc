@@ -9,7 +9,7 @@ import { AvisoConexion } from './AvisoConexion';
  * cambian cuando los garzones cobran. Lo que la persona escribe no se pierde, porque el componente no
  * se vuelve a montar. Sin conexión lo avisa, como las pantallas en vivo.
  */
-export function RefrescoPeriodico({ segundos = 5 }: Readonly<{ segundos?: number }>) {
+export function RefrescoPeriodico({ segundos = 3 }: Readonly<{ segundos?: number }>) {
   const router = useRouter();
   const [enLinea, setEnLinea] = useState(true);
   useEffect(() => {

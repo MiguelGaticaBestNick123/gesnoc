@@ -97,14 +97,28 @@ export async function pantallaArqueo(actor: Actor) {
 export type PantallaArqueo = Awaited<ReturnType<typeof pantallaArqueo>>;
 
 /**
- * HU-28: guarda el conteo. El esperado se calcula dentro de la misma transacción, y si el contado
- * no coincide la nota es obligatoria (RN-20). Se puede volver a contar.
+ * HU-28: guarda el conteo. El arqueo se bloquea y el esperado se calcula dentro de la misma
+ * transacción: un pago o una entrada en efectivo que llega a la vez espera, y al terminar borra el
+ * conteo (`anularConteo`), o llega antes y cambia el esperado. Si el esperado ya no es el que la
+ * administración tenía a la vista, se le pide revisar: su nota explicaba otra diferencia. Si el
+ * contado no coincide, la nota es obligatoria (RN-20). Se puede volver a contar.
  */
-export async function contar(actor: Actor, contado: number, nota: string | null) {
+export async function contar(
+  actor: Actor,
+  contado: number,
+  nota: string | null,
+  esperadoVisto?: number,
+) {
   exigir(actor, 'admin');
   return enLaNoche(async (tx, fecha) => {
+    await caja.bloquearArqueo(tx, fecha);
     const esperado = await caja.esperado(tx, fecha);
     if (!esperado) throw new ErrorDeNegocio('La noche no tiene arqueo');
+    if (esperadoVisto !== undefined && esperadoVisto !== esperado.total) {
+      throw new ErrorDeNegocio(
+        `El esperado cambió a ${formatearPesos(esperado.total)} mientras contabas: revisa el conteo`,
+      );
+    }
     const diferencia = contado - esperado.total;
     if (diferencia !== 0 && !nota) {
       throw new ErrorDeNegocio(

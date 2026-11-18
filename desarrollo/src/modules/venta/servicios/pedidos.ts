@@ -1,7 +1,7 @@
 import 'server-only';
 import { enLaNoche } from '@/modules/noche/servicios/noches';
 import { exigir, type Actor } from '@/shared/autorizacion';
-import { bloquearCorrelativo } from '@/shared/db/cliente';
+import { bloquearCorrelativo, db } from '@/shared/db/cliente';
 import { ErrorDeNegocio } from '@/shared/errores';
 import type { DatosLinea, DatosPedido } from '../esquemas';
 import { bloquearCuenta, consumoYPagos } from '../repositorios/cuentas';
@@ -21,12 +21,27 @@ export interface PedidoEnviado {
  * cuenta ya se haya cerrado), y recién entonces se bloquea y valida la cuenta.
  */
 export async function enviar(actor: Actor, datos: DatosPedido): Promise<PedidoEnviado> {
+  // Un reintento de un pedido que ya quedó registrado recibe lo registrado aunque entretanto se haya
+  // cerrado la noche y su turno ya no exista: un 4xx le diría al teléfono que no se envió y liberaría
+  // el borrador (RN-13). Solo quien lo envió (o la administración) lo recibe, como en el cobro.
+  const yaEnviado = await pedidos.pedidoPorClave(db(), datos.claveEnvio);
+  if (
+    yaEnviado?.cuenta === datos.cuenta &&
+    (yaEnviado.tomadoPor === actor.id || actor.esAdministrador)
+  ) {
+    return { numero: yaEnviado.numero, estaciones: yaEnviado.estaciones, repetido: true };
+  }
   exigir(actor, 'garzon');
 
   return enLaNoche(async (tx, fecha) => {
     await bloquearCorrelativo(tx, 'pedido', fecha);
     const previo = await pedidos.pedidoPorClave(tx, datos.claveEnvio);
-    if (previo) return { ...previo, repetido: true }; // RN-13
+    if (previo) {
+      if (previo.cuenta !== datos.cuenta) {
+        throw new ErrorDeNegocio('Esa clave de envío ya se usó en otro pedido');
+      }
+      return { numero: previo.numero, estaciones: previo.estaciones, repetido: true }; // RN-13
+    }
 
     const cuenta = await bloquearCuenta(tx, fecha, datos.cuenta);
     if (!cuenta) throw new ErrorDeNegocio('Esa cuenta no existe');

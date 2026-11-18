@@ -1,5 +1,6 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { ejecutar, type EstadoAccion } from '@/shared/acciones';
 import {
   datosCierreDeCuenta,
@@ -25,13 +26,24 @@ export async function cerrarConSaldo(_: EstadoAccion, datos: FormData) {
 
 export async function contarCaja(_: EstadoAccion, datos: FormData) {
   return ejecutar((actor) => {
-    const { contado, nota } = datosConteo.parse(campos(datos));
-    return caja.contar(actor, contado, nota);
+    const { contado, nota, esperado } = datosConteo.parse(campos(datos));
+    return caja.contar(actor, contado, nota, esperado);
   });
 }
 
+/**
+ * HU-12: cierra la noche. CU-11 paso 6: cerrada, la administración llega a «Ventas y propinas» de
+ * esa noche, con el resultado del arqueo (esperado, contado, diferencia y nota) y cuántos clientes
+ * se anonimizaron.
+ */
 export async function cerrarNoche(_: EstadoAccion, datos: FormData) {
-  return ejecutar((actor) =>
-    caja.cerrarNoche(actor, datosCierreDeNoche.parse(campos(datos)).fecha),
-  );
+  const cerrada: { fecha?: string; anonimizados?: number } = {};
+  const estado = await ejecutar(async (actor) => {
+    const { fecha } = datosCierreDeNoche.parse(campos(datos));
+    Object.assign(cerrada, { fecha }, await caja.cerrarNoche(actor, fecha));
+  });
+  if (estado.ok && cerrada.fecha) {
+    redirect(`/admin/ventas?fecha=${cerrada.fecha}&cerrada=${cerrada.anonimizados ?? 0}`);
+  }
+  return estado;
 }

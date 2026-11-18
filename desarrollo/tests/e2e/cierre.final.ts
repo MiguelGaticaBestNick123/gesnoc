@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { formatearPesos } from '../../src/shared/utilidades/dinero';
 import { entrarComo } from './apoyo';
 
 // Corre al final, cuando terminaron las demás pruebas (proyecto «cierre»): la administración recibe
@@ -48,9 +49,16 @@ test('la noche se cierra con la caja explicada y el turno deja de dar acceso', a
   await page.getByRole('button', { name: 'Guardar conteo' }).click();
   await expect(page.getByText(/Último conteo/)).toBeVisible();
 
-  // HU-12: sin pendientes, la noche se cierra.
+  // HU-12: sin pendientes, la noche se cierra. La tarjeta muestra el esperado (CU-11 paso 3) y,
+  // cerrada, se ve el resultado del arqueo con su nota (paso 6).
   await page.goto('/admin/noche');
+  await expect(page.getByText(`Esperado ${formatearPesos(monto)}`, { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Cerrar la noche' }).click();
+  await expect(page).toHaveURL(/\/admin\/ventas\?fecha=[\d-]+&cerrada=\d+$/);
+  const aviso = page.getByRole('alert').filter({ hasText: 'quedó cerrada' });
+  await expect(aviso).toContainText('faltan $1.000');
+  await expect(aviso).toContainText('Un vuelto mal dado en la barra');
+  await page.goto('/admin/noche');
   await expect(page.getByRole('button', { name: 'Abrir noche' })).toBeVisible();
 
   // Sin noche abierta, el garzón vuelve a ver solo su calendario.
