@@ -18,6 +18,8 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 COPY --from=construccion --chown=node:node /app/.next/standalone ./
 COPY --from=construccion --chown=node:node /app/.next/static ./.next/static
+# Los íconos del manifest (la aplicación instalable) se sirven desde public/.
+COPY --from=construccion --chown=node:node /app/public ./public
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \

@@ -1,9 +1,20 @@
 'use client';
 
-import { Box, Button, Container, Group, SegmentedControl, Stack, Text, Title } from '@mantine/core';
-import { IconBell, IconBellRinging } from '@tabler/icons-react';
+import {
+  Box,
+  Button,
+  Container,
+  Group,
+  SegmentedControl,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from '@mantine/core';
+import { IconBell, IconBellRinging, IconSearch } from '@tabler/icons-react';
 import { useState } from 'react';
 import { enviarJson } from '@/shared/red';
+import { paraBuscar } from '@/shared/utilidades/buscar';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import { ordenarProductos, type OrdenCarta } from './carta';
 import type { CartaPublica } from './servicios/carta';
@@ -24,11 +35,24 @@ const ordenes: { label: string; value: OrdenCarta }[] = [
 export function CartaDeMesa({ codigo, carta }: Readonly<{ codigo: string; carta: CartaPublica }>) {
   const [orden, setOrden] = useState<OrdenCarta>('nombre');
   const [categoria, setCategoria] = useState<number | null>(null);
+  const [busqueda, setBusqueda] = useState('');
   const [llamado, setLlamado] = useState<Llamado>(carta.llamadoPendiente ? 'avisado' : 'libre');
   const [error, setError] = useState<string | null>(null);
 
-  const visibles =
-    categoria === null ? carta.categorias : carta.categorias.filter((c) => c.id === categoria);
+  // El buscador ignora tildes y mayúsculas, y busca en la categoría elegida (o en toda la carta).
+  const texto = paraBuscar(busqueda.trim());
+  const visibles = (
+    categoria === null ? carta.categorias : carta.categorias.filter((c) => c.id === categoria)
+  )
+    .map((grupo) =>
+      texto
+        ? {
+            ...grupo,
+            productos: grupo.productos.filter((p) => paraBuscar(p.nombre).includes(texto)),
+          }
+        : grupo,
+    )
+    .filter((grupo) => grupo.productos.length > 0);
 
   async function llamar() {
     setLlamado('enviando');
@@ -56,6 +80,15 @@ export function CartaDeMesa({ codigo, carta }: Readonly<{ codigo: string; carta:
             <Text>La carta todavía no tiene productos.</Text>
           ) : (
             <>
+              <TextInput
+                aria-label="Buscar en la carta"
+                placeholder="Buscar en la carta"
+                leftSection={<IconSearch size={18} />}
+                value={busqueda}
+                onChange={(evento) => setBusqueda(evento.currentTarget.value)}
+                size="md"
+                type="search"
+              />
               {/* En un teléfono angosto las categorías se desplazan de lado, sin cortarse. */}
               <Box component="nav" aria-label="Categorías" style={{ overflowX: 'auto' }}>
                 <Group gap="xs" wrap="nowrap" pb={4}>
@@ -83,6 +116,9 @@ export function CartaDeMesa({ codigo, carta }: Readonly<{ codigo: string; carta:
                 aria-label="Ordenar los productos"
               />
 
+              {visibles.length === 0 && (
+                <Text c="dimmed">No encontramos «{busqueda.trim()}» en la carta.</Text>
+              )}
               {visibles.map((grupo) => (
                 <section key={grupo.id} aria-labelledby={`categoria-${grupo.id}`}>
                   <Title order={2} size="h3" id={`categoria-${grupo.id}`} mt="xs">

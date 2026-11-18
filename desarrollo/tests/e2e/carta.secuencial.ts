@@ -41,6 +41,12 @@ test('HU-07, HU-38, HU-39 y HU-40: el cliente llama desde la carta y el garzón 
   await expect(cliente.getByRole('heading', { name: 'Tragos' })).toBeVisible();
   await expect(cliente.getByRole('heading', { name: 'Cervezas' })).toBeHidden();
   await cliente.getByText('Mayor precio').click();
+  // El buscador ignora tildes y mayúsculas.
+  await cliente.getByRole('button', { name: 'Todo' }).click();
+  await cliente.getByRole('searchbox', { name: 'Buscar en la carta' }).fill('MOJITO');
+  await expect(cliente.getByText('Mojito', { exact: true })).toBeVisible();
+  await expect(cliente.getByRole('heading', { name: 'Bebidas' })).toBeHidden();
+  await cliente.getByRole('searchbox', { name: 'Buscar en la carta' }).fill('');
 
   // HU-39 CA1: el llamado queda pendiente y la carta lo confirma.
   await cliente.getByRole('button', { name: 'Llamar al garzón' }).click();
@@ -52,6 +58,9 @@ test('HU-07, HU-38, HU-39 y HU-40: el cliente llama desde la carta y el garzón 
   // HU-40 CA1: el aviso le llega al garzón del ambiente en su pantalla actual, en 5 s o menos.
   const aviso = garzon.getByRole('region', { name: 'Llamado de una mesa' });
   await expect(aviso.getByText('Mesa 5 te llama')).toBeVisible({ timeout: 5000 });
+  // En el mapa, la mesa que llama se destaca.
+  await garzon.goto('/garzon');
+  await expect(garzon.getByRole('button', { name: /^Mesa 5, .*llama al garzón$/ })).toBeVisible();
   // CA2: al marcarlo atendido deja de mostrarse.
   await aviso.getByRole('button', { name: 'Marcar atendido el llamado de la mesa 5' }).click();
   await expect(aviso).toBeHidden();
