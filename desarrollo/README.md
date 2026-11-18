@@ -130,6 +130,19 @@ garzón y el editor de la administración (`/admin/mapa`, HU-05). Se ajusta al a
 acerca y se abre a pantalla completa. La portada de la administración (`/admin`) muestra las cifras
 reales de la noche, al día cada 3 segundos.
 
+La carta de cada mesa (`/carta/[token]`, HU-07 y HU-38 a HU-40) muestra los productos activos, con
+buscador, y permite llamar al garzón. El llamado aparece en todas sus pantallas y en el mapa hasta
+que lo atiende. En la puerta, el guardia puede reportar a un cliente (HU-35, RN-30). Su historial
+aparece en cada búsqueda, por documento o por nombre (HU-36, RN-25).
+
+La administración tiene dos vistas de la noche:
+
+- «Indicadores» (`/admin/indicadores`): ventas por hora, por garzón y por categoría, tiempos de
+  preparación, llamados y entradas.
+- «Bitácora» (`/admin/bitacora`): cada evento con su autor y su hora.
+
+Ninguna guarda datos propios: las dos se calculan de lo registrado (ADR-011).
+
 ## Estructura
 
 ```
