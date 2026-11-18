@@ -105,7 +105,13 @@ export function ResumenNoche({ inicial }: Readonly<{ inicial: ResumenDeLaNoche }
                       {formatearPesos(ambiente.vendido)}
                     </Text>
                   </Group>
-                  <Progress value={porcentaje} color="violeta" size="md" radius="xl" />
+                  <Progress
+                    value={porcentaje}
+                    color="violeta"
+                    size="md"
+                    radius="xl"
+                    aria-label={`Ocupación de ${ambiente.nombre}: ${Math.round(porcentaje)} %`}
+                  />
                   <Group gap="md" mt={6}>
                     <Punto color="var(--mantine-color-violeta-4)">
                       {plural(ambiente.ocupadas, 'ocupada', 'ocupadas')}

@@ -2,7 +2,6 @@
 
 import {
   ActionIcon,
-  Anchor,
   AppShell,
   Avatar,
   Box,
@@ -16,7 +15,7 @@ import {
   ThemeIcon,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconLogout, IconMoonStars } from '@tabler/icons-react';
+import { IconHome, IconLogout, IconMoonStars } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { salir } from '@/modules/acceso/acciones';
@@ -131,10 +130,34 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
             </Box>
           </Group>
           <Group gap="xs" wrap="nowrap">
+            {/* Fuera de su pantalla, el camino de vuelta: un ícono en el teléfono, donde el
+                encabezado no da para más, y el texto desde 576 px. Los dos miden 44 px (RNF-09). */}
             {fueraDeSuInicio && (
-              <Anchor component={Link} href={inicio} size="sm">
-                Mi pantalla
-              </Anchor>
+              <>
+                <ActionIcon
+                  component={Link}
+                  href={inicio}
+                  hiddenFrom="xs"
+                  size={44}
+                  variant="subtle"
+                  color="gray"
+                  aria-label="Mi pantalla"
+                >
+                  <IconHome size={20} />
+                </ActionIcon>
+                <Button
+                  component={Link}
+                  href={inicio}
+                  visibleFrom="xs"
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  mih={44}
+                  leftSection={<IconHome size={16} />}
+                >
+                  Mi pantalla
+                </Button>
+              </>
             )}
             <AyudaRol rol={rol} />
             <form action={salir}>

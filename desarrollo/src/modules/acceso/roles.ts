@@ -338,7 +338,8 @@ export const roles: Rol[] = [
         ruta: '',
         etiqueta: 'Entrada',
         icono: IconDoorEnter,
-        historias: ['HU-30', 'HU-31', 'HU-33'],
+        // HU-31 (escanear la cédula) quedó fuera de esta versión: el documento se digita.
+        historias: ['HU-30', 'HU-33'],
         construida: true,
       },
       {

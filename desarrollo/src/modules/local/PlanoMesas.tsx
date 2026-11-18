@@ -536,7 +536,7 @@ function Control({
 }>) {
   return (
     <ActionIcon
-      size={40}
+      size={44}
       variant="default"
       aria-label={etiqueta}
       title={etiqueta}

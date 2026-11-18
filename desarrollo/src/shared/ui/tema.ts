@@ -34,6 +34,13 @@ const noche: MantineColorsTuple = [
 export const tema = createTheme({
   primaryColor: 'violeta',
   primaryShade: { light: 6, dark: 5 },
+  // Sobre un relleno claro (el verde de «Recibí», el gris de «Desactivada») el texto va oscuro, y
+  // sobre uno oscuro, blanco: así todo botón e insignia rellenos cumplen el contraste de WCAG AA.
+  // Mantine decide mirando el tono del tema claro (6), un punto más oscuro que el que se ve de noche
+  // (5): con el umbral en 0,2, el violeta sigue en blanco (4,9:1) y el gris, el azul y el rojo
+  // pasan a texto oscuro (sobre 5,9:1).
+  autoContrast: true,
+  luminanceThreshold: 0.2,
   colors: { violeta, dark: noche },
   fontFamily: 'var(--fuente-gesnoc), system-ui, sans-serif',
   fontFamilyMonospace: 'ui-monospace, monospace',
@@ -53,6 +60,28 @@ export const tema = createTheme({
       defaultProps: { radius: 'md' },
       styles: {
         label: { minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+      },
+    },
+    Tabs: { styles: { tab: { minHeight: 44 } } },
+    // Un tono más claro que el violeta de los botones: sobre el fondo de la noche llega a 6:1.
+    Anchor: { defaultProps: { c: 'violeta.3' } },
+    // Los campos miden 44 px como los botones (Mantine trae 42 en el tamaño md).
+    TextInput: { defaultProps: { size: 'md' }, styles: { input: { minHeight: 44 } } },
+    NumberInput: { defaultProps: { size: 'md' }, styles: { input: { minHeight: 44 } } },
+    Textarea: { defaultProps: { size: 'md' } },
+    Select: { defaultProps: { size: 'md' }, styles: { input: { minHeight: 44 } } },
+    NativeSelect: { defaultProps: { size: 'md' }, styles: { input: { minHeight: 44 } } },
+    // El ojo que muestra la contraseña ocupa todo el alto del campo: 44 px.
+    PasswordInput: {
+      defaultProps: {
+        size: 'md',
+        rightSectionWidth: 44,
+        visibilityToggleButtonProps: { 'aria-label': 'Mostrar u ocultar la contraseña' },
+      },
+      styles: {
+        input: { minHeight: 44 },
+        innerInput: { minHeight: 42 },
+        visibilityToggle: { width: 44, height: 44, minWidth: 44, minHeight: 44 },
       },
     },
   },

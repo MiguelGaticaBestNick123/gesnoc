@@ -1,6 +1,6 @@
 'use client';
 
-import { Anchor, Card, Group, Paper, Stack, Text } from '@mantine/core';
+import { Button, Card, Group, Paper, Stack, Text } from '@mantine/core';
 import { IconCash, IconChevronRight } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useTiempoReal } from '@/shared/puertos/tiempo-real';
@@ -81,12 +81,12 @@ export function EfectivoPorEntregar({ inicial }: Readonly<{ inicial: MiEfectivo 
 
       {pagos.length > 0 && (
         <Text size="sm" c="dimmed">
-          Entrega el efectivo a la administración: al confirmarlo sale de esta lista.{' '}
-          <Anchor component={Link} href="/garzon" size="sm">
-            Volver a las mesas
-          </Anchor>
+          Entrega el efectivo a la administración: al confirmarlo sale de esta lista.
         </Text>
       )}
+      <Button component={Link} href="/garzon" variant="default" fullWidth>
+        Volver a las mesas
+      </Button>
     </Stack>
   );
 }

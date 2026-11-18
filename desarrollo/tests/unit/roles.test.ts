@@ -10,13 +10,15 @@ describe('menús por rol', () => {
       ...historiasFueraDelMenu,
       ...secciones.flatMap((seccion) => seccion.historias ?? []),
     ]);
+    // HU-31 (escanear la cédula) y HU-41 (promociones) quedaron fuera de esta versión.
+    const fuera = ['HU-31', 'HU-41'];
     const planificadas = Array.from(
-      { length: 40 },
+      { length: 41 },
       (_, i) => `HU-${String(i + 1).padStart(2, '0')}`,
-    );
+    ).filter((historia) => !fuera.includes(historia));
 
     expect(planificadas.filter((historia) => !cubiertas.has(historia))).toEqual([]);
-    expect(cubiertas.has('HU-41')).toBe(false);
+    expect(fuera.filter((historia) => cubiertas.has(historia))).toEqual([]);
   });
 
   it('todos tienen calendario y nadie repite una ruta', () => {

@@ -182,7 +182,7 @@ function TarjetaPersona({
             mih={44}
             px="xs"
             onClick={alCambiarClave}
-            aria-label={`Restablecer la contraseña de ${persona.nombre}`}
+            aria-label={`Clave de ${persona.nombre}: restablecerla`}
           >
             Clave
           </Button>

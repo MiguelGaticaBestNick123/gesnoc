@@ -213,11 +213,18 @@ export function EditorPlano({
       )}
 
       <Group gap="xs">
-        <Button size="md" variant="light" leftSection={<IconPlus size={18} />} onClick={agregar}>
+        <Button
+          size="md"
+          mih={44}
+          variant="light"
+          leftSection={<IconPlus size={18} />}
+          onClick={agregar}
+        >
           Agregar mesa
         </Button>
         <Button
           size="md"
+          mih={44}
           variant="default"
           leftSection={<IconArrowBackUp size={18} />}
           onClick={descartar}
@@ -227,6 +234,7 @@ export function EditorPlano({
         </Button>
         <Button
           size="md"
+          mih={44}
           leftSection={<IconDeviceFloppy size={18} />}
           onClick={() => void guardar()}
           loading={guardando}

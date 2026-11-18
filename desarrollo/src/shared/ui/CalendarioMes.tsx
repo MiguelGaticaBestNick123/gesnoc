@@ -1,6 +1,6 @@
 'use client';
 
-import { ActionIcon, Box, Group, Text, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Box, Group, Text, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import Link from 'next/link';
 import {
@@ -67,7 +67,14 @@ export function CalendarioMes({
           <IconChevronRight size={20} />
         </ActionIcon>
       </Group>
-      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4 }}>
+      {/* El espacio entre días se achica en el teléfono: así cada día mide 44 px de ancho (RNF-09). */}
+      <Box
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+          gap: 'clamp(2px, 0.6vw, 4px)',
+        }}
+      >
         {DIAS_DE_LA_SEMANA.map((nombre) => (
           <Text key={nombre} size="xs" c="dimmed" ta="center" fw={600} pb={2}>
             {nombre}
@@ -77,12 +84,12 @@ export function CalendarioMes({
           const dia = dias[fecha];
           const elegido = fecha === seleccionado;
           const esHoy = fecha === hoy;
-          const color = dia?.color;
+          const delMes = mesDe(fecha) === mes;
+          const color = delMes ? dia?.color : undefined;
           return (
             <UnstyledButton
               key={fecha}
               onClick={() => alElegir(fecha)}
-              aria-label={dia?.etiqueta ?? formatearFecha(fecha)}
               aria-pressed={elegido}
               mih={{ base: 58, sm: 96 }}
               p={6}
@@ -98,28 +105,38 @@ export function CalendarioMes({
                     ? 'var(--mantine-color-violeta-3)'
                     : color
                       ? `var(--mantine-color-${color}-${dia?.contorno ? 4 : 6})`
-                      : 'var(--mantine-color-dark-5)'
+                      : `var(--mantine-color-dark-${delMes ? 5 : 6})`
                 }`,
                 // El tono del día se mezcla con el fondo oscuro: así se distingue cada color
-                // (el amarillo de la guardia del naranjo de la cocina) sin encandilar de noche.
+                // (el amarillo de la guardia del naranjo de la cocina) sin encandilar de noche. Los
+                // días de otro mes van sin relleno y con el número atenuado, que igual se lee (WCAG).
                 background:
                   color && !dia?.contorno
                     ? `color-mix(in srgb, var(--mantine-color-${color}-6) 32%, var(--mantine-color-dark-6))`
-                    : 'var(--mantine-color-dark-6)',
+                    : delMes
+                      ? 'var(--mantine-color-dark-6)'
+                      : 'transparent',
                 boxShadow: elegido ? '0 0 0 2px var(--mantine-color-violeta-4)' : undefined,
-                opacity: mesDe(fecha) === mes ? 1 : 0.35,
               }}
             >
+              {/* El nombre accesible es la descripción completa del día; el número y las marcas
+                  son su versión visual. */}
+              <VisuallyHidden>{dia?.etiqueta ?? formatearFecha(fecha)}</VisuallyHidden>
               <Text
+                aria-hidden
                 size="sm"
                 fw={esHoy ? 800 : 600}
-                c={esHoy ? 'violeta.2' : undefined}
+                c={esHoy ? 'violeta.1' : delMes ? undefined : 'dimmed'}
                 td={esHoy ? 'underline' : undefined}
                 lh={1}
               >
                 {Number(fecha.slice(8))}
               </Text>
-              {dia?.contenido}
+              {dia?.contenido && (
+                <Box aria-hidden style={{ opacity: delMes ? 1 : 0.6 }}>
+                  {dia.contenido}
+                </Box>
+              )}
             </UnstyledButton>
           );
         })}

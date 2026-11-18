@@ -35,7 +35,7 @@ import { SinNocheAbierta } from '@/shared/ui/SinNocheAbierta';
 
 const sinEstacion: Record<TipoEstacion, string> = {
   barra: 'Tu ambiente no tiene una barra configurada: avisa a la administración.',
-  cocina: 'Tu ambiente no tiene una cocina configurada: avisa a la administración.',
+  cocina: 'El local no tiene una cocina configurada: avisa a la administración.',
 };
 
 // HU-17, HU-18 y HU-19: la cola de la estación, al día cada pocos segundos, con sonido al entrar

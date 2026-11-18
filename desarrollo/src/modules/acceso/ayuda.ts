@@ -35,10 +35,11 @@ export const ayudaPorRol: Record<ClaveRol, string[]> = {
   ],
   guardia: [
     'Busca a cada persona por su RUT, o por su documento si es extranjera, antes de dejarla pasar.',
-    'Elige cómo entra: EF (efectivo), RC (tarjeta), PN (paga después) o gratis si viene en una lista.',
+    'Elige cómo entra: EF (efectivo), RC (tarjeta), PN (paga después) o gratis.',
+    'Si viene en una lista o invitada, la pantalla te dice si paga o entra gratis.',
     'Una persona entra una sola vez por noche: si ya entró, la pantalla te dice a qué hora y con qué ticket.',
     'Un aviso rojo o amarillo significa que tiene reportes. En «Historial y reportes» puedes ver el detalle o reportarla.',
-    'El sorteo se hace en «Sorteo», entre los tickets pagados de la noche.',
+    'El sorteo se hace en «Sorteo», entre los tickets de la noche (EF, RC y PN) que aún no ganan.',
   ],
   personal: [
     'Sin turno esta noche solo ves tu calendario.',

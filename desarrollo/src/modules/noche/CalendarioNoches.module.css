@@ -1,0 +1,12 @@
+/*
+ * En el teléfono el calendario va de borde a borde, como el de cada persona: dentro de una tarjeta
+ * cada día mediría 40 px de ancho, y deben ser 44 (RNF-09). Desde 768 px vuelve a ir en su tarjeta.
+ */
+@media (min-width: 48em) {
+  .marco {
+    padding: var(--mantine-spacing-sm);
+    border: 1px solid var(--mantine-color-dark-4);
+    border-radius: var(--mantine-radius-lg);
+    background-color: var(--mantine-color-dark-6);
+  }
+}

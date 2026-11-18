@@ -20,6 +20,7 @@ import {
   TextInput,
   ThemeIcon,
   Title,
+  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconArrowLeft,
@@ -287,7 +288,8 @@ function TarjetaLista({
   const entraron = lista.personas.filter((p) => p.entroEn).length;
   return (
     <Accordion.Item value={String(lista.numero)}>
-      <Accordion.Control aria-label={`Lista ${lista.nombre}`}>
+      <Accordion.Control>
+        <VisuallyHidden>Lista </VisuallyHidden>
         <Group gap="xs" wrap="nowrap">
           <div style={{ minWidth: 0, flex: 1 }}>
             <Group gap={6}>
@@ -397,6 +399,9 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
         component={Link}
         href={`/admin/calendario?mes=${mesDe(noche.fecha)}&dia=${noche.fecha}`}
         size="sm"
+        mih={44}
+        display="inline-flex"
+        style={{ alignItems: 'center' }}
       >
         <Group gap={4}>
           <IconArrowLeft size={16} /> Calendario de noches

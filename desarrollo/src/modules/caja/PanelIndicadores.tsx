@@ -206,7 +206,12 @@ export function PanelIndicadores({ datos }: Readonly<{ datos: IndicadoresDeLaNoc
                   Sin comandas esta noche.
                 </Text>
               ) : (
-                <Table.ScrollContainer minWidth={320}>
+                <Table.ScrollContainer
+                  minWidth={320}
+                  scrollAreaProps={{
+                    viewportProps: { tabIndex: 0, 'aria-label': 'Tabla desplazable' },
+                  }}
+                >
                   <Table striped>
                     <Table.Thead>
                       <Table.Tr>

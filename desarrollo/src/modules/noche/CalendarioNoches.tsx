@@ -4,7 +4,6 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   Drawer,
   Group,
   Modal,
@@ -39,6 +38,7 @@ import { editarNoche, eliminarNoche, programarNoche } from './acciones';
 import { CamposNoche } from './CamposNoche';
 import { colorDelRol, estadosDeNoche, nombreDelRol } from './nombres';
 import type { EstadoNoche } from './repositorios/noches';
+import estilos from './CalendarioNoches.module.css';
 import type { CalendarioDelMes, NocheDelCalendario } from './servicios/noches';
 import { iniciales, plural } from '@/shared/utilidades/texto';
 
@@ -66,11 +66,7 @@ function PersonasDelDia({ noche }: Readonly<{ noche: NocheDelCalendario }>) {
             {iniciales(turno.nombre)}
           </Badge>
         ))}
-        {resto > 0 && (
-          <Text size="xs" c="dimmed">
-            +{resto}
-          </Text>
-        )}
+        {resto > 0 && <Text size="xs">+{resto}</Text>}
       </Group>
       <Group gap={3} hiddenFrom="sm">
         {noche.turnos.slice(0, 6).map((turno) => (
@@ -86,7 +82,7 @@ function PersonasDelDia({ noche }: Readonly<{ noche: NocheDelCalendario }>) {
         ))}
       </Group>
       {noche.estado === 'programada' && noche.postulantes.length > 0 && (
-        <Text size="xs" c="dimmed" lh={1.1} visibleFrom="sm">
+        <Text size="xs" lh={1.1} visibleFrom="sm">
           {plural(noche.postulantes.length, 'postula', 'postulan')}
         </Text>
       )}
@@ -336,7 +332,7 @@ export function CalendarioNoches({
         ))}
       </Group>
 
-      <Card withBorder padding="sm">
+      <Box className={estilos.marco}>
         <CalendarioMes
           mes={datos.mes}
           hoy={datos.hoy}
@@ -345,7 +341,7 @@ export function CalendarioNoches({
           seleccionado={dia}
           alElegir={setDia}
         />
-      </Card>
+      </Box>
 
       <Drawer
         opened={dia !== null}

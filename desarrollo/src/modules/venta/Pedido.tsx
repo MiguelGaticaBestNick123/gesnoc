@@ -15,6 +15,7 @@ import {
   TextInput,
   Title,
   UnstyledButton,
+  VisuallyHidden,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconMinus, IconNote, IconPlus, IconSearch } from '@tabler/icons-react';
@@ -225,8 +226,9 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
                 cambiar((actual) => ({ ...actual, lineas: agregar(actual.lineas, producto.id) }))
               }
               disabled={congelado || producto.sinDestino}
-              aria-label={`Agregar ${producto.nombre}`}
             >
+              {/* El nombre accesible contiene lo que se ve: «Agregar Schop $3.500» (WCAG 2.5.3). */}
+              <VisuallyHidden>Agregar </VisuallyHidden>
               <Paper
                 withBorder
                 p="sm"

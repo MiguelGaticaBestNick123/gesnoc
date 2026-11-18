@@ -5,7 +5,7 @@ import { CLAVE_PRUEBAS } from '../base-pruebas';
 export async function ingresar(page: Page, correo: string, clave = CLAVE_PRUEBAS) {
   await page.goto('/ingresar');
   await page.getByLabel('Correo').fill(correo);
-  await page.getByLabel('Contraseña').fill(clave);
+  await page.getByRole('textbox', { name: 'Contraseña', exact: true }).fill(clave);
   await page.getByRole('button', { name: 'Ingresar' }).click();
 }
 
