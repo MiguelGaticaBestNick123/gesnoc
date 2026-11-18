@@ -46,6 +46,9 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://gesnoc_app:${CLAVE_APP}@db:5432/gesnoc
+      # En el local se sirve por http (el teléfono entra con la IP del equipo, como `npm run local`):
+      # una cookie Secure se descartaría. El ambiente publicado usa HTTPS y no define esta variable.
+      SESION_SIN_HTTPS: '1'
     ports:
       - '3000:3000'
     profiles: ['app']

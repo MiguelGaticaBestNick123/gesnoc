@@ -46,6 +46,7 @@ cada persona opere su rol, la administración debe abrir la noche.
 | `npm run test:unit`                                       | Solo unitarias                                                                                                        |
 | `npx vitest run tests/unit/dinero.test.ts -t "decimales"` | Un archivo o una sola prueba                                                                                          |
 | `npm run test:e2e`                                        | Playwright (levanta el servidor en :3100 contra `gesnoc_pruebas`)                                                     |
+| `npm run carga`                                           | Prueba de carga de una noche: 40 dispositivos contra la compilación de producción (después de `npm run build`)        |
 | `npm run db:migrar`                                       | Aplicar migraciones pendientes                                                                                        |
 | `npm run db:nueva -- nombre`                              | Crear una migración nueva en `db/migrations/`                                                                         |
 | `npm run db:semilla`                                      | Cargar el local de demostración si la base no tiene personal                                                          |
@@ -142,6 +143,26 @@ La administración tiene dos vistas de la noche:
 - «Bitácora» (`/admin/bitacora`): cada evento con su autor y su hora.
 
 Ninguna guarda datos propios: las dos se calculan de lo registrado (ADR-011).
+
+## Pruebas
+
+- `tests/unit/`: la lógica pura (cobro, colas, RUT, ruteo, indicadores…).
+- `tests/integracion/`: los servicios reales contra PostgreSQL 17, con una prueba por cada regla que
+  citan las historias. `restricciones.test.ts` escribe directo con el rol de la aplicación y
+  comprueba que la base rechaza por sí sola lo que viola una regla (RNF-03).
+  `tres-noches.test.ts` simula tres noches completas, de la programación al cierre, con las sesiones
+  de cada persona:
+  - un jueves tranquilo;
+  - un viernes con 300 pedidos y 400 ingresos, cortes de red y una diferencia de caja;
+  - un sábado con imprevistos de personal y de configuración.
+
+  Al cerrar cada noche compara lo registrado con un libro de control: los indicadores de OE1 a OE4
+  y el arqueo.
+
+- `tests/e2e/`: los recorridos de cada rol en un teléfono de 360 px (RNF-09).
+- `npm run carga` (EV-07): 40 dispositivos durante una noche completa contra dos instancias del
+  servidor. Mide el p95 de pedidos, pagos e ingresos (RNF-04) y cuánto tarda un cambio en verse en
+  otro teléfono (RNF-05).
 
 ## Estructura
 
