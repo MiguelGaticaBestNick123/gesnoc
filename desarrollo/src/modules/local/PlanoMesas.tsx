@@ -20,7 +20,18 @@ export interface MesaDibujada extends Mesa {
   estado: EstadoDibujo;
   /** Algo de esta mesa espera más de 10 minutos en una estación. */
   atrasada?: boolean;
+  /** HU-40: el cliente llamó al garzón desde la carta y espera que lo atiendan. */
+  llamando?: boolean;
 }
+
+/** El llamado de la mesa: naranja, como el aviso que le llega al garzón. */
+const LLAMADO = '#fd7e14';
+// El brillo de la mesa que llama late; quien pidió reducir el movimiento lo ve fijo.
+const LATIDO = `
+  .mesa-llamando { animation: mesa-latido 1.2s ease-in-out infinite; }
+  @keyframes mesa-latido { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  @media (prefers-reduced-motion: reduce) { .mesa-llamando { animation: none; } }
+`;
 
 interface Colores {
   mesa: string;
@@ -158,6 +169,7 @@ export function PlanoMesas({
         <filter id={`${prefijo}-brillo`} x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur stdDeviation="7" />
         </filter>
+        <style>{LATIDO}</style>
       </defs>
 
       {/* Piso y muros del ambiente. */}
@@ -243,6 +255,7 @@ export function PlanoMesas({
               />
             ))}
             {(color.brillo || elegida) &&
+              !mesa.llamando &&
               cuerpo({
                 fill: 'none',
                 stroke: elegida ? '#b39dff' : (color.brillo ?? undefined),
@@ -250,6 +263,18 @@ export function PlanoMesas({
                 opacity: 0.7,
                 filter: `url(#${prefijo}-brillo)`,
               })}
+            {/* La mesa que llama late en naranja: se ve desde lejos aunque esté libre. */}
+            {mesa.llamando && (
+              <g className="mesa-llamando">
+                {cuerpo({
+                  fill: 'none',
+                  stroke: LLAMADO,
+                  strokeWidth: 12,
+                  opacity: 0.85,
+                  filter: `url(#${prefijo}-brillo)`,
+                })}
+              </g>
+            )}
             {cuerpo({ fill: color.mesa, stroke: borde, strokeWidth: elegida ? 4 : 2.5 })}
             <text
               textAnchor="middle"
@@ -277,6 +302,20 @@ export function PlanoMesas({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
+              </Insignia>
+            )}
+            {mesa.llamando && (
+              <Insignia
+                x={-mesa.ancho / 2}
+                y={-mesa.alto / 2}
+                rotacion={mesa.rotacion}
+                color={LLAMADO}
+              >
+                <path
+                  d="M -4.5 2.5 L 4.5 2.5 L 3.2 0.5 L 3.2 -1.5 A 3.2 3.2 0 0 0 -3.2 -1.5 L -3.2 0.5 Z"
+                  fill="#1b1b1b"
+                />
+                <circle cx={0} cy={4.3} r={1.4} fill="#1b1b1b" />
               </Insignia>
             )}
             {mesa.atrasada && mesa.estado !== 'lista' && (
@@ -516,6 +555,7 @@ export function LeyendaPlano() {
     ['Ocupada', '#8462ff'],
     ['Lista para retirar', '#2fbf71'],
     ['Espera de +10 min', '#f59f0b'],
+    ['Llama al garzón', LLAMADO],
   ];
   return (
     <Group gap="md" justify="center">

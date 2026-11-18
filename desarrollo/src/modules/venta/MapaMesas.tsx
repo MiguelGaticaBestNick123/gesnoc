@@ -61,6 +61,7 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
   const { ambiente, mesas } = datos;
   const seleccionada = mesas.find((mesa) => mesa.id === mesaId);
   const ocupadas = mesas.filter((mesa) => mesa.cuenta !== null).length;
+  const llamando = mesas.filter((mesa) => mesa.llamando).length;
 
   const dibujadas: MesaDibujada[] = mesas.map((mesa) => {
     const estado = estadoDe(mesa);
@@ -70,7 +71,7 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
       atrasada: mesa.esperaMaxima > ESPERA_ATRASADA,
       etiqueta: `Mesa ${mesa.numero}, ${estado === 'libre' ? 'libre' : 'ocupada'}${
         estado === 'lista' ? ', con comandas listas' : ''
-      }`,
+      }${mesa.llamando ? ', llama al garzón' : ''}`,
     };
   });
 
@@ -93,7 +94,7 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
       <EncabezadoPagina
         icono={IconArmchair}
         titulo="Mesas"
-        descripcion={`${ambiente.nombre} · ${plural(ocupadas, 'ocupada', 'ocupadas')} · ${plural(mesas.length - ocupadas, 'libre', 'libres')} · ${datos.dePie.length} de pie`}
+        descripcion={`${ambiente.nombre} · ${plural(ocupadas, 'ocupada', 'ocupadas')} · ${plural(mesas.length - ocupadas, 'libre', 'libres')} · ${datos.dePie.length} de pie${llamando > 0 ? ` · ${plural(llamando, 'llama', 'llaman')}` : ''}`}
       >
         <Button
           size="sm"
@@ -204,9 +205,27 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
 
 function EstadoMesa({ mesa }: Readonly<{ mesa: Mesa }>) {
   const estado = estadoDe(mesa);
-  if (estado === 'libre') return <Badge color="gray">Libre</Badge>;
-  if (estado === 'lista') return <Badge color="green">Lista para retirar</Badge>;
-  return <Badge color="violeta">Ocupada</Badge>;
+  const llama = mesa.llamando && <Badge color="orange">Llama al garzón</Badge>;
+  if (estado === 'libre')
+    return (
+      <>
+        <Badge color="gray">Libre</Badge>
+        {llama}
+      </>
+    );
+  if (estado === 'lista')
+    return (
+      <>
+        <Badge color="green">Lista para retirar</Badge>
+        {llama}
+      </>
+    );
+  return (
+    <>
+      <Badge color="violeta">Ocupada</Badge>
+      {llama}
+    </>
+  );
 }
 
 /** Lo que muestra la mesa elegida: abrir cuenta, o su resumen con lo pedido y el total. */

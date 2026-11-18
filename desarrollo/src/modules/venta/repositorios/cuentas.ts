@@ -90,9 +90,13 @@ export async function mesasDe(fecha: string | undefined, ambienteId: number) {
       alto: number;
       rotacion: number;
       sillas: number | null;
+      llamando: boolean;
     }
   >(sql`
     select m.id, m.numero, m.forma, m.pos_x, m.pos_y, m.ancho, m.alto, m.rotacion, m.sillas,
+           exists (select 1 from gesnoc.llamado l
+                   where l.fecha = ${fecha ?? null}::date and l.mesa_id = m.id
+                     and l.atendido_en is null) as llamando,
            c.numero as cuenta, c.abierta_en::text,
            extract(epoch from now() - c.abierta_en)::int as abierta_hace,
            u.nombre as garzon, t.total, g.pagado, k.listas, k.espera_maxima
@@ -113,6 +117,8 @@ export async function mesasDe(fecha: string | undefined, ambienteId: number) {
     alto: f.alto,
     rotacion: f.rotacion,
     sillas: f.sillas,
+    /** HU-40: el cliente llamó desde la carta y nadie lo ha atendido. */
+    llamando: f.llamando,
     ...resumen(f),
   }));
 }

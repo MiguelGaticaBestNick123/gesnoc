@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { cartaDeMesa } from '@/modules/local/servicios/carta';
 import { archivoDelCodigo, codigosDeMesas, regenerarCodigo } from '@/modules/local/servicios/qr';
 import { misComandas } from '@/modules/venta/servicios/colas';
+import { mapa } from '@/modules/venta/servicios/cuentas';
 import {
   atender,
   CODIGO_SIN_CARTA,
@@ -139,6 +140,17 @@ describe('HU-39 y HU-40 llamados', () => {
       expect.objectContaining({ mesa: 4, ambiente: 'Salón' }),
     ]);
     expect((await misComandas(local.persona('garzon2'))).llamados).toEqual([]);
+  });
+
+  it('la mesa que llama se marca en el mapa del garzón hasta que la atienden', async () => {
+    const garzon = local.persona('garzon');
+    const llama = async () => (await mapa(garzon)).mesas.find((m) => m.numero === 4)?.llamando;
+    expect(await llama()).toBe(false);
+    await llamar(codigo);
+    expect(await llama()).toBe(true);
+    const [pendiente] = (await misComandas(garzon)).llamados;
+    await atender(garzon, pendiente!.numero);
+    expect(await llama()).toBe(false);
   });
 
   it('HU-39 CA2 (RN-29): otro toque con el llamado pendiente no crea otro, ni a la vez', async () => {
