@@ -27,6 +27,7 @@ import {
   IconConfetti,
   IconListDetails,
   IconMoonStars,
+  IconBrandWhatsapp,
   IconPencil,
   IconPlus,
   IconStar,
@@ -38,6 +39,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { BotonAccion } from '@/shared/ui/BotonAccion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
+import { enlaceDeWhatsApp, mensajeDeLaNoche } from './aviso';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { mesDe } from '@/shared/utilidades/calendario';
 import { formatearPesos } from '@/shared/utilidades/dinero';
@@ -417,6 +419,31 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
           </Badge>
           {editable && (
             <>
+              <Button
+                onClick={() => {
+                  // El enlace del mensaje lleva al dominio con que se abrió la aplicación.
+                  const mensaje = mensajeDeLaNoche(
+                    {
+                      fecha: noche.fecha,
+                      precioEntrada: noche.precioEntrada,
+                      nota: noche.nota,
+                      premios: detalle.ambientes.flatMap((ambiente) => {
+                        const premio = premioDe(ambiente.id);
+                        return premio ? [{ ambiente: ambiente.nombre, premio }] : [];
+                      }),
+                      eventos: detalle.eventos,
+                    },
+                    window.location.origin,
+                  );
+                  window.open(enlaceDeWhatsApp(mensaje), '_blank', 'noopener');
+                }}
+                size="sm"
+                mih={44}
+                variant="default"
+                leftSection={<IconBrandWhatsapp size={16} />}
+              >
+                Avisar por WhatsApp
+              </Button>
               <Button
                 size="sm"
                 mih={44}
