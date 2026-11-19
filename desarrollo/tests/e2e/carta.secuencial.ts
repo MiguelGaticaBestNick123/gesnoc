@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { entrarComo } from './apoyo';
+import { aceptarPregunta, entrarComo } from './apoyo';
 
 // Corre sola, después de las pruebas del proyecto «movil» y antes del cierre: el llamado de una mesa
 // aparece en todas las pantallas de los garzones del ambiente, y en paralelo taparía los botones que
@@ -68,9 +68,9 @@ test('HU-07, HU-38, HU-39 y HU-40: el cliente llama desde la carta y el garzón 
   await expect(garzon.getByText('Ninguna mesa está llamando.')).toBeVisible();
 
   // HU-07 CA2 (RN-28): al regenerar el código, el enlace anterior ya no abre la carta.
-  page.on('dialog', (dialogo) => dialogo.accept());
   const tarjeta = page.getByRole('article', { name: 'Mesa 5', exact: true });
   await tarjeta.getByRole('button', { name: 'Regenerar' }).click();
+  await aceptarPregunta(page);
   await expect(page.getByRole('link', { name: 'Abrir la carta de la mesa 5' })).not.toHaveAttribute(
     'href',
     enlace!,

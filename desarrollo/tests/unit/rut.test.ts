@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { datosInvitacion, datosPremio } from '@/modules/noche/esquemas';
+import { datosIntegrante, datosInvitacion, datosPremio } from '@/modules/noche/esquemas';
 import { leerLista, ordenNocturno } from '@/modules/noche/listas';
 import {
   digitoVerificador,
@@ -116,31 +116,44 @@ describe('detalles de la noche', () => {
 
   const fecha = '2026-11-07';
 
-  it('una invitación individual exige quién invita; la de una lista, no', () => {
-    const persona = { fecha, documento: '16.543.210-k', nombre: 'Felipe', apellido: 'Araya' };
-    expect(datosInvitacion.safeParse(persona).success).toBe(false);
-    expect(datosInvitacion.parse({ ...persona, invitadoPor: 'DJ', gratis: 'on' })).toMatchObject({
+  it('una invitación individual exige quién invita; una persona de una lista, no', () => {
+    const persona = { documento: '16.543.210-k', nombre: 'Felipe', apellido: 'Araya' };
+    expect(datosInvitacion.safeParse({ ...persona, fecha }).error?.issues[0]?.message).toBe(
+      'Escribe quién la invitó',
+    );
+    expect(datosInvitacion.parse({ ...persona, fecha, invitadoPor: 'DJ', gratis: 'on' })).toEqual({
+      fecha,
       documento: '16543210-K',
-      listaNumero: null,
+      nombre: 'Felipe',
+      apellido: 'Araya',
       invitadoPor: 'DJ',
       gratis: true,
     });
-    expect(datosInvitacion.parse({ ...persona, listaNumero: '2', gratis: 'on' })).toMatchObject({
-      listaNumero: 2,
-      invitadoPor: null,
-      gratis: null,
+    expect(datosIntegrante.parse({ ...persona, listaId: '2' })).toEqual({
+      listaId: 2,
+      documento: '16543210-K',
+      nombre: 'Felipe',
+      apellido: 'Araya',
     });
   });
 
-  it('rechaza un RUT inválido en una invitación', () => {
-    const resultado = datosInvitacion.safeParse({
-      fecha,
+  it('rechaza un RUT inválido en una lista y lee un documento extranjero', () => {
+    const resultado = datosIntegrante.safeParse({
+      listaId: '1',
       documento: '16.543.210-1',
       nombre: 'Felipe',
       apellido: 'Araya',
-      listaNumero: '1',
     });
     expect(resultado.error?.issues[0]?.message).toMatch(/RUT no válido/);
+    expect(
+      datosIntegrante.parse({
+        listaId: '1',
+        tipoDocumento: 'extranjero',
+        documento: 'ab 123 456',
+        nombre: 'Lucas',
+        apellido: 'Ferreira',
+      }).documento,
+    ).toBe('AB123456');
   });
 
   it('el premio admite hasta cinco productos sin repetir, de 1 a 10 unidades', () => {

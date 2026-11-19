@@ -1,16 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { entrarComo, ingresar } from './apoyo';
+import { aceptarPregunta, entrarComo, ingresar } from './apoyo';
 
 // Las acciones destructivas piden confirmación con el diálogo del navegador.
-const aceptarDialogos = (page: Page) => page.on('dialog', (dialogo) => dialogo.accept());
-
 const modal = (page: Page) => page.getByRole('dialog');
 
 test('HU-03: una cuenta creada entra al sistema y deja de entrar al desactivarla', async ({
   page,
   browser,
 }) => {
-  aceptarDialogos(page);
   await entrarComo(page, 'admin');
   await page.goto('/admin/personal');
 
@@ -25,6 +22,9 @@ test('HU-03: una cuenta creada entra al sistema y deja de entrar al desactivarla
   const telefono = await contexto.newPage();
   await ingresar(telefono, 'marta@gesnoc.test', 'clave-inicial-1');
   await expect(telefono).toHaveURL(/\/personal$/);
+  // Sin turno esta noche no hay chat del personal (pedido del Product Owner, 18 nov).
+  await expect(telefono.getByRole('heading', { name: 'Mis turnos' })).toBeVisible();
+  await expect(telefono.getByRole('button', { name: /^Chat del personal/ })).toHaveCount(0);
 
   // Brecha 5: la persona cambia la contraseña que le dio la administración y sigue dentro.
   await telefono.goto('/personal/clave');
@@ -37,6 +37,7 @@ test('HU-03: una cuenta creada entra al sistema y deja de entrar al desactivarla
   await expect(telefono).toHaveURL(/\/personal\/clave$/);
 
   await page.getByRole('button', { name: 'Desactivar a Marta Lagos' }).click();
+  await aceptarPregunta(page);
   await expect(page.getByText('Desactivada')).toBeVisible();
 
   await telefono.reload();

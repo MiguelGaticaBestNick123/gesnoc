@@ -1,18 +1,15 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { formatearPesos } from '../../src/shared/utilidades/dinero';
-import { entrarComo } from './apoyo';
+import { aceptarPregunta, entrarComo } from './apoyo';
 
 // Corre al final, cuando terminaron las demás pruebas (proyecto «cierre»): la administración recibe
 // el efectivo, cierra las cuentas que quedaron, cuenta la caja con una diferencia y su nota, y
 // cierra la noche (HU-26, HU-27, HU-28 y HU-12). Después, el turno ya no da acceso (RN-05).
 
-const aceptarDialogos = (page: Page) => page.on('dialog', (dialogo) => dialogo.accept());
-
 test('la noche se cierra con la caja explicada y el turno deja de dar acceso', async ({
   page,
   browser,
 }) => {
-  aceptarDialogos(page);
   await entrarComo(page, 'admin');
 
   await page.goto('/admin/noche');
@@ -25,6 +22,7 @@ test('la noche se cierra con la caja explicada y el turno deja de dar acceso', a
   for (let vuelta = 0; vuelta < 10 && (await confirmar.count()) > 0; vuelta++) {
     const antes = await confirmar.count();
     await confirmar.first().click();
+    await aceptarPregunta(page);
     await expect(confirmar).toHaveCount(antes - 1);
   }
   await expect(page.getByText('No queda efectivo por confirmar.')).toBeVisible();
@@ -35,6 +33,7 @@ test('la noche se cierra con la caja explicada y el turno deja de dar acceso', a
   for (let vuelta = 0; vuelta < 30 && (await cerrar.count()) > 0; vuelta++) {
     const antes = await cerrar.count();
     await cerrar.first().click();
+    await aceptarPregunta(page);
     await expect(cerrar).toHaveCount(antes - 1);
   }
   await expect(page.getByText('No quedan cuentas abiertas.')).toBeVisible();
@@ -54,6 +53,7 @@ test('la noche se cierra con la caja explicada y el turno deja de dar acceso', a
   await page.goto('/admin/noche');
   await expect(page.getByText(`Esperado ${formatearPesos(monto)}`, { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Cerrar la noche' }).click();
+  await aceptarPregunta(page);
   await expect(page).toHaveURL(/\/admin\/ventas\?fecha=[\d-]+&cerrada=\d+$/);
   const aviso = page.getByRole('alert').filter({ hasText: 'quedó cerrada' });
   await expect(aviso).toContainText('faltan $1.000');

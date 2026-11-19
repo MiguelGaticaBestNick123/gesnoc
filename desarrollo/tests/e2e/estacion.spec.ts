@@ -32,7 +32,10 @@ test('HU-17 a HU-19: cada estación recibe su parte en 5 s o menos y la barra la
   const enBarra = barra!.getByRole('article', { name: `Pedido ${numero}`, exact: true });
   await expect(enBarra).toBeVisible({ timeout: 5000 });
   await expect(enBarra.getByText('1 × Mojito')).toBeVisible();
-  await expect(enBarra.getByText('Mesa 6 · Diego Soto')).toBeVisible();
+  await expect(enBarra.getByText('Mesa 6', { exact: true })).toBeVisible();
+  // Pedido del Product Owner (18 nov): la hora del pedido y quién lo tomó, destacado.
+  await expect(enBarra.getByText('Diego Soto', { exact: true })).toBeVisible();
+  await expect(enBarra.getByText(/^· \d{2}:\d{2}$/)).toBeVisible();
   await expect(enBarra.getByText(/Papas fritas/)).toHaveCount(0);
 
   // HU-18: la cocina ve la comida con el número de personas, sin bebidas.
@@ -64,6 +67,16 @@ test('HU-17 a HU-19: cada estación recibe su parte en 5 s o menos y la barra la
   await expect(
     barra!.getByRole('article', { name: `Pedido ${numero}, lista`, exact: true }),
   ).toHaveCount(0, { timeout: 5000 });
+
+  // Historial de comandas (pedido del Product Owner, 18 nov): la cocina ve el pedido completo, con
+  // su hora, su mesa, quién lo tomó y en qué va la parte de cada estación.
+  await cocina!.goto('/cocina/historial');
+  await cocina!.getByRole('combobox', { name: 'Estación' }).selectOption('todas');
+  const enHistorial = cocina!.getByRole('article', { name: `Pedido ${numero}`, exact: true });
+  await expect(enHistorial.getByText('Salón · Mesa 6 · 2 personas')).toBeVisible();
+  await expect(enHistorial.getByText('Diego Soto', { exact: true })).toBeVisible();
+  await expect(enHistorial.getByText(/^Entregada \d{2}:\d{2}$/)).toBeVisible();
+  await expect(enHistorial.getByText('En preparación')).toBeVisible();
 
   await Promise.all(contextos.map((c) => c.close()));
 });

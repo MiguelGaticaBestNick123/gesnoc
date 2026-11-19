@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { abrirMesa, agregar, entrarComo, enviar } from './apoyo';
+import { abrirMesa, aceptarPregunta, agregar, entrarComo, enviar } from './apoyo';
 
 // Cada prueba usa mesas distintas del Salón: corren en paralelo sobre la misma noche abierta.
 
@@ -104,10 +104,10 @@ test('HU-14 CA2: un cliente de pie se abre con una referencia y queda en las cue
 });
 
 test('una cuenta abierta por error se cierra sin consumo y libera la mesa', async ({ page }) => {
-  page.on('dialog', (dialogo) => dialogo.accept());
   await entrarComo(page, 'garzon');
   await abrirMesa(page, 8);
   await page.getByRole('button', { name: 'Cerrar cuenta sin consumo' }).click();
+  await aceptarPregunta(page);
   await expect(page).toHaveURL(/\/garzon$/);
   await expect(page.getByRole('button', { name: 'Mesa 8, libre' })).toBeVisible();
 });

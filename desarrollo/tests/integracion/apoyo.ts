@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { afterAll, beforeEach } from 'vitest';
+import { afterAll, beforeEach, vi } from 'vitest';
 import { llevaAmbiente, type Actor, type RolTurno } from '@/shared/autorizacion';
 import { hashearClave } from '@/shared/sesion/clave';
 import { vaciar } from '../../db/seeds/demostracion';
@@ -12,6 +12,20 @@ export const consultar = migrador;
 
 /** Deja la base vacía antes de cada prueba del archivo. */
 export const conBaseVacia = () => beforeEach(() => vaciar(migrador));
+
+/**
+ * Pone el reloj del servidor en la tarde de una fecha de Chile (solo `Date`, que sigue avanzando):
+ * lo que depende de «hoy», como la vigencia de una lista, no cambia según el día en que corran las
+ * pruebas. Hasta `relojReal()`.
+ */
+export const fijarReloj = (fecha: string, hora = '15:00') =>
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date(`${fecha}T${hora}:00-03:00`),
+    shouldAdvanceTime: true,
+  });
+
+export const relojReal = () => vi.useRealTimers();
 
 export const administracion: Actor = {
   id: 0,

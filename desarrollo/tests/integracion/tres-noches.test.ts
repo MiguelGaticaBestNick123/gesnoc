@@ -12,8 +12,11 @@
 //   barra, una mesa retirada y otra renumerada, una cuenta desactivada, una sesión vencida, un
 //   bloqueo por intentos fallidos, una carrera con el cierre y la anonimización de quien cumplió
 //   12 meses sin venir.
+//
+// Las tres noches, los clientes frecuentes de la lista sin término entran gratis; el sábado la
+// administración saca a una de la lista y sus entradas anteriores conservan con qué lista entró.
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { datosPersonaNueva } from '@/modules/acceso/esquemas';
 import { cerrarSesion, iniciarSesion } from '@/modules/acceso/servicios/autenticacion';
 import * as personal from '@/modules/acceso/servicios/personal';
@@ -24,9 +27,10 @@ import { cartaDeMesa } from '@/modules/local/servicios/carta';
 import * as catalogo from '@/modules/local/servicios/catalogo';
 import { guardarPlano } from '@/modules/local/servicios/mapa';
 import { regenerarCodigo } from '@/modules/local/servicios/qr';
-import { datosInvitacion } from '@/modules/noche/esquemas';
+import { datosIntegrante, datosInvitacion, datosLista } from '@/modules/noche/esquemas';
 import { bitacora } from '@/modules/noche/servicios/bitacora';
 import * as detalles from '@/modules/noche/servicios/detalles';
+import * as listas from '@/modules/noche/servicios/listas';
 import * as noches from '@/modules/noche/servicios/noches';
 import * as turnos from '@/modules/noche/servicios/turnos';
 import { datosEntrada, datosFicha, datosReporte } from '@/modules/porteria/esquemas';
@@ -53,7 +57,7 @@ import { NoAutorizado } from '@/shared/errores';
 import { actorDeToken } from '@/shared/sesion/actor';
 import { digitoVerificador } from '@/shared/utilidades/rut';
 import { correoDe, sembrar, vaciar } from '../../db/seeds/demostracion';
-import { CLAVE, consultar } from './apoyo';
+import { CLAVE, consultar, fijarReloj, relojReal } from './apoyo';
 
 const SIEMBRA = '2026-12-01';
 const JUEVES = '2026-12-03';
@@ -182,6 +186,29 @@ async function leerLocal() {
 const ambienteId = (nombre: string) => local.ambiente.get(nombre)!;
 const estacionId = (nombre: string) => local.estacion.get(nombre)!;
 const personaId = (clave: string) => local.persona.get(clave)!;
+
+// Clientes frecuentes de la lista sin término que trae el local de demostración.
+const FRECUENTES = {
+  andres: { documento: '12765432-8', tipo: 'rut', nombre: 'Andrés', apellido: 'Valdés' },
+  paz: { documento: '14321987-9', tipo: 'rut', nombre: 'Paz', apellido: 'Cifuentes' },
+} as const;
+
+/** La lista con ese nombre que vale esa noche: la semilla trae otros «Bailarines» del día 1. */
+async function idDeLista(nombre: string, noche: string) {
+  const filas = await consultar<{ id: number }[]>`
+    select id from gesnoc.lista
+    where nombre = ${nombre} and desde <= ${noche} and (hasta is null or hasta >= ${noche})`;
+  expect(filas).toHaveLength(1);
+  return filas[0]!.id;
+}
+
+/** La lista con que la puerta reconoció a la persona esa noche (HU-33 CA2). */
+async function listaDeLaEntrada(fecha: string, documento: string) {
+  const [fila] = await consultar<{ lista_id: number | null }[]>`
+    select e.lista_id from gesnoc.entrada e join gesnoc.cliente c on c.id = e.cliente_id
+    where e.fecha = ${fecha} and c.documento = ${documento}`;
+  return fila?.lista_id;
+}
 
 async function mesaDe(ambiente: string, numero: number) {
   const [fila] = await consultar<{ id: number }[]>`
@@ -873,7 +900,10 @@ const resumenes: Awaited<ReturnType<typeof comprobarNoche>>[] = [];
 // =============================================================================================
 
 describe('Tres noches completas, de la programación al cierre', () => {
+  afterAll(relojReal);
   beforeAll(async () => {
+    // «Hoy» es el día de la siembra, antes del jueves: lo que se prepara no empieza en el pasado.
+    fijarReloj(SIEMBRA);
     await vaciar(consultar);
     await sembrar(consultar, CLAVE, SIEMBRA);
     await leerLocal();
@@ -901,8 +931,8 @@ describe('Tres noches completas, de la programación al cierre', () => {
       values (${rodrigo!.id}, 1, ${HACE_UN_ANO}, 'advertencia',
               'Discutió con el guardia en la fila', ${personaId('guardia')})`;
     await consultar`
-      insert into gesnoc.lista (fecha, numero, nombre, responsable, gratis)
-      values (${HACE_UN_ANO}, 1, 'Cumpleaños de Rodrigo', 'Rodrigo Antiguo', false)`;
+      insert into gesnoc.lista (nombre, responsable, gratis, desde, hasta)
+      values ('Cumpleaños de Rodrigo', 'Rodrigo Antiguo', false, ${HACE_UN_ANO}, ${HACE_UN_ANO})`;
     await consultar`
       insert into gesnoc.invitacion (fecha, documento, nombre, apellido, invitado_por, gratis)
       values (${HACE_UN_ANO}, ${rut(13_333_334)}, 'Amigo', 'Del DJ', 'DJ de esa noche', true)`;
@@ -940,23 +970,25 @@ describe('Tres noches completas, de la programación al cierre', () => {
         items: [{ productoId: local.producto.get('Botella de pisco 35°')!.id, cantidad: 1 }],
       });
       await detalles.agregarEvento(admin, JUEVES, 'Karaoke abierto', '23:30');
-      await detalles.guardarLista(admin, {
-        fecha: JUEVES,
-        numero: null,
-        nombre: 'Cumpleaños de Sofía',
-        responsable: 'Sofía Morales',
-        gratis: false,
-      });
+      await listas.guardarLista(
+        admin,
+        datosLista.parse({
+          nombre: 'Cumpleaños de Sofía',
+          responsable: 'Sofía Morales',
+          desde: JUEVES,
+          duracion: 'noche',
+        }),
+      );
+      const deSofia = await idDeLista('Cumpleaños de Sofía', JUEVES);
       const cumpleanos = [rut(15_000_001), rut(15_000_002), rut(15_000_003)];
       for (const [i, documento] of cumpleanos.entries()) {
-        await detalles.invitar(
+        await listas.agregarIntegrante(
           admin,
-          datosInvitacion.parse({
-            fecha: JUEVES,
+          datosIntegrante.parse({
+            listaId: deSofia,
             documento,
             nombre: `Amiga ${i + 1}`,
             apellido: 'De Sofía',
-            listaNumero: 1,
           }),
         );
       }
@@ -1038,6 +1070,9 @@ describe('Tres noches completas, de la programación al cierre', () => {
         fila.push(visitante(azar, 20_000_000 + i * 7, formaAlAzar(azar)));
       }
       fila[3] = { ...fila[3]!, forma: 'gratis' };
+      // Andrés y Paz son clientes frecuentes: la lista sin término los deja entrar gratis.
+      fila[0] = { ...FRECUENTES.andres, forma: 'gratis' };
+      fila[1] = { ...FRECUENTES.paz, forma: 'gratis' };
       for (const [i, documento] of cumpleanos.entries()) {
         fila.push({
           documento,
@@ -1092,6 +1127,22 @@ describe('Tres noches completas, de la programación al cierre', () => {
       }
       // CA2: el invitado gratis entra sin ticket ni medio de pago.
       expect(libro.entradas.get(delDj)).toEqual({ forma: 'gratis', ticket: null });
+      // Los clientes frecuentes vienen en la lista sin término, que vale todas las noches, y su
+      // entrada queda vinculada a ella; la del cumpleaños, a la de esa noche (HU-33 CA2).
+      for (const { busqueda } of resultados) {
+        const deFrecuentes: string[] = [FRECUENTES.andres.documento, FRECUENTES.paz.documento];
+        if (deFrecuentes.includes(busqueda.documento)) {
+          expect(busqueda.invitacion).toMatchObject({
+            lista: 'Clientes frecuentes',
+            responsable: 'Carla Muñoz',
+            gratis: true,
+          });
+        }
+      }
+      const frecuentes = await idDeLista('Clientes frecuentes', JUEVES);
+      expect(await listaDeLaEntrada(JUEVES, FRECUENTES.paz.documento)).toBe(frecuentes);
+      expect(await listaDeLaEntrada(JUEVES, cumpleanos[0]!)).toBe(deSofia);
+      expect(await listaDeLaEntrada(JUEVES, delDj)).toBeNull();
       // CU-23 5a: quien ya entró no entra de nuevo; se muestran su hora y su ticket.
       const repetido = await registrarEntrada(libro, 'apoyo', fila[0]!);
       expect(repetido.hecho).toMatchObject({
@@ -1293,31 +1344,28 @@ describe('Tres noches completas, de la programación al cierre', () => {
           items: [{ productoId: local.producto.get(premio)!.id, cantidad: 1 }],
         });
       }
-      const listas = [
-        { nombre: 'Bailarines', responsable: 'Javiera Soto', gratis: true },
-        { nombre: 'Despedida de soltera', responsable: 'Carolina Pinto', gratis: false },
-      ];
-      for (const lista of listas) {
-        await detalles.guardarLista(admin, { fecha: VIERNES, numero: null, ...lista });
+      for (const lista of [
+        { nombre: 'Bailarines', responsable: 'Javiera Soto', gratis: 'on' },
+        { nombre: 'Despedida de soltera', responsable: 'Carolina Pinto' },
+      ]) {
+        await listas.guardarLista(
+          admin,
+          datosLista.parse({ ...lista, desde: VIERNES, duracion: 'noche' }),
+        );
       }
+      const deBailarines = await idDeLista('Bailarines', VIERNES);
+      const deDespedida = await idDeLista('Despedida de soltera', VIERNES);
       const bailarines = [0, 1, 2, 3, 4].map((i) => rut(16_000_000 + i * 11));
       const despedida = [0, 1, 2, 3, 4].map((i) => rut(16_500_000 + i * 11));
-      for (const [listaNumero, documentos] of [
-        [1, bailarines],
-        [2, despedida],
+      for (const [listaId, documentos, apellido] of [
+        [deBailarines, bailarines, 'Bailarina'],
+        [deDespedida, despedida, 'Invitada'],
       ] as const) {
-        for (const [i, documento] of documentos.entries()) {
-          await detalles.invitar(
-            admin,
-            datosInvitacion.parse({
-              fecha: VIERNES,
-              documento,
-              nombre: `Persona ${i + 1}`,
-              apellido: listaNumero === 1 ? 'Bailarina' : 'Invitada',
-              listaNumero,
-            }),
-          );
-        }
+        // La organizadora manda la lista por mensaje y la administración la pega completa.
+        const texto = documentos
+          .map((documento, i) => `${conPuntos(documento)} Persona${i + 1} ${apellido}`)
+          .join('\n');
+        expect(await listas.pegarIntegrantes(admin, listaId, texto)).toBe(5);
       }
       const equipo = ['garzon', 'garzon2', 'barra', 'barra2', 'cocina', 'guardia', 'apoyo'];
       for (const clave of equipo) {
@@ -1420,12 +1468,16 @@ describe('Tres noches completas, de la programación al cierre', () => {
       ]);
       expect(libro.entradas.size).toBe(401); // los 400 de la fila y quien llegó a los dos teléfonos
       // Los bailarines ya entraron: su lista queda como registro de cómo entraron (HU-33 CA2).
-      await expect(detalles.quitarLista(admin, VIERNES, 1)).rejects.toThrow(
-        '5 personas de esta lista ya entraron',
+      await expect(listas.quitarLista(admin, deBailarines)).rejects.toThrow(
+        '5 personas ya entraron con esta lista esta noche',
       );
-      await expect(detalles.quitarInvitacion(admin, VIERNES, bailarines[0]!)).rejects.toThrow(
-        'Esta persona ya entró esta noche',
-      );
+      // HU-34 CA2: sacar de la lista a una bailarina que ya entró no borra cómo entró.
+      await listas.quitarIntegrante(admin, deBailarines, bailarines[0]!);
+      expect(await listaDeLaEntrada(VIERNES, bailarines[0]!)).toBe(deBailarines);
+      // Los clientes frecuentes también valen el viernes.
+      expect(
+        (await puerta.buscar(await como('guardia'), FRECUENTES.andres.documento)).invitacion,
+      ).toMatchObject({ lista: 'Clientes frecuentes', gratis: true });
 
       // --- 1:00: la administración actualiza la carta ---
       // Un cliente del Salón pide Schop antes del cambio de precio.
@@ -1889,11 +1941,21 @@ describe('Tres noches completas, de la programación al cierre', () => {
       for (let i = 0; i < 60; i++) {
         porTres[i % 3]!.push(visitante(azar, 25_000_000 + i * 17, formaAlAzar(azar)));
       }
+      // La administración saca a Paz de los clientes frecuentes; Andrés sigue y vuelve el sábado.
+      const frecuentes = await idDeLista('Clientes frecuentes', JUEVES);
+      await listas.quitarIntegrante(admin, frecuentes, FRECUENTES.paz.documento);
+      porTres[0]![0] = { ...FRECUENTES.andres, forma: 'gratis' };
+      expect(
+        (await puerta.buscar(await como('guardia'), FRECUENTES.paz.documento)).invitacion,
+      ).toBeNull();
       await Promise.all(
         ['guardia', 'apoyo', 'refuerzo5'].map(async (quien, i) => {
           for (const persona of porTres[i]!) await registrarEntrada(libro, quien, persona);
         }),
       );
+      // HU-34 CA2: la entrada del jueves de Paz conserva la lista con que entró.
+      expect(await listaDeLaEntrada(SABADO, FRECUENTES.andres.documento)).toBe(frecuentes);
+      expect(await listaDeLaEntrada(JUEVES, FRECUENTES.paz.documento)).toBe(frecuentes);
 
       // --- La sala ---
       // CU-13 5e: el Rooftop todavía no tiene barra: el pedido no se registra, ni la comida.
@@ -2103,9 +2165,13 @@ describe('Tres noches completas, de la programación al cierre', () => {
       expect(
         await consultar`select 1 from gesnoc.invitacion where fecha = ${HACE_UN_ANO}`,
       ).toHaveLength(0);
-      expect(await consultar`select 1 from gesnoc.lista where fecha = ${HACE_UN_ANO}`).toHaveLength(
+      expect(await consultar`select 1 from gesnoc.lista where desde = ${HACE_UN_ANO}`).toHaveLength(
         0,
       );
+      // La lista sin término de los clientes frecuentes sigue: la mantiene la administración.
+      expect(
+        await consultar`select 1 from gesnoc.lista where nombre = 'Clientes frecuentes'`,
+      ).toHaveLength(1);
       // Si vuelve, la puerta no lo reconoce: es una persona nueva.
       expect(
         await consultar`select 1 from gesnoc.cliente where documento = ${rut(11_111_112)}`,

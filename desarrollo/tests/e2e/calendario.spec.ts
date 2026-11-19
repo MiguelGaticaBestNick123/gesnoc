@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { entrarComo } from './apoyo';
+import { aceptarPregunta, entrarComo } from './apoyo';
 
 // Abril de 2030 es solo de esta prueba: otras programan marzo de 2030 en paralelo.
 
@@ -43,7 +43,6 @@ test('HU-08 y HU-09: la administración habilita un día en el calendario y la p
 test('HU-10: al asignar un rol se recomiendan primero quienes lo hacen habitualmente', async ({
   page,
 }) => {
-  page.on('dialog', (dialogo) => dialogo.accept());
   await entrarComo(page, 'admin');
   await page.goto('/admin/asignacion');
 
@@ -57,6 +56,7 @@ test('HU-10: al asignar un rol se recomiendan primero quienes lo hacen habitualm
 
   // Un toque asigna; como Rocío no postuló, se confirma antes.
   await page.getByRole('button', { name: 'Asignar a Rocío Paredes como Guardia' }).click();
+  await aceptarPregunta(page);
   await expect(
     page.locator('.mantine-Card-root', { hasText: 'Rocío Paredes' }).getByText('Guardia', {
       exact: true,

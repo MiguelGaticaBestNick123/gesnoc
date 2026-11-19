@@ -16,6 +16,7 @@ const comanda = (pedido: number, cambios: Partial<FilaComanda> = {}): FilaComand
   referencia: null,
   ambiente: 'Salón',
   garzon: 'Diego',
+  hora: '22:30',
   ...cambios,
 });
 

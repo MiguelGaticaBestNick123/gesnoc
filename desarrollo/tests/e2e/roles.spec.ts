@@ -10,6 +10,23 @@ test('la administración llega a la caja y a las pantallas de los otros roles', 
   await page.goto('/guardia');
   await expect(page.getByRole('heading', { name: 'Entrada', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Mi pantalla' })).toHaveAttribute('href', '/admin');
+  // Pedido del Product Owner (18 nov): al operar como guardia conserva su menú de administración.
+  await page.getByRole('button', { name: 'Abrir menú' }).click();
+  await expect(page.getByRole('link', { name: 'Arqueo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Guardia' })).toHaveAttribute('data-active', 'true');
+});
+
+test('quien tiene turno y está en otra pantalla ve destacado el camino a la suya', async ({
+  page,
+}) => {
+  await entrarComo(page, 'garzon');
+  // Como Diego en la captura del Product Owner: con turno, pero en la sección «Sin turno».
+  await page.goto('/personal');
+  await expect(page.getByRole('link', { name: 'Mi pantalla: Garzón · Salón' })).toBeVisible();
+  // Abajo a la izquierda ya no aparece el nombre de la persona.
+  await page.getByRole('button', { name: 'Abrir menú' }).click();
+  await expect(page.getByRole('link', { name: 'Ir a mi pantalla' })).toBeVisible();
+  await expect(page.getByText('Diego Soto', { exact: true })).toHaveCount(0);
 });
 
 test('un código de carta desconocido no abre nada ni muestra el menú del personal', async ({

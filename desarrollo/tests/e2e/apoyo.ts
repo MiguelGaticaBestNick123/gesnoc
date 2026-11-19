@@ -9,6 +9,16 @@ export async function ingresar(page: Page, correo: string, clave = CLAVE_PRUEBAS
   await page.getByRole('button', { name: 'Ingresar' }).click();
 }
 
+/**
+ * Acepta la pregunta en pantalla que abrió el último toque (las confirmaciones ya no usan el diálogo
+ * del navegador). El botón que acepta es el último del diálogo, después de «Cancelar».
+ */
+export async function aceptarPregunta(page: Page) {
+  const pregunta = page.getByRole('dialog').last();
+  await expect(pregunta.getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible();
+  await pregunta.getByRole('button').last().click();
+}
+
 /** Entra con una cuenta del local de demostración y espera salir de la pantalla de ingreso. */
 export async function entrarComo(page: Page, persona: string) {
   await ingresar(page, correoDe(persona));

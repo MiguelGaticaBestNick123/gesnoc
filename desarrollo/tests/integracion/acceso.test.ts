@@ -167,11 +167,13 @@ describe('HU-02 cerrar sesión', () => {
 });
 
 describe('HU-03 administrar el personal', () => {
+  const sinRoles = { rolHabitual: null, rolAlternativo: null };
   const nueva = {
     nombre: 'Ana Rojas',
     correo: 'ana@gesnoc.test',
     clave: 'clave-inicial',
     esAdministrador: false,
+    ...sinRoles,
   };
 
   it('CA1: el correo no se repite', async () => {
@@ -233,6 +235,7 @@ describe('HU-03 administrar el personal', () => {
         nombre: 'Otra',
         correo,
         esAdministrador: false,
+        ...sinRoles,
       }),
     ).rejects.toThrow('Ya existe una cuenta con ese correo');
   });
@@ -242,8 +245,25 @@ describe('HU-03 administrar el personal', () => {
     const yo = { ...administracion, id };
     await expect(personal.cambiarActivo(yo, id, false)).rejects.toThrow('propia cuenta');
     await expect(
-      personal.editar(yo, id, { nombre: 'Yo', correo, esAdministrador: false }),
+      personal.editar(yo, id, { nombre: 'Yo', correo, esAdministrador: false, ...sinRoles }),
     ).rejects.toThrow('propio acceso');
+  });
+
+  it('el rol habitual y el alternativo se guardan; la base rechaza el mismo rol dos veces', async () => {
+    await personal.crear(administracion, {
+      ...nueva,
+      rolHabitual: 'barman',
+      rolAlternativo: 'garzon',
+    });
+    const [matias] = await personal.listar(administracion);
+    expect(matias).toMatchObject({ principal: 'barman', alternativo: 'garzon' });
+    await expect(
+      personal.editar(administracion, matias!.id, {
+        ...nueva,
+        rolHabitual: 'garzon',
+        rolAlternativo: 'garzon',
+      }),
+    ).rejects.toThrow('El rol alternativo debe ser distinto del habitual');
   });
 
   it('solo la administración administra el personal (RNF-01)', async () => {

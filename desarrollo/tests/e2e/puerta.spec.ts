@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { entrarComo } from './apoyo';
+import { aceptarPregunta, entrarComo } from './apoyo';
 
 // La puerta como la pidió el Product Owner (12 nov): EF, RC, PN o gratis; el ticket solo para las
 // pagadas; quien viene en una lista no se escribe y el guardia no ve lo recaudado.
@@ -50,6 +50,18 @@ test('HU-30 y HU-33: la lista trae el nombre, la entrada pagada recibe ticket y 
   await expect(page.getByText(/recaudado/i)).toHaveCount(0);
 });
 
+test('HU-33: un cliente frecuente viene en la lista sin término y entra gratis', async ({
+  page,
+}) => {
+  await entrarComo(page, 'guardia');
+  await buscar(page, '12.765.432-8');
+  await expect(page.getByText('Entra gratis')).toBeVisible();
+  await expect(
+    page.getByText('Viene en la lista «Clientes frecuentes», de Carla Muñoz.'),
+  ).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Andrés');
+});
+
 test('HU-30 CA2 (RN-21): quien ya entró no entra de nuevo y se ve con qué ticket', async ({
   page,
 }) => {
@@ -81,11 +93,11 @@ test('HU-37: el guardia sortea el premio del Salón entre los tickets de la noch
   page,
 }) => {
   await entrarComo(page, 'guardia');
-  page.on('dialog', (dialogo) => dialogo.accept());
   await page.goto('/guardia/sorteo');
   await expect(page.getByText('Participan 2 tickets')).toBeVisible();
   await expect(page.getByText('1 × Botella de ron añejo')).toBeVisible();
   await page.getByRole('button', { name: 'Sortear el premio de Salón' }).click();
+  await aceptarPregunta(page);
   await expect(page.getByLabel(/^Ticket ganador [12]$/)).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText('Compara el nombre con la cédula')).toBeVisible();
   // Ya sorteado: el Salón no ofrece otro sorteo.

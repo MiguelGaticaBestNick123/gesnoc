@@ -16,11 +16,13 @@ const codigoDeError = async (consulta: Promise<unknown>) => {
 };
 
 describe('esquema migrado', () => {
-  it('tiene las 25 tablas del modelo vigente en el esquema gesnoc', async () => {
+  it('tiene las 27 tablas del modelo vigente en el esquema gesnoc', async () => {
     const [fila] = await sql<{ tablas: number }[]>`
       select count(*)::int as tablas from information_schema.tables
       where table_schema = 'gesnoc' and table_type = 'BASE TABLE'`;
-    expect(fila?.tablas).toBe(25);
+    // 26 desde el 18 de noviembre (las personas de cada lista pasaron a `integrante`) y 27 desde
+    // el 19, con los mensajes del chat del personal.
+    expect(fila?.tablas).toBe(27);
   });
 
   it('de la historia solo se actualizan las columnas de eventos (RN-09, RN-22, RN-30)', async () => {
@@ -37,6 +39,8 @@ describe('esquema migrado', () => {
       ['pago', 'medio'],
       ['entrada', 'ticket'],
       ['entrada', 'monto'],
+      // La lista con que entró una persona tampoco se cambia (HU-33 CA2).
+      ['entrada', 'lista_id'],
       ['reporte', 'tipo'],
       ['arqueo', 'fondo_inicial'],
     ] as const) {
