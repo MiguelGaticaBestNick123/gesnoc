@@ -6,6 +6,8 @@ export type TipoEstacion = 'barra' | 'cocina';
 
 export interface FilaComanda {
   pedido: number;
+  /** Hora en que se envió el pedido, «22:30» en Chile. */
+  hora: string;
   personas: number | null;
   /** Segundos desde que se envió el pedido. */
   espera: number;
@@ -37,6 +39,8 @@ export interface LineaEnCola {
 
 export interface ComandaEnCola {
   pedido: number;
+  /** Hora en que se envió el pedido, «22:30» en Chile. */
+  hora: string;
   personas: number | null;
   espera: number;
   listaHace: number | null;

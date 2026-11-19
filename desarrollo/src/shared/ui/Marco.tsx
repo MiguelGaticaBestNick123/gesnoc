@@ -3,7 +3,6 @@
 import {
   ActionIcon,
   AppShell,
-  Avatar,
   Box,
   Burger,
   Button,
@@ -20,14 +19,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { salir } from '@/modules/acceso/acciones';
 import { AyudaRol } from '@/modules/acceso/AyudaRol';
-import { gruposDe, rolDeRuta, rutaDe } from '@/modules/acceso/roles';
+import { BotonChat } from '@/modules/chat/Chat';
+import { gruposDe, rolDeRuta, roles, rutaDe } from '@/modules/acceso/roles';
 import { fechaCorta } from '@/shared/utilidades/fechas';
-import { iniciales } from '@/shared/utilidades/texto';
+
+const administracion = roles.find((rol) => rol.clave === 'admin')!;
 
 interface Props {
-  nombre: string;
   /** Qué hace la persona esta noche, por ejemplo «Garzón · Salón». */
   puesto: string;
+  /** La administración conserva su menú aunque abra la pantalla de otro rol. */
+  esAdministrador: boolean;
   /** Pantalla que le corresponde a la persona según su turno. */
   inicio: string;
   /** Fecha operativa de la noche abierta, si la hay. */
@@ -46,14 +48,15 @@ function Marca({ subtitulo }: Readonly<{ subtitulo: string }>) {
       >
         <IconMoonStars size={22} />
       </ThemeIcon>
-      <div>
+      {/* En un teléfono angosto queda solo el ícono: el encabezado lleva el chat, la ayuda y salir. */}
+      <Box visibleFrom="xs">
         <Text fw={700} size="lg" lh={1.1}>
           GesNoc
         </Text>
         <Text size="xs" c="dimmed" lh={1.2}>
           {subtitulo}
         </Text>
-      </div>
+      </Box>
     </Group>
   );
 }
@@ -90,13 +93,22 @@ function EstadoNoche({ noche }: Readonly<{ noche: string | null }>) {
   );
 }
 
-// Marco común del personal: el menú lateral cambia según el rol de la ruta. En un teléfono el menú
-// se abre con el botón de la barra superior.
-export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Props>) {
+// Marco común del personal: el menú lateral es el del rol de la ruta. La administración conserva el
+// suyo cuando abre la pantalla de otro rol desde «Operación» (pedido del Product Owner, 18 nov). En
+// un teléfono el menú se abre con el botón de la barra superior.
+export function Marco({ puesto, esAdministrador, inicio, noche, children }: Readonly<Props>) {
   const ruta = usePathname();
   const [abierto, { toggle, close }] = useDisclosure(false);
   const rol = rolDeRuta(ruta);
+  const menu = esAdministrador ? administracion : rol;
+  const subtitulo =
+    esAdministrador && rol && rol !== administracion
+      ? `Administración · ${rol.nombre}`
+      : (rol?.nombre ?? 'Gestión nocturna');
   const fueraDeSuInicio = ruta !== inicio && !ruta.startsWith(`${inicio}/`);
+  // Quien tiene turno y está en otra pantalla (su calendario, su contraseña) ve destacado el camino
+  // de vuelta a la suya: antes era un enlace discreto que pasaba desapercibido.
+  const volverAlTurno = fueraDeSuInicio && !esAdministrador && inicio !== '/personal';
 
   return (
     <AppShell
@@ -123,7 +135,7 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
               aria-expanded={abierto}
             />
             <Box w={{ sm: 232 }}>
-              <Marca subtitulo={rol?.nombre ?? 'Gestión nocturna'} />
+              <Marca subtitulo={subtitulo} />
             </Box>
             <Box visibleFrom="sm">
               <EstadoNoche noche={noche} />
@@ -131,7 +143,8 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
           </Group>
           <Group gap="xs" wrap="nowrap">
             {/* Fuera de su pantalla, el camino de vuelta: un ícono en el teléfono, donde el
-                encabezado no da para más, y el texto desde 576 px. Los dos miden 44 px (RNF-09). */}
+                encabezado no da para más, y el texto desde 576 px. Los dos miden 44 px (RNF-09).
+                Con turno va relleno y dice cuál es su puesto. */}
             {fueraDeSuInicio && (
               <>
                 <ActionIcon
@@ -139,9 +152,9 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
                   href={inicio}
                   hiddenFrom="xs"
                   size={44}
-                  variant="subtle"
-                  color="gray"
-                  aria-label="Mi pantalla"
+                  variant={volverAlTurno ? 'filled' : 'subtle'}
+                  color={volverAlTurno ? undefined : 'gray'}
+                  aria-label={volverAlTurno ? `Mi pantalla: ${puesto}` : 'Mi pantalla'}
                 >
                   <IconHome size={20} />
                 </ActionIcon>
@@ -149,16 +162,18 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
                   component={Link}
                   href={inicio}
                   visibleFrom="xs"
-                  variant="subtle"
-                  color="gray"
+                  variant={volverAlTurno ? 'filled' : 'subtle'}
+                  color={volverAlTurno ? undefined : 'gray'}
                   size="sm"
                   mih={44}
                   leftSection={<IconHome size={16} />}
                 >
-                  Mi pantalla
+                  {volverAlTurno ? `Mi pantalla: ${puesto}` : 'Mi pantalla'}
                 </Button>
               </>
             )}
+            {/* El chat es de quien trabaja esta noche y de la administración. */}
+            {(esAdministrador || inicio !== '/personal') && <BotonChat />}
             <AyudaRol rol={rol} />
             <form action={salir}>
               <ActionIcon
@@ -198,8 +213,20 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
         </AppShell.Section>
         <AppShell.Section grow component={ScrollArea} p="md">
           <Stack gap="lg">
-            {rol &&
-              gruposDe(rol).map((grupo) => (
+            {volverAlTurno && (
+              <Button
+                component={Link}
+                href={inicio}
+                onClick={close}
+                fullWidth
+                size="md"
+                leftSection={<IconHome size={18} />}
+              >
+                Ir a mi pantalla
+              </Button>
+            )}
+            {menu &&
+              gruposDe(menu).map((grupo) => (
                 <Stack key={grupo.titulo ?? 'inicio'} gap={4}>
                   {grupo.titulo && (
                     <Text size="xs" fw={700} c="dimmed" tt="uppercase" px="sm" mb={2}>
@@ -207,7 +234,7 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
                     </Text>
                   )}
                   {grupo.secciones.map((seccion) => {
-                    const href = rutaDe(rol, seccion);
+                    const href = rutaDe(menu, seccion);
                     const Icono = seccion.icono;
                     // Una subpágina (la noche de un día del calendario) marca su sección.
                     const activa =
@@ -231,21 +258,6 @@ export function Marco({ nombre, puesto, inicio, noche, children }: Readonly<Prop
                 </Stack>
               ))}
           </Stack>
-        </AppShell.Section>
-        <AppShell.Section p="md" style={{ borderTop: '1px solid var(--mantine-color-dark-5)' }}>
-          <Group gap="sm" wrap="nowrap">
-            <Avatar color="violeta" radius="xl">
-              {iniciales(nombre)}
-            </Avatar>
-            <div style={{ minWidth: 0 }}>
-              <Text size="sm" fw={600} truncate>
-                {nombre}
-              </Text>
-              <Text size="xs" c="dimmed" truncate>
-                {puesto}
-              </Text>
-            </div>
-          </Group>
         </AppShell.Section>
       </AppShell.Navbar>
 

@@ -18,6 +18,8 @@ import {
   IconKey,
   IconLayoutDashboard,
   IconListCheck,
+  IconListDetails,
+  IconListSearch,
   IconMap2,
   IconMoon,
   IconQrcode,
@@ -79,6 +81,15 @@ const miClave: Seccion = {
   construida: true,
 };
 
+// Pedido del Product Owner (18 nov): garzón, barra, cocina y administración ven el historial.
+const historialDeComandas: Seccion = {
+  ruta: 'historial',
+  etiqueta: 'Historial de comandas',
+  icono: IconListSearch,
+  descripcion: 'Cada pedido de la noche: hora, mesa, garzón y en qué va cada comanda.',
+  construida: true,
+};
+
 const operarComo = (clave: ClaveRol, etiqueta: string, icono: Icon): Seccion => ({
   ruta: clave,
   etiqueta,
@@ -124,8 +135,19 @@ export const roles: Rol[] = [
         grupo: 'Noche',
         descripcion:
           'Programar cada noche: entrada, premio del sorteo, eventos, listas e invitados.',
-        // Las listas y los invitados son de cada noche (decisión del Product Owner, 12 nov).
+        // Los invitados son de cada noche (decisión del Product Owner, 12 nov).
         historias: ['HU-08', 'HU-34'],
+        construida: true,
+      },
+      {
+        ruta: 'listas',
+        etiqueta: 'Listas',
+        icono: IconListDetails,
+        grupo: 'Noche',
+        descripcion:
+          'Listas de una noche, de varias o sin término, como la de los clientes frecuentes.',
+        // Cada lista tiene su vigencia (decisión del Product Owner, 18 nov).
+        historias: ['HU-34'],
         construida: true,
       },
       {
@@ -145,6 +167,7 @@ export const roles: Rol[] = [
         descripcion: 'Quién hizo qué y cuándo en cada noche, con filtros por tipo y persona.',
         construida: true,
       },
+      { ...historialDeComandas, grupo: 'Noche' },
       {
         ruta: 'efectivo',
         etiqueta: 'Confirmar efectivo',
@@ -273,6 +296,7 @@ export const roles: Rol[] = [
         historias: ['HU-20', 'HU-21'],
         construida: true,
       },
+      historialDeComandas,
       {
         ruta: 'efectivo',
         etiqueta: 'Efectivo por entregar',
@@ -307,6 +331,7 @@ export const roles: Rol[] = [
         historias: ['HU-17', 'HU-19'],
         construida: true,
       },
+      historialDeComandas,
       misTurnos,
       miClave,
     ],
@@ -324,6 +349,7 @@ export const roles: Rol[] = [
         historias: ['HU-18', 'HU-19'],
         construida: true,
       },
+      historialDeComandas,
       misTurnos,
       miClave,
     ],

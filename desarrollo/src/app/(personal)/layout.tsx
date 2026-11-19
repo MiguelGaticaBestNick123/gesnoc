@@ -23,7 +23,12 @@ export default async function LayoutPersonal({
   const [noche, puesto] = await Promise.all([fechaAbierta(), puestoDe(actor)]);
 
   return (
-    <Marco nombre={actor.nombre} puesto={puesto} inicio={inicioDe(actor)} noche={noche ?? null}>
+    <Marco
+      puesto={puesto}
+      esAdministrador={actor.esAdministrador}
+      inicio={inicioDe(actor)}
+      noche={noche ?? null}
+    >
       {children}
     </Marco>
   );

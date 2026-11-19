@@ -12,7 +12,7 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconAlertTriangle, IconChefHat, IconGlassFull } from '@tabler/icons-react';
+import { IconAlertTriangle, IconChefHat, IconGlassFull, IconUser } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { usePantallaEncendida } from '@/shared/navegador/pantalla-encendida';
 import { avisar, useSonido } from '@/shared/navegador/sonido';
@@ -194,7 +194,10 @@ function TarjetaComanda({
       <Stack gap="xs">
         <Group justify="space-between" wrap="nowrap">
           <Text fw={700} size="xl">
-            Pedido {comanda.pedido}
+            Pedido {comanda.pedido}{' '}
+            <Text span c="dimmed" fw={500} size="md">
+              · {comanda.hora}
+            </Text>
           </Text>
           {comanda.anulada ? (
             <Badge color="gray">Anulada</Badge>
@@ -204,10 +207,22 @@ function TarjetaComanda({
             </Badge>
           )}
         </Group>
-        <Text size="sm" c="dimmed">
-          {conPersonas && `${comanda.ambiente} · `}
-          {comanda.ubicacion} · {comanda.garzon}
-        </Text>
+        {/* Quién lo pidió va destacado: es a quien se le avisa y quien lo retira. */}
+        <Group gap={8} wrap="wrap">
+          <Text size="sm" c="dimmed">
+            {conPersonas && `${comanda.ambiente} · `}
+            {comanda.ubicacion}
+          </Text>
+          <Badge
+            variant="light"
+            color="violeta"
+            size="lg"
+            tt="none"
+            leftSection={<IconUser size={13} />}
+          >
+            {comanda.garzon}
+          </Badge>
+        </Group>
         {conPersonas && comanda.personas !== null && (
           <Text fw={600}>
             Para {comanda.personas} {comanda.personas === 1 ? 'persona' : 'personas'}

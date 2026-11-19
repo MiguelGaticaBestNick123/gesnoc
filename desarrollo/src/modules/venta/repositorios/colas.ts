@@ -38,6 +38,7 @@ export async function buscarEstacion(tx: Transaccion, id: number) {
 export async function comandasSinEntregar(fecha: string, estacionId: number) {
   const filas = await db().execute<{
     pedido: number;
+    hora: string;
     personas: number | null;
     espera: number;
     lista_hace: number | null;
@@ -47,6 +48,7 @@ export async function comandasSinEntregar(fecha: string, estacionId: number) {
     garzon: string;
   }>(sql`
     select c.pedido_numero as pedido, p.personas,
+           to_char(p.enviado_en at time zone 'America/Santiago', 'HH24:MI') as hora,
            extract(epoch from now() - p.enviado_en)::int as espera,
            extract(epoch from now() - c.lista_en)::int as lista_hace,
            m.numero as mesa, cu.referencia, a.nombre as ambiente, u.nombre as garzon
