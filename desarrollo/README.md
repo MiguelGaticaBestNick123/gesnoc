@@ -136,7 +136,10 @@ desde ahí la noche no admite operaciones (RN-26).
 
 El plano de mesas es un SVG (`src/modules/local/PlanoMesas.tsx`, ADR-013) que comparten el mapa del
 garzón y el editor de la administración (`/admin/mapa`, HU-05). Se ajusta al ancho del teléfono, se
-acerca y se abre a pantalla completa. La portada de la administración (`/admin`) muestra las cifras
+acerca y se abre a pantalla completa. Desde su mapa, el garzón entra a «Ordenar mesas»
+(`/garzon/plano`), el mismo editor limitado al ambiente de su turno. Ahí mueve las mesas y les
+cambia el número, las sillas, la forma, el tamaño y el giro. Agregar o retirar mesas queda en la
+administración, porque cambia los códigos QR impresos. La portada de la administración (`/admin`) muestra las cifras
 reales de la noche, al día cada 3 segundos.
 
 La carta de cada mesa (`/carta/[token]`, HU-07 y HU-38 a HU-40) muestra los productos activos, con

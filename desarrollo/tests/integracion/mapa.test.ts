@@ -190,9 +190,69 @@ describe('HU-05 editar el mapa de mesas', () => {
     ).rejects.toThrow('El plano cambió');
   });
 
-  it('solo la administración edita el plano', async () => {
+  it('sin turno de garzón no se edita el plano', async () => {
     const plano = await terraza();
-    await expect(guardarPlano(local.persona('garzon2'), plano)).rejects.toThrow(NoAutorizado);
-    await expect(planoParaEditar(local.persona('garzon2'))).rejects.toThrow(NoAutorizado);
+    for (const clave of ['barra', 'sinturno']) {
+      await expect(guardarPlano(local.persona(clave), plano)).rejects.toThrow(NoAutorizado);
+      await expect(planoParaEditar(local.persona(clave))).rejects.toThrow(NoAutorizado);
+    }
+  });
+});
+
+// Pedido del Product Owner (19 nov): el garzón ordena las mesas de su ambiente al empezar el turno.
+describe('el garzón ordena las mesas de su ambiente', () => {
+  it('las mueve y les cambia el número y las sillas', async () => {
+    const garzon = local.persona('garzon2'); // su turno es en la Terraza
+    // Aunque pida el Salón, ordena el ambiente de su turno (RN-14).
+    const plano = await planoParaEditar(garzon, local.salon);
+    expect(plano.ambiente?.id).toBe(local.terraza);
+    expect(plano.ambientes).toEqual([{ id: local.terraza, nombre: 'Terraza' }]);
+    expect(plano.agregaYRetira).toBe(false);
+
+    const [uno, dos, tres] = plano.mesas;
+    const mesas = await guardarPlano(garzon, {
+      ambienteId: local.terraza,
+      mesas: [
+        { ...uno!, numero: 2, posX: 300, posY: 120 },
+        { ...dos!, numero: 1, sillas: 6 },
+        tres!,
+      ],
+      retiradas: [],
+    });
+    expect(mesas.map((m) => [m.id, m.numero])).toEqual([
+      [dos!.id, 1],
+      [uno!.id, 2],
+      [tres!.id, 3],
+    ]);
+    expect(mesas.find((m) => m.id === uno!.id)).toMatchObject({ posX: 300, posY: 120 });
+    expect(mesas.find((m) => m.id === dos!.id)?.sillas).toBe(6);
+  });
+
+  it('no ordena otro ambiente ni agrega o retira mesas', async () => {
+    const garzon = local.persona('garzon2');
+    const salon = await planoParaEditar(administracion, local.salon);
+    await expect(
+      guardarPlano(garzon, { ambienteId: local.salon, mesas: salon.mesas, retiradas: [] }),
+    ).rejects.toThrow(NoAutorizado);
+
+    const plano = await terraza();
+    const nueva = {
+      numero: 4,
+      forma: 'cuadrada' as const,
+      posX: 700,
+      posY: 50,
+      ancho: 80,
+      alto: 80,
+      rotacion: 0,
+      sillas: null,
+    };
+    await expect(
+      guardarPlano(garzon, { ...plano, mesas: [...plano.mesas, nueva] }),
+    ).rejects.toThrow('Agregar o retirar mesas lo hace la administración');
+    const [primera, ...resto] = plano.mesas;
+    await expect(
+      guardarPlano(garzon, { ...plano, mesas: resto, retiradas: [primera!.id] }),
+    ).rejects.toThrow('Agregar o retirar mesas lo hace la administración');
+    expect(await numeros(local.terraza)).toEqual([1, 2, 3]);
   });
 });

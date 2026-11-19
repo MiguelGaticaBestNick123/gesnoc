@@ -15,7 +15,7 @@ import {
   Text,
 } from '@mantine/core';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
-import { IconArmchair, IconChevronRight, IconUserPlus } from '@tabler/icons-react';
+import { IconArmchair, IconArrowsMove, IconChevronRight, IconUserPlus } from '@tabler/icons-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -96,16 +96,29 @@ export function MapaMesas({ inicial }: Readonly<{ inicial: Mapa }>) {
         titulo="Mesas"
         descripcion={`${ambiente.nombre} · ${plural(ocupadas, 'ocupada', 'ocupadas')} · ${plural(mesas.length - ocupadas, 'libre', 'libres')} · ${datos.dePie.length} de pie${llamando > 0 ? ` · ${plural(llamando, 'llama', 'llaman')}` : ''}`}
       >
-        <Button
-          size="sm"
-          mih={44}
-          variant="light"
-          leftSection={<IconUserPlus size={18} />}
-          onClick={dePie.open}
-          disabled={!datos.noche}
-        >
-          Cliente de pie
-        </Button>
+        <Group gap="xs">
+          {/* Pedido del 19 nov: el garzón ordena las mesas de su ambiente al empezar el turno. */}
+          <Button
+            component={Link}
+            href={`/garzon/plano?ambiente=${ambiente.id}`}
+            size="sm"
+            mih={44}
+            variant="default"
+            leftSection={<IconArrowsMove size={18} />}
+          >
+            Ordenar mesas
+          </Button>
+          <Button
+            size="sm"
+            mih={44}
+            variant="light"
+            leftSection={<IconUserPlus size={18} />}
+            onClick={dePie.open}
+            disabled={!datos.noche}
+          >
+            Cliente de pie
+          </Button>
+        </Group>
       </EncabezadoPagina>
 
       {datos.ambientes.length > 1 && (

@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import {
   IconArrowBackUp,
+  IconArrowLeft,
   IconDeviceFloppy,
   IconMap2,
   IconPlus,
@@ -23,6 +24,7 @@ import {
   IconRotateClockwise,
   IconTrash,
 } from '@tabler/icons-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useEffectEvent, useState } from 'react';
 import { mensajeDeFalla } from '@/shared/red';
@@ -64,13 +66,17 @@ const flechas: Record<string, [number, number]> = {
 const numero = (valor: string | number) => (typeof valor === 'number' ? valor : Number(valor));
 
 // HU-05: la administración dibuja el plano de cada ambiente. Los cambios quedan en el teléfono o el
-// computador hasta «Guardar plano», que los aplica todos juntos en una transacción.
+// computador hasta «Guardar plano», que los aplica todos juntos en una transacción. El garzón usa el
+// mismo editor para ordenar las mesas de su ambiente, sin agregar ni retirar (pedido del 19 nov).
 export function EditorPlano({
   inicial,
   ambiente,
-}: Readonly<{ inicial: PlanoParaEditar; ambiente: Ambiente }>) {
+  base = '/admin/mapa',
+  volver,
+}: Readonly<{ inicial: PlanoParaEditar; ambiente: Ambiente; base?: string; volver?: string }>) {
   const router = useRouter();
   const preguntar = useConfirmar();
+  const { agregaYRetira } = inicial;
   const plano = { ancho: ambiente.planoAncho, alto: ambiente.planoAlto };
   const [guardadas, setGuardadas] = useState<MesaEditable[]>(inicial.mesas);
   const [mesas, setMesas] = useState<MesaEditable[]>(inicial.mesas);
@@ -191,7 +197,12 @@ export function EditorPlano({
       setMesas(resultado.mesas);
       setRetiradas([]);
       setSeleccionada(null);
-      setMensaje({ ok: true, texto: 'Plano guardado: los garzones ya lo ven así.' });
+      setMensaje({
+        ok: true,
+        texto: agregaYRetira
+          ? 'Plano guardado: los garzones ya lo ven así.'
+          : 'Mesas guardadas: el resto del equipo ya las ve así.',
+      });
     } catch (error) {
       setMensaje({ ok: false, texto: mensajeDeFalla(error) });
     } finally {
@@ -208,7 +219,7 @@ export function EditorPlano({
         peligro: true,
       }));
     if (!descarta) return;
-    router.push(`/admin/mapa?ambiente=${id}`);
+    router.push(`${base}?ambiente=${id}`);
   }
 
   const dibujadas: MesaDibujada[] = mesas.map((mesa) => ({
@@ -221,9 +232,22 @@ export function EditorPlano({
     <Stack gap="md">
       <EncabezadoPagina
         icono={IconMap2}
-        titulo="Mapa de mesas"
+        titulo={agregaYRetira ? 'Mapa de mesas' : 'Ordenar mesas'}
         descripcion={`${ambiente.nombre} · ${plural(mesas.length, 'mesa', 'mesas')} · arrastra para mover, toca para editar`}
-      />
+      >
+        {volver && (
+          <Button
+            component={Link}
+            href={volver}
+            size="sm"
+            mih={44}
+            variant="default"
+            leftSection={<IconArrowLeft size={18} />}
+          >
+            Volver a las mesas
+          </Button>
+        )}
+      </EncabezadoPagina>
 
       {inicial.ambientes.length > 1 && (
         <SegmentedControl
@@ -234,15 +258,17 @@ export function EditorPlano({
       )}
 
       <Group gap="xs">
-        <Button
-          size="md"
-          mih={44}
-          variant="light"
-          leftSection={<IconPlus size={18} />}
-          onClick={agregar}
-        >
-          Agregar mesa
-        </Button>
+        {agregaYRetira && (
+          <Button
+            size="md"
+            mih={44}
+            variant="light"
+            leftSection={<IconPlus size={18} />}
+            onClick={agregar}
+          >
+            Agregar mesa
+          </Button>
+        )}
         <Button
           size="md"
           mih={44}
@@ -429,26 +455,34 @@ export function EditorPlano({
                     </ActionIcon>
                   </Group>
                 </Group>
-                <Button
-                  size="md"
-                  color="red"
-                  variant="light"
-                  leftSection={<IconTrash size={18} />}
-                  disabled={conCuenta(elegida.id)}
-                  onClick={() => retirar(elegida)}
-                >
-                  {elegida.nueva ? 'Quitar mesa' : 'Retirar mesa'}
-                </Button>
-                {conCuenta(elegida.id) ? (
-                  <Text size="xs" c="dimmed">
-                    Tiene una cuenta abierta: se puede retirar después de cobrarla.
-                  </Text>
+                {agregaYRetira ? (
+                  <>
+                    <Button
+                      size="md"
+                      color="red"
+                      variant="light"
+                      leftSection={<IconTrash size={18} />}
+                      disabled={conCuenta(elegida.id)}
+                      onClick={() => retirar(elegida)}
+                    >
+                      {elegida.nueva ? 'Quitar mesa' : 'Retirar mesa'}
+                    </Button>
+                    {conCuenta(elegida.id) ? (
+                      <Text size="xs" c="dimmed">
+                        Tiene una cuenta abierta: se puede retirar después de cobrarla.
+                      </Text>
+                    ) : (
+                      !elegida.nueva && (
+                        <Text size="xs" c="dimmed">
+                          Retirarla libera su número; sus cuentas pasadas no cambian.
+                        </Text>
+                      )
+                    )}
+                  </>
                 ) : (
-                  !elegida.nueva && (
-                    <Text size="xs" c="dimmed">
-                      Retirarla libera su número; sus cuentas pasadas no cambian.
-                    </Text>
-                  )
+                  <Text size="xs" c="dimmed">
+                    Agregar o retirar mesas lo hace la administración.
+                  </Text>
                 )}
               </Stack>
             ) : (

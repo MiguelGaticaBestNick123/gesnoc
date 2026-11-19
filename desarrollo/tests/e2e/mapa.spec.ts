@@ -41,3 +41,45 @@ test('HU-05: la administración agrega, arrastra y renumera una mesa, y el plano
   await page.reload();
   await expect(page.getByRole('button', { name: 'Mesa 7', exact: true })).toBeVisible();
 });
+
+// Pedido del Product Owner (19 nov). Mueve la mesa 12 del Salón sin renumerarla: otras pruebas
+// buscan las mesas por su número.
+test('el garzón ordena las mesas de su ambiente desde el mapa, sin agregar ni retirar', async ({
+  page,
+}) => {
+  await entrarComo(page, 'garzon');
+  await page.goto('/garzon');
+  await page.getByRole('link', { name: 'Ordenar mesas' }).click();
+  await expect(page.getByRole('heading', { name: 'Ordenar mesas' })).toBeVisible();
+  await expect(page.getByText(/^Salón · \d+ mesas/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Agregar mesa' })).toHaveCount(0);
+
+  // Se elige tocándola, cuando React ya terminó de hidratar.
+  const mesa = page.getByRole('button', { name: 'Mesa 12', exact: true });
+  const panel = page.getByRole('region', { name: 'Mesa elegida' });
+  await expect(async () => {
+    await mesa.click();
+    await expect(panel.getByText('Mesa 12', { exact: true })).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await expect(panel.getByText('Agregar o retirar mesas lo hace la administración.')).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Retirar mesa' })).toHaveCount(0);
+
+  const centro = mesa.locator('text');
+  const antes = (await centro.boundingBox())!;
+  await page.mouse.move(antes.x + antes.width / 2, antes.y + antes.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(antes.x + antes.width / 2 - 40, antes.y + antes.height / 2 - 20, {
+    steps: 8,
+  });
+  await page.mouse.up();
+  expect((await centro.boundingBox())!.x).toBeLessThan(antes.x - 10);
+
+  const sillas = panel.getByLabel('Sillas');
+  await sillas.fill('4');
+  await sillas.blur();
+  await page.getByRole('button', { name: 'Guardar plano' }).click();
+  await expect(page.getByText('Mesas guardadas: el resto del equipo ya las ve así.')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Volver a las mesas' }).click();
+  await expect(page.getByRole('heading', { name: 'Mesas', exact: true })).toBeVisible();
+});
