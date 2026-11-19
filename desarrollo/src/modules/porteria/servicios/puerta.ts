@@ -8,6 +8,7 @@ import { ErrorDeNegocio } from '@/shared/errores';
 import { formatearPesos } from '@/shared/utilidades/dinero';
 import type { DatosEntrada } from '../esquemas';
 import { formaDe, type FormaDeEntrada } from '../formas';
+import { elegirReconocimiento } from '../reconocimiento';
 import { resumenDeReportes } from '../reportes';
 import { reportesDe } from '../repositorios/clientes';
 import * as puerta from '../repositorios/puerta';
@@ -24,11 +25,12 @@ import * as puerta from '../repositorios/puerta';
 export async function buscar(actor: Actor, documento: string) {
   exigir(actor, 'guardia');
   const fecha = await nocheEnCurso();
-  const [cliente, invitacion, precio] = await Promise.all([
+  const [cliente, candidatos, precio] = await Promise.all([
     puerta.clientePorDocumento(db(), documento),
-    puerta.invitacionDe(fecha, documento),
+    puerta.reconocimientos(db(), fecha, documento),
     puerta.precioDeLaNoche(db(), fecha),
   ]);
+  const invitacion = elegirReconocimiento(candidatos);
   const [entrada, visitas, reportes] = cliente
     ? await Promise.all([
         puerta.entradaDe(db(), fecha, cliente.id),
@@ -55,7 +57,16 @@ export async function buscar(actor: Actor, documento: string) {
           registradaEn: entrada.registradaEn,
         }
       : null,
-    invitacion: invitacion ?? null,
+    invitacion: invitacion
+      ? {
+          nombre: invitacion.nombre,
+          apellido: invitacion.apellido,
+          gratis: invitacion.gratis,
+          invitadoPor: invitacion.invitadoPor,
+          lista: invitacion.lista,
+          responsable: invitacion.responsable,
+        }
+      : null,
   };
 }
 
@@ -115,6 +126,11 @@ export async function registrar(actor: Actor, datos: DatosEntrada): Promise<Ingr
       persona = { id: await puerta.asegurarCliente(tx, nueva), ...nueva };
     }
 
+    // HU-33 CA2: la entrada queda vinculada a la lista con que se reconoció a la persona. La lista
+    // cambia con el tiempo; el vínculo dice cómo entró aunque después la saquen de ella.
+    const reconocida = elegirReconocimiento(
+      await puerta.reconocimientos(tx, fecha, datos.documento, true),
+    );
     const ticket = pagada ? await puerta.siguienteTicket(tx, fecha) : null;
     const registradaEn = await puerta.insertarEntrada(tx, {
       fecha,
@@ -123,6 +139,7 @@ export async function registrar(actor: Actor, datos: DatosEntrada): Promise<Ingr
       medioPago: pagada ? datos.forma : null,
       ticket,
       registradaPor: actor.id,
+      listaId: reconocida?.listaId ?? null,
     });
     // Una entrada en efectivo cambia el esperado de la caja: un conteo anterior deja de valer.
     if (datos.forma === 'efectivo') await anularConteo(tx, fecha);

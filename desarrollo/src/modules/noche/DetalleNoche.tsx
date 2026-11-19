@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Accordion,
   Alert,
   Anchor,
   Badge,
@@ -12,19 +11,16 @@ import {
   Modal,
   MultiSelect,
   NumberInput,
-  SegmentedControl,
   SimpleGrid,
   Stack,
   Text,
-  Textarea,
   TextInput,
   ThemeIcon,
   Title,
-  VisuallyHidden,
 } from '@mantine/core';
 import {
   IconArrowLeft,
-  IconClipboardText,
+  IconChevronRight,
   IconConfetti,
   IconListDetails,
   IconMoonStars,
@@ -44,34 +40,27 @@ import { enlaceDeWhatsApp, mensajeDeLaNoche } from './aviso';
 import { FormularioAccion } from '@/shared/ui/FormularioAccion';
 import { mesDe } from '@/shared/utilidades/calendario';
 import { formatearPesos } from '@/shared/utilidades/dinero';
-import { formatearHora, tituloDeFecha } from '@/shared/utilidades/fechas';
-import { formatearDocumento } from '@/shared/utilidades/rut';
+import { tituloDeFecha } from '@/shared/utilidades/fechas';
 import {
   agregarEvento,
   editarNoche,
   elegirPremio,
-  guardarLista,
   invitar,
-  pegarLista,
   quitarEvento,
   quitarInvitacion,
-  quitarLista,
 } from './acciones';
-import type { InvitacionDeLaNoche } from './repositorios/detalles';
 import type { DetalleDeNoche } from './servicios/detalles';
 import { CamposNoche } from './CamposNoche';
+import { DialogosDeListas, GrupoDeListas, type DialogoLista } from './ListasVigentes';
 import { estadosDeNoche } from './nombres';
-
-type Lista = DetalleDeNoche['listas'][number];
+import { CamposDocumento, FilaPersona } from './Personas';
 
 type Dialogo =
   | { tipo: 'noche' }
   | { tipo: 'premio'; ambiente: { id: number; nombre: string } }
   | { tipo: 'evento' }
-  | { tipo: 'lista'; lista?: Lista }
-  | { tipo: 'persona'; lista: Lista }
-  | { tipo: 'pegar'; lista: Lista }
   | { tipo: 'invitado' }
+  | NonNullable<DialogoLista>
   | null;
 
 const estados = estadosDeNoche;
@@ -129,87 +118,6 @@ const botonAgregar = (texto: string, alTocar: () => void, etiqueta?: string) => 
     {texto}
   </Button>
 );
-
-/** Quien ya entró, con su hora: la puerta lo registró con su documento. */
-const marcaDeEntrada = (persona: InvitacionDeLaNoche) =>
-  persona.entroEn ? (
-    <Badge color="green" variant="light" tt="none">
-      Entró {formatearHora(persona.entroEn)}
-    </Badge>
-  ) : null;
-
-function FilaPersona({
-  persona,
-  fecha,
-  editable,
-  detalle,
-}: Readonly<{
-  persona: InvitacionDeLaNoche;
-  fecha: string;
-  editable: boolean;
-  detalle?: React.ReactNode;
-}>) {
-  const nombre = `${persona.nombre} ${persona.apellido}`;
-  return (
-    <Group justify="space-between" wrap="nowrap" gap="xs" py={4}>
-      <div style={{ minWidth: 0 }}>
-        <Text size="sm" fw={600} truncate>
-          {nombre}
-        </Text>
-        <Text size="xs" c="dimmed" truncate>
-          {formatearDocumento(persona.documento)}
-          {detalle}
-        </Text>
-      </div>
-      <Group gap={6} wrap="nowrap">
-        {marcaDeEntrada(persona)}
-        {editable && !persona.entroEn && (
-          <BotonAccion
-            accion={quitarInvitacion}
-            datos={{ fecha, documento: persona.documento }}
-            etiqueta="Quitar"
-            variant="subtle"
-            color="red"
-            px="xs"
-            aria-label={`Quitar a ${nombre}`}
-            confirmar={`¿Quitar a ${nombre} de esta noche?`}
-          />
-        )}
-      </Group>
-    </Group>
-  );
-}
-
-/** Documento con su tipo: el guardia y la administración lo eligen, no se adivina (RN-21). */
-function CamposDocumento() {
-  const [tipo, setTipo] = useState('rut');
-  return (
-    <>
-      <input type="hidden" name="tipoDocumento" value={tipo} />
-      <SegmentedControl
-        value={tipo}
-        onChange={setTipo}
-        aria-label="Tipo de documento"
-        data={[
-          { value: 'rut', label: 'RUT' },
-          { value: 'extranjero', label: 'Extranjero' },
-        ]}
-      />
-      <TextInput
-        name="documento"
-        label="Documento"
-        placeholder={tipo === 'rut' ? '12.345.678-5' : 'Letras y números'}
-        size="md"
-        required
-        autoComplete="off"
-      />
-      <Group grow>
-        <TextInput name="nombre" label="Nombre" size="md" required autoComplete="off" />
-        <TextInput name="apellido" label="Apellido" size="md" required autoComplete="off" />
-      </Group>
-    </>
-  );
-}
 
 /** El premio de un ambiente: hasta cinco productos del catálogo, cada uno con su cantidad. */
 function FormularioPremio({
@@ -271,110 +179,6 @@ function FormularioPremio({
         </Group>
       ))}
     </FormularioAccion>
-  );
-}
-
-function TarjetaLista({
-  lista,
-  fecha,
-  editable,
-  abrir,
-}: Readonly<{
-  lista: Lista;
-  fecha: string;
-  editable: boolean;
-  abrir: (dialogo: Dialogo) => void;
-}>) {
-  const entraron = lista.personas.filter((p) => p.entroEn).length;
-  return (
-    <Accordion.Item value={String(lista.numero)}>
-      <Accordion.Control>
-        <VisuallyHidden>Lista </VisuallyHidden>
-        <Group gap="xs" wrap="nowrap">
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <Group gap={6}>
-              <Text fw={700} truncate>
-                {lista.nombre}
-              </Text>
-              {lista.gratis ? (
-                <Badge color="green" variant="light" tt="none">
-                  Entran gratis
-                </Badge>
-              ) : (
-                <Badge color="gray" variant="light" tt="none">
-                  Pagan entrada
-                </Badge>
-              )}
-            </Group>
-            <Text size="xs" c="dimmed" truncate>
-              {lista.personas.length} {lista.personas.length === 1 ? 'persona' : 'personas'}
-              {entraron > 0 && ` · ${entraron} ${entraron === 1 ? 'entró' : 'entraron'}`} · organiza{' '}
-              {lista.responsable}
-            </Text>
-          </div>
-        </Group>
-      </Accordion.Control>
-      <Accordion.Panel>
-        <Stack gap={4}>
-          {lista.personas.length === 0 && (
-            <Text size="sm" c="dimmed">
-              Todavía no tiene personas. Agrégalas una por una o pega la lista que te enviaron.
-            </Text>
-          )}
-          {lista.personas.map((persona) => (
-            <FilaPersona
-              key={persona.documento}
-              persona={persona}
-              fecha={fecha}
-              editable={editable}
-            />
-          ))}
-          {editable && (
-            <Group gap="xs" mt="sm">
-              <Button
-                size="sm"
-                mih={44}
-                variant="light"
-                leftSection={<IconPlus size={16} />}
-                onClick={() => abrir({ tipo: 'persona', lista })}
-                aria-label={`Agregar persona a ${lista.nombre}`}
-              >
-                Persona
-              </Button>
-              <Button
-                size="sm"
-                mih={44}
-                variant="light"
-                leftSection={<IconClipboardText size={16} />}
-                onClick={() => abrir({ tipo: 'pegar', lista })}
-                aria-label={`Pegar lista en ${lista.nombre}`}
-              >
-                Pegar lista
-              </Button>
-              <Button
-                size="sm"
-                mih={44}
-                variant="default"
-                leftSection={<IconPencil size={16} />}
-                onClick={() => abrir({ tipo: 'lista', lista })}
-                aria-label={`Editar ${lista.nombre}`}
-              >
-                Editar
-              </Button>
-              <BotonAccion
-                accion={quitarLista}
-                datos={{ fecha, numero: lista.numero }}
-                etiqueta="Eliminar"
-                variant="subtle"
-                color="red"
-                aria-label={`Eliminar ${lista.nombre}`}
-                confirmar={`¿Eliminar ${lista.nombre} con ${lista.personas.length === 1 ? 'su persona' : `sus ${lista.personas.length} personas`}?`}
-              />
-            </Group>
-          )}
-        </Stack>
-      </Accordion.Panel>
-    </Accordion.Item>
   );
 }
 
@@ -571,28 +375,29 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
         icono={IconListDetails}
         color="violeta"
         titulo="Listas"
-        descripcion="Quien organiza envía los datos antes y en la puerta no se escriben. Un cumpleaños paga su entrada; los bailarines entran gratis."
+        descripcion="Las de esta noche y las que siguen vigentes, como los clientes frecuentes. Quien organiza envía los datos antes y en la puerta no se escriben."
         accion={
           editable && botonAgregar('Lista', () => setDialogo({ tipo: 'lista' }), 'Nueva lista')
         }
       >
         {detalle.listas.length === 0 ? (
           <Text size="sm" c="dimmed">
-            Sin listas para esta noche.
+            Ninguna lista vale esta noche.
           </Text>
         ) : (
-          <Accordion variant="separated" multiple chevronPosition="right">
-            {detalle.listas.map((lista) => (
-              <TarjetaLista
-                key={lista.numero}
-                lista={lista}
-                fecha={noche.fecha}
-                editable={editable}
-                abrir={setDialogo}
-              />
-            ))}
-          </Accordion>
+          <GrupoDeListas listas={detalle.listas} noche={noche.fecha} abrir={setDialogo} />
         )}
+        <Button
+          component={Link}
+          href="/admin/listas"
+          size="sm"
+          mih={44}
+          variant="subtle"
+          rightSection={<IconChevronRight size={16} />}
+          style={{ alignSelf: 'flex-start' }}
+        >
+          Todas las listas
+        </Button>
       </Seccion>
 
       <Seccion
@@ -615,13 +420,21 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
             <FilaPersona
               key={persona.documento}
               persona={persona}
-              fecha={noche.fecha}
-              editable={editable}
               detalle={
                 <>
                   {` · invita ${persona.invitadoPor}`}
                   {persona.gratis ? ' · gratis' : ' · paga entrada'}
                 </>
+              }
+              // Quien ya entró queda: su invitación es el registro de cómo entró.
+              quitar={
+                editable && !persona.entroEn
+                  ? {
+                      accion: quitarInvitacion,
+                      datos: { fecha: noche.fecha, documento: persona.documento },
+                      confirmar: `¿Quitar a ${persona.nombre} ${persona.apellido} de esta noche?`,
+                    }
+                  : undefined
               }
             />
           ))}
@@ -664,85 +477,15 @@ export function DetalleNoche({ detalle }: Readonly<{ detalle: DetalleDeNoche }>)
         </FormularioAccion>
       </Modal>
 
-      <Modal
-        opened={dialogo?.tipo === 'lista'}
-        onClose={cerrar}
-        title={dialogo?.tipo === 'lista' && dialogo.lista ? 'Editar lista' : 'Nueva lista'}
-      >
-        {dialogo?.tipo === 'lista' && (
-          <FormularioAccion accion={guardarLista} textoEnviar="Guardar" alTerminar={cerrar}>
-            <input type="hidden" name="fecha" value={noche.fecha} />
-            {dialogo.lista && <input type="hidden" name="numero" value={dialogo.lista.numero} />}
-            <TextInput
-              name="nombre"
-              label="Nombre de la lista"
-              placeholder="Cumpleaños de Camila"
-              defaultValue={dialogo.lista?.nombre}
-              size="md"
-              required
-              maxLength={60}
-            />
-            <TextInput
-              name="responsable"
-              label="Quién la organiza"
-              placeholder="Camila Rojas"
-              defaultValue={dialogo.lista?.responsable}
-              size="md"
-              required
-              maxLength={80}
-            />
-            <Checkbox
-              name="gratis"
-              label="Entran gratis"
-              description="Por ejemplo, los bailarines del show. Un cumpleaños paga su entrada."
-              defaultChecked={dialogo.lista?.gratis}
-            />
-          </FormularioAccion>
-        )}
-      </Modal>
-
-      <Modal
-        opened={dialogo?.tipo === 'persona'}
-        onClose={cerrar}
-        title={dialogo?.tipo === 'persona' ? `Agregar a ${dialogo.lista.nombre}` : ''}
-      >
-        {dialogo?.tipo === 'persona' && (
-          <FormularioAccion accion={invitar} textoEnviar="Agregar" alTerminar={cerrar}>
-            <input type="hidden" name="fecha" value={noche.fecha} />
-            <input type="hidden" name="listaNumero" value={dialogo.lista.numero} />
-            <CamposDocumento />
-          </FormularioAccion>
-        )}
-      </Modal>
-
-      <Modal
-        opened={dialogo?.tipo === 'pegar'}
-        onClose={cerrar}
-        title={dialogo?.tipo === 'pegar' ? `Pegar personas en ${dialogo.lista.nombre}` : ''}
-        size="lg"
-      >
-        {dialogo?.tipo === 'pegar' && (
-          <FormularioAccion
-            accion={pegarLista}
-            textoEnviar="Agregar a la lista"
-            alTerminar={cerrar}
-          >
-            <input type="hidden" name="fecha" value={noche.fecha} />
-            <input type="hidden" name="listaNumero" value={dialogo.lista.numero} />
-            <Textarea
-              name="texto"
-              label="Una persona por línea, con su RUT y su nombre"
-              description="Sirve tal como llega por mensaje. Si una línea no se entiende, no se agrega nadie y se indica cuál corregir."
-              placeholder={'12.345.678-5 Camila Rojas\nIgnacio Bravo, 17654321-3'}
-              autosize
-              minRows={6}
-              maxRows={14}
-              size="md"
-              required
-            />
-          </FormularioAccion>
-        )}
-      </Modal>
+      <DialogosDeListas
+        dialogo={
+          dialogo?.tipo === 'lista' || dialogo?.tipo === 'integrante' || dialogo?.tipo === 'pegar'
+            ? dialogo
+            : null
+        }
+        cerrar={cerrar}
+        desde={noche.fecha}
+      />
 
       <Modal opened={dialogo?.tipo === 'invitado'} onClose={cerrar} title="Agregar invitado">
         {dialogo?.tipo === 'invitado' && (

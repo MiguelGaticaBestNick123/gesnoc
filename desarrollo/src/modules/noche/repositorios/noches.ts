@@ -37,9 +37,10 @@ export const actualizarNoche = ({ fecha, ...datos }: DatosNoche) =>
     .where(and(eq(noche.fecha, fecha), isNull(noche.cerradaEn)))
     .returning({ fecha: noche.fecha });
 
-// La disponibilidad y los turnos caen con la noche; una noche abierta ya tiene operaciones.
-export const eliminarNocheSinAbrir = (fecha: string) =>
-  db()
+// La disponibilidad, los turnos, el premio, los eventos y las invitaciones caen con la noche; una
+// noche abierta ya tiene operaciones.
+export const eliminarNocheSinAbrir = (tx: Transaccion, fecha: string) =>
+  tx
     .delete(noche)
     .where(and(eq(noche.fecha, fecha), isNull(noche.abiertaEn)))
     .returning({ fecha: noche.fecha });

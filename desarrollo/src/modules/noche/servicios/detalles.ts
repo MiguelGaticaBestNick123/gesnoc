@@ -1,23 +1,22 @@
 import 'server-only';
+import { listasDeLaNoche } from './listas';
 import { exigirNocheVigente } from './noches';
 import { listarAmbientes } from '@/modules/local/repositorios/ambientes';
 import { listarCategorias, listarProductos } from '@/modules/local/repositorios/catalogo';
 import { exigir, type Actor } from '@/shared/autorizacion';
 import { CLAVE_FORANEA, ErrorDeNegocio, traducir } from '@/shared/errores';
-import { formatearDocumento } from '@/shared/utilidades/rut';
-import type { DatosInvitacion, DatosLista, DatosPremio } from '../esquemas';
-import { leerLista, ordenNocturno } from '../listas';
+import type { DatosInvitacion, DatosPremio } from '../esquemas';
+import { ordenNocturno } from '../listas';
 import * as repositorio from '../repositorios/detalles';
 import { buscarNoche, type EstadoNoche } from '../repositorios/noches';
 
 // Detalles de cada noche (pedido del Product Owner, 12 nov): el premio del sorteo de cada ambiente,
-// los eventos, las listas y los invitados. Se preparan antes y también con la noche abierta (llegan
-// nombres a última hora); una noche cerrada ya no cambia (RN-26).
+// los eventos, las listas vigentes y los invitados. Se preparan antes y también con la noche abierta
+// (llegan nombres a última hora); una noche cerrada ya no cambia (RN-26). Las listas tienen su
+// propia vigencia (18 nov) y se administran en `servicios/listas.ts`.
 
 const restricciones = {
   invitacion_pkey: 'Esa persona ya está invitada esta noche',
-  lista_nombre_uq: 'Ya hay una lista con ese nombre esta noche',
-  invitacion_lista_fk: 'Esa lista ya no existe',
 };
 
 const estadoDe = (noche: { abiertaEn: string | null; cerradaEn: string | null }): EstadoNoche => {
@@ -30,14 +29,15 @@ export async function detalleDeNoche(actor: Actor, fecha: string) {
   exigir(actor, 'admin');
   const noche = await buscarNoche(fecha);
   if (!noche) return null;
-  const [ambientes, categorias, productos, premios, eventos, listas, invitaciones, sorteos] =
+  const estado = estadoDe(noche);
+  const [ambientes, categorias, productos, premios, eventos, listas, invitados, sorteos] =
     await Promise.all([
       listarAmbientes(),
       listarCategorias(),
       listarProductos(),
       repositorio.premiosDe(fecha),
       repositorio.eventosDe(fecha),
-      repositorio.listasDe(fecha),
+      listasDeLaNoche(fecha, estado !== 'cerrada'),
       repositorio.invitacionesDe(fecha),
       repositorio.sorteosDe(fecha),
     ]);
@@ -47,7 +47,7 @@ export async function detalleDeNoche(actor: Actor, fecha: string) {
       fecha: noche.fecha,
       nota: noche.nota,
       precioEntrada: noche.precioEntrada,
-      estado: estadoDe(noche),
+      estado,
     },
     ambientes: ambientes.filter((a) => a.activo).map(({ id, nombre }) => ({ id, nombre })),
     // Para elegir el premio: los productos que se venden, con su categoría.
@@ -58,11 +58,8 @@ export async function detalleDeNoche(actor: Actor, fecha: string) {
     // Un ambiente que ya sorteó conserva su premio como se sorteó.
     sorteos,
     eventos: eventos.toSorted((a, b) => ordenNocturno(a.hora) - ordenNocturno(b.hora)),
-    listas: listas.map((l) => ({
-      ...l,
-      personas: invitaciones.filter((i) => i.listaNumero === l.numero),
-    })),
-    invitados: invitaciones.filter((i) => i.listaNumero === null),
+    listas,
+    invitados,
   };
 }
 
@@ -98,67 +95,17 @@ export async function quitarEvento(actor: Actor, fecha: string, numero: number) 
   await repositorio.quitarEvento(fecha, numero);
 }
 
-export async function guardarLista(actor: Actor, { fecha, numero, ...datos }: DatosLista) {
-  exigir(actor, 'admin');
-  await exigirNocheVigente(fecha);
-  if (numero === null) {
-    const nueva = await traducir(repositorio.agregarLista(fecha, datos), restricciones);
-    if (nueva === null) throw new ErrorDeNegocio('La noche ya tiene 99 listas');
-    return;
-  }
-  const editadas = await traducir(repositorio.editarLista(fecha, numero, datos), restricciones);
-  if (editadas.length === 0) throw new ErrorDeNegocio('Esa lista ya no existe');
-}
-
-export async function quitarLista(actor: Actor, fecha: string, numero: number) {
-  exigir(actor, 'admin');
-  await exigirNocheVigente(fecha);
-  const entraron = await repositorio.yaEntraron(fecha, { listaNumero: numero });
-  if (entraron > 0) {
-    throw new ErrorDeNegocio(
-      `${entraron === 1 ? 'Una persona de esta lista ya entró' : `${entraron} personas de esta lista ya entraron`}: la lista queda como registro de cómo entraron`,
-    );
-  }
-  await repositorio.quitarLista(fecha, numero);
-}
-
+/** Una persona invitada esa noche por alguien (el DJ, la administración), con o sin entrada gratis. */
 export async function invitar(actor: Actor, datos: DatosInvitacion) {
   exigir(actor, 'admin');
   await exigirNocheVigente(datos.fecha);
   await traducir(repositorio.insertarInvitacion(datos), restricciones);
 }
 
-/**
- * Carga de una vez la lista que envió quien la organiza. Si una línea no se entiende o alguien ya
- * está invitado, no se carga nada y se dice qué corregir: una lista a medias se presta a confusión.
- */
-export async function pegarLista(
-  actor: Actor,
-  fecha: string,
-  listaNumero: number,
-  texto: string,
-): Promise<number> {
-  exigir(actor, 'admin');
-  await exigirNocheVigente(fecha);
-  const { personas, errores } = leerLista(texto);
-  if (errores.length > 0) throw new ErrorDeNegocio(errores.slice(0, 3).join('. '));
-  const repetidos = await repositorio.yaInvitados(
-    fecha,
-    personas.map((p) => p.documento),
-  );
-  if (repetidos.length > 0) {
-    throw new ErrorDeNegocio(
-      `Ya están invitados esta noche: ${repetidos.map(formatearDocumento).join(', ')}`,
-    );
-  }
-  await traducir(repositorio.insertarPersonasDeLista(fecha, listaNumero, personas), restricciones);
-  return personas.length;
-}
-
 export async function quitarInvitacion(actor: Actor, fecha: string, documento: string) {
   exigir(actor, 'admin');
   await exigirNocheVigente(fecha);
-  if ((await repositorio.yaEntraron(fecha, { documento })) > 0) {
+  if ((await repositorio.yaEntro(fecha, documento)) > 0) {
     throw new ErrorDeNegocio(
       'Esta persona ya entró esta noche: su invitación queda como registro de cómo entró',
     );

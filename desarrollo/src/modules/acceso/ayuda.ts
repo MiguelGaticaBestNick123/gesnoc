@@ -7,6 +7,7 @@ import type { ClaveRol } from './roles';
 export const ayudaPorRol: Record<ClaveRol, string[]> = {
   admin: [
     'Antes de la noche: prográmala en «Calendario de noches», con su premio y sus listas, y asigna los turnos.',
+    'Una lista dura una noche, varias o no tiene término, como la de clientes frecuentes: se arma en «Listas».',
     'Al empezar: abre la noche con el fondo de caja en «Noche en curso». Sin noche abierta nadie opera.',
     'Durante la noche, «Resumen» e «Indicadores» se actualizan solos, y «Bitácora» dice quién hizo qué.',
     'El efectivo que cobran los garzones se confirma en «Confirmar efectivo».',

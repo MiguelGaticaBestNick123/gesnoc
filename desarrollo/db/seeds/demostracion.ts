@@ -147,9 +147,32 @@ async function crearCatalogo(tx: TransactionSql, cocina: number) {
   }
 }
 
+// Una lista con su vigencia (desde y hasta, o sin término) y sus personas.
+async function crearLista(
+  tx: TransactionSql,
+  lista: {
+    nombre: string;
+    responsable: string;
+    gratis: boolean;
+    desde: string;
+    hasta: string | null;
+  },
+  personas: [documento: string, nombre: string, apellido: string][],
+) {
+  const [fila] = await tx<{ id: number }[]>`
+    insert into gesnoc.lista (nombre, responsable, gratis, desde, hasta)
+    values (${lista.nombre}, ${lista.responsable}, ${lista.gratis}, ${lista.desde}, ${lista.hasta})
+    returning id`;
+  for (const [documento, nombre, apellido] of personas) {
+    await tx`
+      insert into gesnoc.integrante (lista_id, documento, nombre, apellido)
+      values (${fila!.id}, ${documento}, ${nombre}, ${apellido})`;
+  }
+}
+
 // Lo que la administración prepara para la noche de demostración: el premio de cada ambiente, los
-// eventos, una lista que paga (un cumpleaños), una que entra gratis (bailarines) y dos invitados.
-// Los RUT son ficticios, con dígito verificador válido.
+// eventos, una lista de esa noche que paga (un cumpleaños), una que entra gratis (bailarines) y dos
+// invitados. Los RUT son ficticios, con dígito verificador válido.
 async function detallarNoche(tx: TransactionSql, fecha: string, ambientes: number[]) {
   const premios = ['Botella de ron añejo', 'Botella de pisco 35°'];
   for (const [i, ambiente] of ambientes.entries()) {
@@ -160,25 +183,37 @@ async function detallarNoche(tx: TransactionSql, fecha: string, ambientes: numbe
   await tx`
     insert into gesnoc.evento (fecha, numero, nombre, hora)
     values (${fecha}, 1, 'Show de baile', '01:00'), (${fecha}, 2, 'Robot de shots', '02:30')`;
-  await tx`
-    insert into gesnoc.lista (fecha, numero, nombre, responsable, gratis)
-    values (${fecha}, 1, 'Cumpleaños de Camila', 'Camila Rojas', false),
-           (${fecha}, 2, 'Bailarines', 'Javiera Soto, coordinadora del show', true)`;
-  const invitaciones: [string, string, string, number | null, string | null][] = [
-    ['15678234-3', 'Camila', 'Rojas', 1, null],
-    ['17654321-3', 'Ignacio', 'Bravo', 1, null],
-    ['18234567-9', 'Fernanda', 'Lagos', 1, null],
-    ['19876543-0', 'Javiera', 'Soto', 2, null],
-    ['20123456-5', 'Martina', 'Herrera', 2, null],
-    ['16543210-K', 'Felipe', 'Araya', null, 'DJ de la noche'],
-    ['21345678-4', 'Marcela', 'Pinto', null, 'Administración'],
+  const deEstaNoche = { desde: fecha, hasta: fecha };
+  await crearLista(
+    tx,
+    { nombre: 'Cumpleaños de Camila', responsable: 'Camila Rojas', gratis: false, ...deEstaNoche },
+    [
+      ['15678234-3', 'Camila', 'Rojas'],
+      ['17654321-3', 'Ignacio', 'Bravo'],
+      ['18234567-9', 'Fernanda', 'Lagos'],
+    ],
+  );
+  await crearLista(
+    tx,
+    {
+      nombre: 'Bailarines',
+      responsable: 'Javiera Soto, coordinadora del show',
+      gratis: true,
+      ...deEstaNoche,
+    },
+    [
+      ['19876543-0', 'Javiera', 'Soto'],
+      ['20123456-5', 'Martina', 'Herrera'],
+    ],
+  );
+  const invitados: [string, string, string, string][] = [
+    ['16543210-K', 'Felipe', 'Araya', 'DJ de la noche'],
+    ['21345678-4', 'Marcela', 'Pinto', 'Administración'],
   ];
-  for (const [documento, nombre, apellido, lista, invitadoPor] of invitaciones) {
+  for (const [documento, nombre, apellido, invitadoPor] of invitados) {
     await tx`
-      insert into gesnoc.invitacion
-        (fecha, documento, nombre, apellido, lista_numero, invitado_por, gratis)
-      values (${fecha}, ${documento}, ${nombre}, ${apellido}, ${lista}, ${invitadoPor},
-              ${lista === null ? true : null})`;
+      insert into gesnoc.invitacion (fecha, documento, nombre, apellido, invitado_por, gratis)
+      values (${fecha}, ${documento}, ${nombre}, ${apellido}, ${invitadoPor}, true)`;
   }
 }
 
@@ -190,9 +225,13 @@ async function crearPersona(tx: TransactionSql, persona: (typeof personas)[numbe
   return fila!.id;
 }
 
-/** Vacía todas las tablas: el vaciado se propaga por las claves foráneas. Solo el dueño puede. */
+/**
+ * Vacía todas las tablas: el vaciado se propaga por las claves foráneas. Las listas no dependen de
+ * una noche, así que van aparte. Solo el dueño puede.
+ */
 export const vaciar = (sql: Sql) => sql`
-  truncate gesnoc.usuario, gesnoc.ambiente, gesnoc.noche, gesnoc.cliente restart identity cascade`;
+  truncate gesnoc.usuario, gesnoc.ambiente, gesnoc.noche, gesnoc.cliente, gesnoc.lista
+  restart identity cascade`;
 
 /** Siembra una base vacía; si ya tiene personal no toca nada y devuelve false. */
 export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Promise<boolean> {
@@ -218,6 +257,23 @@ export async function sembrar(sql: Sql, clave: string, hoy = hoyEnChile()): Prom
              (${sumarDias(hoy, 1)}, null, 5000),
              (${proxima}, 'Entrada gratis hasta las 00:00', 7000)`;
     await detallarNoche(tx, hoy, [salon, terraza]);
+    // Los clientes frecuentes (conocidos de la administración y habituales) entran gratis todas
+    // las noches: una lista sin término, que rige desde la primera noche del historial.
+    await crearLista(
+      tx,
+      {
+        nombre: 'Clientes frecuentes',
+        responsable: 'Carla Muñoz',
+        gratis: true,
+        desde: sumarDias(hoy, -14),
+        hasta: null,
+      },
+      [
+        ['12765432-8', 'Andrés', 'Valdés'],
+        ['14321987-9', 'Paz', 'Cifuentes'],
+        ['17890123-0', 'Rodrigo', 'Lillo'],
+      ],
+    );
 
     const dotacion = [
       ['garzon', 'garzon', salon],

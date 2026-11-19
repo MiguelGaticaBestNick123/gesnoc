@@ -234,8 +234,10 @@ export async function bloquearNocheParaCerrar(tx: Transaccion, fecha: string) {
 /**
  * RN-25: al cerrar se anonimizan los clientes sin visitas en los 12 meses anteriores a la fecha de la
  * noche (no al reloj): documento «ANON» seguido de su id y nombre «Anónimo», y la descripción de sus
- * reportes. Las listas e invitaciones de esas noches también se borran: ya cumplieron su función y
- * guardan nombres y documentos (RNF-11).
+ * reportes. También se borran las invitaciones de esas noches y las listas que terminaron hace más
+ * de 12 meses, con sus integrantes: ya cumplieron su función y guardan nombres y documentos
+ * (RNF-11). Las entradas de esas listas pierden el vínculo. Una lista sin término, como la de los
+ * clientes frecuentes, sigue mientras la administración la mantenga.
  */
 export async function anonimizar(tx: Transaccion, fecha: string): Promise<number> {
   const [fila] = await tx.execute<{ anonimizados: number }>(sql`
@@ -259,7 +261,7 @@ export async function anonimizar(tx: Transaccion, fecha: string): Promise<number
   await tx.execute(sql`
     delete from gesnoc.invitacion where fecha <= ${fecha}::date - interval '12 months'`);
   await tx.execute(sql`
-    delete from gesnoc.lista where fecha <= ${fecha}::date - interval '12 months'`);
+    delete from gesnoc.lista where hasta <= ${fecha}::date - interval '12 months'`);
   return fila?.anonimizados ?? 0;
 }
 

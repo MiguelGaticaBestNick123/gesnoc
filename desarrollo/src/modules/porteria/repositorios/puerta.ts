@@ -2,6 +2,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 import { bloquearCorrelativo, db, type Conexion, type Transaccion } from '@/shared/db/cliente';
 import { cliente, entrada, noche } from '@/shared/db/esquema/schema';
+import type { Reconocimiento } from '../reconocimiento';
 
 export async function clientePorDocumento(conexion: Conexion, documento: string) {
   const [fila] = await conexion
@@ -32,31 +33,64 @@ export async function visitasAnteriores(clienteId: number, fecha: string): Promi
   return fila?.visitas ?? 0;
 }
 
-/** La invitación de la persona para esta noche, con la lista si viene en una. */
-export async function invitacionDe(fecha: string, documento: string) {
-  const [fila] = await db().execute<{
+/**
+ * HU-33: todo lo que trae a la persona esta noche: su invitación individual y las listas vigentes en
+ * que está (una de esa noche, una de varias o la de los clientes frecuentes). Al registrar la entrada
+ * se piden con `bloquear`: las listas quedan reservadas hasta el fin de la transacción, así nadie
+ * elimina ni acorta la lista con que la persona está entrando (HU-33 CA2).
+ */
+export async function reconocimientos(
+  conexion: Conexion,
+  fecha: string,
+  documento: string,
+  bloquear = false,
+): Promise<Reconocimiento[]> {
+  const invitaciones = await conexion.execute<{
     nombre: string;
     apellido: string;
-    invitado_por: string | null;
+    invitado_por: string;
     gratis: boolean;
-    lista: string | null;
-    responsable: string | null;
   }>(sql`
-    select i.nombre, i.apellido, i.invitado_por, coalesce(i.gratis, l.gratis) as gratis,
-           l.nombre as lista, l.responsable
-    from gesnoc.invitacion i
-    left join gesnoc.lista l on l.fecha = i.fecha and l.numero = i.lista_numero
-    where i.fecha = ${fecha} and i.documento = ${documento}`);
-  return (
-    fila && {
-      nombre: fila.nombre,
-      apellido: fila.apellido,
-      invitadoPor: fila.invitado_por,
-      gratis: fila.gratis,
-      lista: fila.lista,
-      responsable: fila.responsable,
-    }
-  );
+    select nombre, apellido, invitado_por, gratis from gesnoc.invitacion
+    where fecha = ${fecha} and documento = ${documento}`);
+  const listas = await conexion.execute<{
+    nombre: string;
+    apellido: string;
+    lista_id: number;
+    lista: string;
+    responsable: string;
+    gratis: boolean;
+    noches: number | null;
+  }>(sql`
+    select g.nombre, g.apellido, l.id as lista_id, l.nombre as lista, l.responsable, l.gratis,
+           l.hasta - l.desde + 1 as noches
+    from gesnoc.integrante g
+    join gesnoc.lista l on l.id = g.lista_id
+    where g.documento = ${documento}
+      and l.desde <= ${fecha} and (l.hasta is null or l.hasta >= ${fecha})
+    ${bloquear ? sql`for share of l` : sql``}`);
+  return [
+    ...invitaciones.map((i) => ({
+      nombre: i.nombre,
+      apellido: i.apellido,
+      gratis: i.gratis,
+      invitadoPor: i.invitado_por,
+      listaId: null,
+      lista: null,
+      responsable: null,
+      noches: null,
+    })),
+    ...listas.map((l) => ({
+      nombre: l.nombre,
+      apellido: l.apellido,
+      gratis: l.gratis,
+      invitadoPor: null,
+      listaId: l.lista_id,
+      lista: l.lista,
+      responsable: l.responsable,
+      noches: l.noches,
+    })),
+  ];
 }
 
 export async function precioDeLaNoche(conexion: Conexion, fecha: string): Promise<number> {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { llevaAmbiente } from '@/shared/autorizacion';
 import { fecha, identificador, marcado, pesos } from '@/shared/esquemas';
 import { MENSAJE_DOCUMENTO, normalizarDocumento } from '@/shared/utilidades/rut';
+import { duraciones } from './vigencia';
 
 const nota = z
   .string()
@@ -47,8 +48,13 @@ export const datosApertura = z.object({
 
 // Detalles de la noche (pedido del Product Owner, 12 nov): eventos, listas, invitados y premio.
 
+// Un campo que no llegó dice lo mismo que uno vacío: qué falta escribir.
 const textoEntre = (minimo: number, maximo: number, falta: string, campo: string) =>
-  z.string().trim().min(minimo, falta).max(maximo, `${campo} admite hasta ${maximo} caracteres`);
+  z
+    .string(falta)
+    .trim()
+    .min(minimo, falta)
+    .max(maximo, `${campo} admite hasta ${maximo} caracteres`);
 
 const horaDelEvento = z
   .string()
@@ -64,69 +70,92 @@ export const datosEvento = z.object({
 
 export const conNumero = z.object({ fecha, numero: identificador });
 
-export const datosLista = z.object({
-  fecha,
-  // Presente al editar una lista que ya existe.
-  numero: z.coerce
-    .number()
-    .int()
-    .optional()
-    .transform((numero) => numero || null),
-  nombre: textoEntre(2, 60, 'Escribe el nombre de la lista', 'El nombre'),
-  responsable: textoEntre(2, 80, 'Escribe quién organiza la lista', 'El responsable'),
-  gratis: marcado,
-});
+export const conId = z.object({ id: identificador });
+
+/**
+ * Una lista con su vigencia (pedido del Product Owner, 18 nov): una noche, hasta una fecha o sin
+ * término, siempre desde una noche.
+ */
+export const datosLista = z
+  .object({
+    // Presente al editar una lista que ya existe.
+    id: z.coerce
+      .number()
+      .int()
+      .optional()
+      .transform((id) => id || null),
+    nombre: textoEntre(2, 60, 'Escribe el nombre de la lista', 'El nombre'),
+    responsable: textoEntre(2, 80, 'Escribe quién organiza la lista', 'El responsable'),
+    gratis: marcado,
+    desde: fecha,
+    duracion: z.enum(duraciones, 'Elige cuánto dura la lista'),
+    hasta: z.string().optional(),
+  })
+  .transform(({ duracion, hasta, ...datos }, contexto) => {
+    if (duracion === 'noche') return { ...datos, hasta: datos.desde };
+    if (duracion === 'siempre') return { ...datos, hasta: null };
+    const ultima = fecha.safeParse(hasta ?? '');
+    if (!ultima.success) {
+      contexto.addIssue({ code: 'custom', message: 'Elige hasta qué noche vale la lista' });
+      return z.NEVER;
+    }
+    if (ultima.data < datos.desde) {
+      contexto.addIssue({ code: 'custom', message: 'La lista no puede terminar antes de empezar' });
+      return z.NEVER;
+    }
+    return { ...datos, hasta: ultima.data };
+  });
 export type DatosLista = z.output<typeof datosLista>;
 
 const tipoDocumento = z.enum(['rut', 'extranjero'], 'Elige el tipo de documento');
 
-/**
- * Una persona invitada: de una lista (la lista dice si entra gratis) o invitada por alguien, con su
- * propia marca de gratis. El documento se normaliza como el de un cliente (RN-21).
- */
-export const datosInvitacion = z
-  .object({
+/** Nombre, apellido y documento de una persona; el documento se normaliza como el de un cliente (RN-21). */
+const persona = z.object({
+  tipoDocumento: tipoDocumento.default('rut'),
+  documento: z.string(),
+  nombre: textoEntre(1, 60, 'Escribe el nombre', 'El nombre'),
+  apellido: textoEntre(1, 60, 'Escribe el apellido', 'El apellido'),
+});
+
+const conDocumentoNormalizado = <T extends z.output<typeof persona>>(
+  { tipoDocumento, ...datos }: T,
+  contexto: z.RefinementCtx,
+) => {
+  const documento = normalizarDocumento(tipoDocumento, datos.documento);
+  if (!documento) {
+    contexto.addIssue({ code: 'custom', message: MENSAJE_DOCUMENTO[tipoDocumento] });
+    return z.NEVER;
+  }
+  return { ...datos, documento };
+};
+
+/** Una persona de una lista: la lista dice si entra gratis. */
+export const datosIntegrante = persona
+  .extend({ listaId: identificador })
+  .transform(conDocumentoNormalizado);
+export type DatosIntegrante = z.output<typeof datosIntegrante>;
+
+/** Una persona invitada una noche por alguien, con su propia marca de gratis. */
+export const datosInvitacion = persona
+  .extend({
     fecha,
-    tipoDocumento: tipoDocumento.default('rut'),
-    documento: z.string(),
-    nombre: textoEntre(1, 60, 'Escribe el nombre', 'El nombre'),
-    apellido: textoEntre(1, 60, 'Escribe el apellido', 'El apellido'),
-    listaNumero: z.coerce
-      .number()
-      .int()
-      .optional()
-      .transform((numero) => numero || null),
-    invitadoPor: z.string().trim().max(80, 'Quién invita admite hasta 80 caracteres').optional(),
+    invitadoPor: textoEntre(2, 80, 'Escribe quién la invitó', 'Quién invita'),
     gratis: marcado,
   })
-  .transform((datos, contexto) => {
-    const documento = normalizarDocumento(datos.tipoDocumento, datos.documento);
-    if (!documento) {
-      contexto.addIssue({ code: 'custom', message: MENSAJE_DOCUMENTO[datos.tipoDocumento] });
-      return z.NEVER;
-    }
-    const deLista = datos.listaNumero !== null;
-    if (!deLista && (datos.invitadoPor ?? '').length < 2) {
-      contexto.addIssue({ code: 'custom', message: 'Escribe quién la invitó' });
-      return z.NEVER;
-    }
-    return {
-      fecha: datos.fecha,
-      documento,
-      nombre: datos.nombre,
-      apellido: datos.apellido,
-      listaNumero: datos.listaNumero,
-      invitadoPor: deLista ? null : (datos.invitadoPor ?? null),
-      gratis: deLista ? null : datos.gratis,
-    };
-  });
+  .transform(conDocumentoNormalizado);
 export type DatosInvitacion = z.output<typeof datosInvitacion>;
 
-export const datosQuitarInvitacion = z.object({ fecha, documento: z.string().min(4).max(20) });
+const documentoGuardado = z.string().min(4).max(20);
+
+export const datosQuitarInvitacion = z.object({ fecha, documento: documentoGuardado });
+
+export const datosQuitarIntegrante = z.object({
+  listaId: identificador,
+  documento: documentoGuardado,
+});
 
 export const datosListaPegada = z.object({
-  fecha,
-  listaNumero: identificador,
+  listaId: identificador,
   texto: z.string().max(20000, 'Pega hasta 200 personas a la vez'),
 });
 

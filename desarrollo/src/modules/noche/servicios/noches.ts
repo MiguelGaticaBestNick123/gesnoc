@@ -6,6 +6,7 @@ import { rangoDelMes } from '@/shared/utilidades/calendario';
 import { hoyEnChile } from '@/shared/utilidades/fechas';
 import type { DatosNoche } from '../esquemas';
 import { detallesDelRango } from '../repositorios/detalles';
+import { eliminarListasDeLaNoche } from '../repositorios/listas';
 import * as repositorio from '../repositorios/noches';
 
 /**
@@ -28,6 +29,14 @@ export async function exigirNocheVigente(fecha: string) {
   const noche = await repositorio.buscarNoche(fecha);
   if (!noche) throw new ErrorDeNegocio('Esa noche no existe');
   if (noche.cerradaEn) throw new ErrorDeNegocio('Una noche cerrada no admite cambios');
+}
+
+/**
+ * La noche desde la que se prepara lo que viene: la abierta (a las 2:00 todavía es la del viernes) o,
+ * si no hay una abierta, la de hoy. Lo anterior ya pasó y no cambia (RN-26).
+ */
+export async function fechaOperativa(): Promise<string> {
+  return (await repositorio.fechaAbierta()) ?? hoyEnChile();
 }
 
 /** La fecha de la noche abierta; sin noche abierta no hay operación. */
@@ -59,12 +68,16 @@ export async function editar(actor: Actor, datos: DatosNoche) {
   }
 }
 
+/** Elimina una noche que no se abrió, con sus listas de esa sola noche (nadie entró con ellas). */
 export async function eliminar(actor: Actor, fecha: string) {
   exigir(actor, 'admin');
-  const eliminadas = await repositorio.eliminarNocheSinAbrir(fecha);
-  if (eliminadas.length === 0) {
-    throw new ErrorDeNegocio('Solo se puede eliminar una noche que aún no se abre');
-  }
+  await db().transaction(async (tx) => {
+    const eliminadas = await repositorio.eliminarNocheSinAbrir(tx, fecha);
+    if (eliminadas.length === 0) {
+      throw new ErrorDeNegocio('Solo se puede eliminar una noche que aún no se abre');
+    }
+    await eliminarListasDeLaNoche(tx, fecha);
+  });
 }
 
 /** Estado de la noche en curso: la abierta, si la hay, o las que se pueden abrir. */

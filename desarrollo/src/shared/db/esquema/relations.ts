@@ -3,26 +3,28 @@ import {
   usuario,
   sesion,
   ambiente,
-  mesa,
   estacion,
+  mesa,
   categoria,
-  producto,
   arqueo,
   noche,
+  producto,
   disponibilidad,
-  asignacion,
-  evento,
   premio,
+  evento,
+  lista,
+  integrante,
+  asignacion,
   comanda,
   pedido,
-  lista,
+  invitacion,
   sorteo,
   entrada,
   llamado,
+  mensaje,
   cuenta,
   cliente,
   reporte,
-  invitacion,
   detallePedido,
   pago,
 } from './schema';
@@ -41,6 +43,7 @@ export const usuarioRelations = relations(usuario, ({ many }) => ({
   asignacions: many(asignacion),
   sorteos: many(sorteo),
   llamados: many(llamado),
+  mensajes: many(mensaje),
   pedidos: many(pedido),
   reportes: many(reporte),
   entradas: many(entrada),
@@ -59,24 +62,6 @@ export const usuarioRelations = relations(usuario, ({ many }) => ({
   }),
 }));
 
-export const mesaRelations = relations(mesa, ({ one, many }) => ({
-  ambiente: one(ambiente, {
-    fields: [mesa.ambienteId],
-    references: [ambiente.id],
-  }),
-  llamados: many(llamado),
-  cuentas: many(cuenta),
-}));
-
-export const ambienteRelations = relations(ambiente, ({ many }) => ({
-  mesas: many(mesa),
-  estacions: many(estacion),
-  asignacions: many(asignacion),
-  premios: many(premio),
-  sorteos: many(sorteo),
-  cuentas: many(cuenta),
-}));
-
 export const estacionRelations = relations(estacion, ({ one, many }) => ({
   ambiente: one(ambiente, {
     fields: [estacion.ambienteId],
@@ -87,25 +72,30 @@ export const estacionRelations = relations(estacion, ({ one, many }) => ({
   comandas: many(comanda),
 }));
 
+export const ambienteRelations = relations(ambiente, ({ many }) => ({
+  estacions: many(estacion),
+  mesas: many(mesa),
+  premios: many(premio),
+  asignacions: many(asignacion),
+  sorteos: many(sorteo),
+  cuentas: many(cuenta),
+}));
+
+export const mesaRelations = relations(mesa, ({ one, many }) => ({
+  ambiente: one(ambiente, {
+    fields: [mesa.ambienteId],
+    references: [ambiente.id],
+  }),
+  llamados: many(llamado),
+  cuentas: many(cuenta),
+}));
+
 export const categoriaRelations = relations(categoria, ({ one, many }) => ({
   estacion: one(estacion, {
     fields: [categoria.estacionId],
     references: [estacion.id],
   }),
   productos: many(producto),
-}));
-
-export const productoRelations = relations(producto, ({ one, many }) => ({
-  categoria: one(categoria, {
-    fields: [producto.categoriaId],
-    references: [categoria.id],
-  }),
-  estacion: one(estacion, {
-    fields: [producto.estacionId],
-    references: [estacion.id],
-  }),
-  premios: many(premio),
-  detallePedidos: many(detallePedido),
 }));
 
 export const arqueoRelations = relations(arqueo, ({ one }) => ({
@@ -122,17 +112,30 @@ export const arqueoRelations = relations(arqueo, ({ one }) => ({
 export const nocheRelations = relations(noche, ({ many }) => ({
   arqueos: many(arqueo),
   disponibilidads: many(disponibilidad),
-  asignacions: many(asignacion),
-  eventos: many(evento),
   premios: many(premio),
-  listas: many(lista),
+  eventos: many(evento),
+  asignacions: many(asignacion),
+  invitacions: many(invitacion),
   sorteos: many(sorteo),
   llamados: many(llamado),
+  mensajes: many(mensaje),
   pedidos: many(pedido),
   reportes: many(reporte),
-  invitacions: many(invitacion),
   entradas: many(entrada),
   cuentas: many(cuenta),
+}));
+
+export const productoRelations = relations(producto, ({ one, many }) => ({
+  categoria: one(categoria, {
+    fields: [producto.categoriaId],
+    references: [categoria.id],
+  }),
+  estacion: one(estacion, {
+    fields: [producto.estacionId],
+    references: [estacion.id],
+  }),
+  premios: many(premio),
+  detallePedidos: many(detallePedido),
 }));
 
 export const disponibilidadRelations = relations(disponibilidad, ({ one }) => ({
@@ -143,28 +146,6 @@ export const disponibilidadRelations = relations(disponibilidad, ({ one }) => ({
   usuario: one(usuario, {
     fields: [disponibilidad.usuarioId],
     references: [usuario.id],
-  }),
-}));
-
-export const asignacionRelations = relations(asignacion, ({ one }) => ({
-  ambiente: one(ambiente, {
-    fields: [asignacion.ambienteId],
-    references: [ambiente.id],
-  }),
-  noche: one(noche, {
-    fields: [asignacion.fecha],
-    references: [noche.fecha],
-  }),
-  usuario: one(usuario, {
-    fields: [asignacion.usuarioId],
-    references: [usuario.id],
-  }),
-}));
-
-export const eventoRelations = relations(evento, ({ one }) => ({
-  noche: one(noche, {
-    fields: [evento.fecha],
-    references: [noche.fecha],
   }),
 }));
 
@@ -180,6 +161,40 @@ export const premioRelations = relations(premio, ({ one }) => ({
   producto: one(producto, {
     fields: [premio.productoId],
     references: [producto.id],
+  }),
+}));
+
+export const eventoRelations = relations(evento, ({ one }) => ({
+  noche: one(noche, {
+    fields: [evento.fecha],
+    references: [noche.fecha],
+  }),
+}));
+
+export const integranteRelations = relations(integrante, ({ one }) => ({
+  lista: one(lista, {
+    fields: [integrante.listaId],
+    references: [lista.id],
+  }),
+}));
+
+export const listaRelations = relations(lista, ({ many }) => ({
+  integrantes: many(integrante),
+  entradas: many(entrada),
+}));
+
+export const asignacionRelations = relations(asignacion, ({ one }) => ({
+  ambiente: one(ambiente, {
+    fields: [asignacion.ambienteId],
+    references: [ambiente.id],
+  }),
+  noche: one(noche, {
+    fields: [asignacion.fecha],
+    references: [noche.fecha],
+  }),
+  usuario: one(usuario, {
+    fields: [asignacion.usuarioId],
+    references: [usuario.id],
   }),
 }));
 
@@ -212,12 +227,11 @@ export const pedidoRelations = relations(pedido, ({ one, many }) => ({
   detallePedidos: many(detallePedido),
 }));
 
-export const listaRelations = relations(lista, ({ one, many }) => ({
+export const invitacionRelations = relations(invitacion, ({ one }) => ({
   noche: one(noche, {
-    fields: [lista.fecha],
+    fields: [invitacion.fecha],
     references: [noche.fecha],
   }),
-  invitacions: many(invitacion),
 }));
 
 export const sorteoRelations = relations(sorteo, ({ one }) => ({
@@ -249,6 +263,10 @@ export const entradaRelations = relations(entrada, ({ one, many }) => ({
     fields: [entrada.fecha],
     references: [noche.fecha],
   }),
+  lista: one(lista, {
+    fields: [entrada.listaId],
+    references: [lista.id],
+  }),
   usuario: one(usuario, {
     fields: [entrada.registradaPor],
     references: [usuario.id],
@@ -267,6 +285,17 @@ export const llamadoRelations = relations(llamado, ({ one }) => ({
   mesa: one(mesa, {
     fields: [llamado.mesaId],
     references: [mesa.id],
+  }),
+}));
+
+export const mensajeRelations = relations(mensaje, ({ one }) => ({
+  usuario: one(usuario, {
+    fields: [mensaje.autorId],
+    references: [usuario.id],
+  }),
+  noche: one(noche, {
+    fields: [mensaje.fecha],
+    references: [noche.fecha],
   }),
 }));
 
@@ -315,17 +344,6 @@ export const reporteRelations = relations(reporte, ({ one }) => ({
 export const clienteRelations = relations(cliente, ({ many }) => ({
   reportes: many(reporte),
   entradas: many(entrada),
-}));
-
-export const invitacionRelations = relations(invitacion, ({ one }) => ({
-  noche: one(noche, {
-    fields: [invitacion.fecha],
-    references: [noche.fecha],
-  }),
-  lista: one(lista, {
-    fields: [invitacion.fecha],
-    references: [lista.fecha],
-  }),
 }));
 
 export const detallePedidoRelations = relations(detallePedido, ({ one }) => ({
