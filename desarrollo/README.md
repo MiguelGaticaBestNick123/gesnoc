@@ -51,8 +51,10 @@ cada persona opere su rol, la administración debe abrir la noche.
 | `npm run db:nueva -- nombre`                              | Crear una migración nueva en `db/migrations/`                                                                         |
 | `npm run db:semilla`                                      | Cargar el local de demostración si la base no tiene personal                                                          |
 | `npm run db:reiniciar`                                    | Dejar la base local como recién sembrada (borra todo; solo en local)                                                  |
+| `npm run personal:local`                                  | Dejar en la base local el personal del local con su rol habitual y desactivar las demás cuentas                       |
 | `npm run host:preparar`                                   | Preparar la base del ambiente publicado desde `.env.host` (ver abajo)                                                 |
 | `npm run host:migrar`                                     | Aplicar las migraciones nuevas al ambiente publicado                                                                  |
+| `npm run host:personal`                                   | El personal del local en el ambiente publicado (cuentas nuevas con la contraseña de `CLAVE_DEMO`)                     |
 | `npm run db:esquema`                                      | Regenerar los tipos de Drizzle desde la base migrada                                                                  |
 
 ## Base de datos
@@ -94,7 +96,10 @@ aplicación corre como imagen Docker en otro servicio, en la misma región.
 ## Operación de la noche
 
 Las pantallas de la noche se actualizan solas cada 3 segundos (`src/shared/puertos/tiempo-real.ts`,
-ADR-007). Pedidos y cuentas se envían por rutas JSON (`src/app/api/`): un 4xx significa que no se
+ADR-007). Quien trabaja la noche y la administración tienen arriba a la derecha el chat del personal
+(`src/modules/chat/`): un canal general y uno por rol, con mensajes de la noche abierta que no se
+duplican al reintentar. Garzón, barra, cocina y administración ven el historial de comandas de la
+noche, con su hora, su mesa, quién las tomó y en qué va cada una. Pedidos y cuentas se envían por rutas JSON (`src/app/api/`): un 4xx significa que no se
 registró nada; ante un corte de red el teléfono reintenta con la misma clave de envío y el servidor
 devuelve lo ya registrado (RN-13).
 
@@ -117,8 +122,11 @@ La puerta (`/guardia`, HU-30 a HU-33) busca a cada persona por su documento, nor
 (pendiente: la paga después a la administración) o gratis. Solo las pagadas reciben ticket, y los
 ingresos de la noche se serializan con un bloqueo, así que nadie entra dos veces y los tickets no se
 repiten ni saltan (RN-22). Quien viene en una lista o invitado ya trae su nombre. El guardia ve
-quién entró, pero no lo recaudado. Las listas, los invitados, los eventos y el premio del sorteo se
-preparan en la página de cada noche (`/admin/calendario/[fecha]`).
+quién entró, pero no lo recaudado. Cada lista tiene su vigencia: una noche (un cumpleaños), varias
+(los bailarines de una temporada) o sin término (los clientes frecuentes). Se administran en
+`/admin/listas` y se ven en la página de cada noche en que valen; la entrada guarda con qué lista se
+reconoció a la persona, así sacarla después de la lista no borra cómo entró. Los invitados, los
+eventos y el premio del sorteo se preparan en la página de cada noche (`/admin/calendario/[fecha]`).
 
 La caja (`src/modules/caja/`, HU-26 a HU-29 y HU-12) confirma el efectivo de cada garzón, cierra
 cuentas con saldo, calcula el esperado con una sola función (RN-19) y exige una nota si el conteo no
