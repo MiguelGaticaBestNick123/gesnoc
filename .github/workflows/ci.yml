@@ -98,3 +98,28 @@ jobs:
             desarrollo/playwright-report/
             desarrollo/test-results/
           retention-days: 7
+
+  # Railway construye desarrollo/Dockerfile solo con lo que deja pasar desarrollo/.dockerignore.
+  # Si a ese contexto le falta algo que el proyecto necesita (pasó con tests/), verificar pasa igual
+  # y el despliegue falla allá. Aquí se construye la misma imagen, sin publicarla, en paralelo.
+  imagen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Construir la imagen
+        uses: docker/build-push-action@v7
+        env:
+          # Sin artefacto .dockerbuild en cada ejecución; el resumen del build queda igual.
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: desarrollo
+          push: false
+          # mode=max guarda también la etapa de dependencias: si package-lock.json no cambia, npm ci
+          # no vuelve a correr. Un caché que no se alcanza a guardar no hace fallar el job.
+          cache-from: type=gha,scope=imagen
+          cache-to: type=gha,scope=imagen,mode=max,ignore-error=true
