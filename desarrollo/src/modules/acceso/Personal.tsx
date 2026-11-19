@@ -8,6 +8,7 @@ import {
   Checkbox,
   Group,
   Modal,
+  NativeSelect,
   PasswordInput,
   SegmentedControl,
   SimpleGrid,
@@ -57,6 +58,14 @@ const CampoClave = ({ etiqueta }: { etiqueta: string }) => (
   />
 );
 
+const opcionesDeRol = (vacio: string) => [
+  { value: '', label: vacio },
+  ...(['garzon', 'barman', 'cocinero', 'guardia'] as const).map((rol) => ({
+    value: rol,
+    label: nombreDelRol[rol]!,
+  })),
+];
+
 function CamposPersona({ persona }: Readonly<{ persona?: PersonaDelLocal }>) {
   return (
     <>
@@ -69,6 +78,21 @@ function CamposPersona({ persona }: Readonly<{ persona?: PersonaDelLocal }>) {
         size="md"
         required
       />
+      {/* Con el rol habitual, la asignación de turnos recomienda a cada persona para lo suyo. */}
+      <Group grow align="flex-start">
+        <NativeSelect
+          name="rolHabitual"
+          label="Rol habitual"
+          defaultValue={persona?.rolHabitual ?? ''}
+          data={opcionesDeRol('Ninguno')}
+        />
+        <NativeSelect
+          name="rolAlternativo"
+          label="También hace"
+          defaultValue={persona?.rolAlternativo ?? ''}
+          data={opcionesDeRol('Nada más')}
+        />
+      </Group>
       <Checkbox
         name="esAdministrador"
         label="Es administración"
@@ -128,6 +152,11 @@ function TarjetaPersona({
               {principal && (
                 <Badge variant="dot" color={colorDelRol[principal]} tt="none">
                   Suele ser {nombreDelRol[principal]}
+                </Badge>
+              )}
+              {persona.alternativo && (
+                <Badge variant="dot" color={colorDelRol[persona.alternativo]} tt="none">
+                  También {nombreDelRol[persona.alternativo]}
                 </Badge>
               )}
               {persona.bloqueado && (

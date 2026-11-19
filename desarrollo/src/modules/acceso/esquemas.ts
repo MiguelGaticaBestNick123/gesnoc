@@ -20,17 +20,34 @@ export const datosIngreso = z.object({
   clave: z.string().min(1, 'Ingresa tu contraseña'),
 });
 
-export const datosPersona = z.object({
-  nombre,
-  correo,
-  esAdministrador: marcado,
-});
+// Rol que la persona suele hacer y, si tiene, otro (pedido del Product Owner, 18 nov). Vacío: ninguno.
+const rolDelTurno = z
+  .enum(['garzon', 'barman', 'cocinero', 'guardia', ''], 'Elige un rol')
+  .optional()
+  .transform((rol) => rol || null);
+
+export const datosPersona = z
+  .object({
+    nombre,
+    correo,
+    esAdministrador: marcado,
+    rolHabitual: rolDelTurno,
+    rolAlternativo: rolDelTurno,
+  })
+  .refine((datos) => datos.rolAlternativo === null || datos.rolHabitual !== null, {
+    message: 'Elige primero el rol habitual',
+    path: ['rolAlternativo'],
+  })
+  .refine((datos) => datos.rolAlternativo === null || datos.rolAlternativo !== datos.rolHabitual, {
+    message: 'El rol alternativo debe ser distinto del habitual',
+    path: ['rolAlternativo'],
+  });
 export type DatosPersona = z.output<typeof datosPersona>;
 
-export const datosPersonaNueva = datosPersona.extend({ clave });
+export const datosPersonaNueva = datosPersona.and(z.object({ clave }));
 export type DatosPersonaNueva = z.output<typeof datosPersonaNueva>;
 
-export const datosEdicion = datosPersona.extend({ id: identificador });
+export const datosEdicion = datosPersona.and(z.object({ id: identificador }));
 
 export const datosClave = z.object({ id: identificador, clave });
 

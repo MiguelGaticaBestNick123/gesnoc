@@ -54,14 +54,16 @@ export async function pantallaAsignacion(actor: Actor, fecha?: string) {
   return {
     noches,
     elegida,
-    dotacion: dotacion.map(({ disponible, rol, ...persona }) => {
+    dotacion: dotacion.map(({ disponible, rol, rolHabitual, rolAlternativo, ...persona }) => {
       const propio = historial.filter((h) => h.usuarioId === persona.id);
       return {
         ...persona,
         rol: rol as RolTurno | null,
         disponible: disponible !== null,
-        // Rol habitual según su historial, para recomendarla al asignar (no se guarda).
-        principal: rolPrincipal(propio),
+        // Su rol habitual, para recomendarla al asignar: el que definió la administración o, si no
+        // lo definió, el que más ha hecho según su historial.
+        principal: rolHabitual ?? rolPrincipal(propio),
+        alternativo: rolAlternativo,
         veces: Object.fromEntries(propio.map((h) => [h.rol, h.veces])) as Partial<
           Record<RolTurno, number>
         >,

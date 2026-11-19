@@ -171,11 +171,20 @@ function TarjetaPersona({
         {persona.principal && (
           <Badge
             color={colorDelRol[persona.principal]}
-            variant={habitual ? 'filled' : 'light'}
-            leftSection={habitual ? <IconStarFilled size={10} /> : undefined}
+            variant={persona.principal === rol ? 'filled' : 'light'}
+            leftSection={persona.principal === rol ? <IconStarFilled size={10} /> : undefined}
             tt="none"
           >
             Suele ser {nombreDelRol[persona.principal]}
+          </Badge>
+        )}
+        {persona.alternativo && (
+          <Badge
+            color={colorDelRol[persona.alternativo]}
+            variant={persona.alternativo === rol ? 'filled' : 'light'}
+            tt="none"
+          >
+            También {nombreDelRol[persona.alternativo]}
           </Badge>
         )}
       </Group>

@@ -1,5 +1,6 @@
 import 'server-only';
 import { and, eq, lte, ne, sql } from 'drizzle-orm';
+import type { RolTurno } from '@/shared/autorizacion';
 import { db } from '@/shared/db/cliente';
 import { sesion, usuario } from '@/shared/db/esquema/schema';
 import { HORAS_DE_SESION } from '@/shared/sesion/actor';
@@ -86,23 +87,27 @@ export const listarPersonal = () =>
       esAdministrador: usuario.esAdministrador,
       activo: usuario.activo,
       bloqueado: estaBloqueado,
+      rolHabitual: sql<RolTurno | null>`${usuario.rolHabitual}`,
+      rolAlternativo: sql<RolTurno | null>`${usuario.rolAlternativo}`,
     })
     .from(usuario)
     .orderBy(usuario.nombre);
 
 export type Persona = Awaited<ReturnType<typeof listarPersonal>>[number];
 
-export const insertarPersona = (datos: {
+interface DatosDeCuenta {
   nombre: string;
   correo: string;
-  claveHash: string;
   esAdministrador: boolean;
-}) => db().insert(usuario).values(datos);
+  rolHabitual: RolTurno | null;
+  rolAlternativo: RolTurno | null;
+}
 
-export const actualizarPersona = (
-  id: number,
-  datos: { nombre: string; correo: string; esAdministrador: boolean },
-) => db().update(usuario).set(datos).where(eq(usuario.id, id));
+export const insertarPersona = (datos: DatosDeCuenta & { claveHash: string }) =>
+  db().insert(usuario).values(datos);
+
+export const actualizarPersona = (id: number, datos: DatosDeCuenta) =>
+  db().update(usuario).set(datos).where(eq(usuario.id, id));
 
 // Cambiar la contraseña expulsa de los teléfonos que tenían la anterior y levanta el bloqueo.
 export async function reemplazarClave(id: number, claveHash: string) {

@@ -37,12 +37,15 @@ export const retirarDisponible = (fecha: string, usuarioId: number) =>
     .delete(disponibilidad)
     .where(and(eq(disponibilidad.fecha, fecha), eq(disponibilidad.usuarioId, usuarioId)));
 
-// Dotación de una noche: todo el personal activo, con su disponibilidad y su turno si lo tiene.
+// Dotación de una noche: el personal activo, con su disponibilidad, su turno si lo tiene y su rol
+// habitual. La administración no toma turnos: no aparece (pedido del Product Owner, 18 nov).
 export const dotacionDe = (fecha: string) =>
   db()
     .select({
       id: usuario.id,
       nombre: usuario.nombre,
+      rolHabitual: sql<RolTurno | null>`${usuario.rolHabitual}`,
+      rolAlternativo: sql<RolTurno | null>`${usuario.rolAlternativo}`,
       disponible: disponibilidad.usuarioId,
       rol: asignacion.rol,
       ambienteId: asignacion.ambienteId,
@@ -53,7 +56,7 @@ export const dotacionDe = (fecha: string) =>
       and(eq(disponibilidad.fecha, fecha), eq(disponibilidad.usuarioId, usuario.id)),
     )
     .leftJoin(asignacion, and(eq(asignacion.fecha, fecha), eq(asignacion.usuarioId, usuario.id)))
-    .where(eq(usuario.activo, true))
+    .where(and(eq(usuario.activo, true), eq(usuario.esAdministrador, false)))
     .orderBy(asc(usuario.nombre));
 
 export async function estaDisponible(fecha: string, usuarioId: number): Promise<boolean> {

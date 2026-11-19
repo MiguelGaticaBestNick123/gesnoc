@@ -7,11 +7,15 @@ import { hashearClave } from '@/shared/sesion/clave';
 import type { DatosPersona, DatosPersonaNueva } from '../esquemas';
 import * as usuarios from '../repositorios/usuarios';
 
-const correoRepetido = { usuario_correo_uq: 'Ya existe una cuenta con ese correo' };
+const restricciones = {
+  usuario_correo_uq: 'Ya existe una cuenta con ese correo',
+  usuario_roles_ck: 'El rol alternativo debe ser distinto del habitual',
+};
 
 /**
- * HU-03: las cuentas del personal con su trayectoria, que sale de los turnos y no se guarda: el rol
- * que suele hacer, cuántas noches trabajó, la última y su próximo turno.
+ * HU-03: las cuentas del personal con su trayectoria: el rol que suele hacer (el que definió la
+ * administración o, si no lo definió, el que más ha hecho), cuántas noches trabajó, la última y su
+ * próximo turno.
  */
 export async function listar(actor: Actor) {
   exigir(actor, 'admin');
@@ -24,7 +28,8 @@ export async function listar(actor: Actor) {
     const proximo = proximos.find((p) => p.usuarioId === persona.id);
     return {
       ...persona,
-      principal: rolPrincipal(propios),
+      principal: persona.rolHabitual ?? rolPrincipal(propios),
+      alternativo: persona.rolAlternativo,
       noches: propios.reduce((suma, r) => suma + r.veces, 0),
       ultima:
         propios
@@ -43,7 +48,7 @@ export type PersonaDelLocal = Awaited<ReturnType<typeof listar>>[number];
 export async function crear(actor: Actor, { clave, ...datos }: DatosPersonaNueva) {
   exigir(actor, 'admin');
   const claveHash = await hashearClave(clave);
-  await traducir(usuarios.insertarPersona({ ...datos, claveHash }), correoRepetido);
+  await traducir(usuarios.insertarPersona({ ...datos, claveHash }), restricciones);
 }
 
 export async function editar(actor: Actor, id: number, datos: DatosPersona) {
@@ -51,7 +56,7 @@ export async function editar(actor: Actor, id: number, datos: DatosPersona) {
   if (id === actor.id && !datos.esAdministrador) {
     throw new ErrorDeNegocio('No puedes quitarte tu propio acceso de administración');
   }
-  await traducir(usuarios.actualizarPersona(id, datos), correoRepetido);
+  await traducir(usuarios.actualizarPersona(id, datos), restricciones);
 }
 
 export async function restablecerClave(actor: Actor, id: number, clave: string) {
