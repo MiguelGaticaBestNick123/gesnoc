@@ -83,3 +83,34 @@ test('el garzón ordena las mesas de su ambiente desde el mapa, sin agregar ni r
   await page.getByRole('link', { name: 'Volver a las mesas' }).click();
   await expect(page.getByRole('heading', { name: 'Mesas', exact: true })).toBeVisible();
 });
+
+// En el teléfono, el navegador tomaba el deslizamiento como un desplazamiento de la página y cortaba
+// el arrastre. Aquí se arrastra con eventos táctiles reales de Chrome, sin guardar.
+test('con el dedo, la mesa sigue al arrastre y la página no se desplaza', async ({ page }) => {
+  await entrarComo(page, 'garzon');
+  await page.goto('/garzon/plano');
+  const mesa = page.getByRole('button', { name: 'Mesa 10', exact: true });
+  const panel = page.getByRole('region', { name: 'Mesa elegida' });
+  await expect(async () => {
+    await mesa.click();
+    await expect(panel.getByText('Mesa 10', { exact: true })).toBeVisible({ timeout: 1000 });
+  }).toPass();
+
+  const antes = (await mesa.locator('text').boundingBox())!;
+  const desplazamiento = await page.evaluate(() => window.scrollY);
+  const x = antes.x + antes.width / 2;
+  const y = antes.y + antes.height / 2;
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  for (let i = 1; i <= 12; i++) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: x + i * 4, y: y - i * 3 }],
+    });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+  expect(await page.evaluate(() => window.scrollY)).toBe(desplazamiento);
+  await expect(page.getByRole('button', { name: 'Guardar plano' })).toBeEnabled();
+  expect((await mesa.locator('text').boundingBox())!.x).toBeGreaterThan(antes.x + 20);
+});

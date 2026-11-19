@@ -89,7 +89,12 @@ interface Arrastre {
   y: number;
   inicial: Mesa;
   movio: boolean;
+  /** Dónde va la mesa que se mueve, sin ajustar a la grilla: se guarda al soltarla. */
+  ultimo?: { posX: number; posY: number };
 }
+
+const entre = (valor: number, minimo: number, maximo: number) =>
+  Math.min(Math.max(valor, minimo), Math.max(minimo, maximo));
 
 /** Más de 3 px de movimiento ya es arrastrar; menos es un toque para elegir la mesa. */
 const UMBRAL_PX = 3;
@@ -106,8 +111,32 @@ export function PlanoMesas({
 }: Readonly<PropsPlano>) {
   const prefijo = useId().replaceAll(':', '');
   const arrastre = useRef<Arrastre | null>(null);
+  const plano = useRef<SVGSVGElement>(null);
+  // La mesa que se arrastra sigue al dedo o al mouse sin saltos; recién al soltarla se ajusta a la
+  // grilla. Con el salto de 10 en 10 durante el arrastre, la mesa parecía vibrar.
+  const [enVivo, setEnVivo] = useState<{ id: number; posX: number; posY: number } | null>(null);
+  const editable = edicion !== undefined;
   const toque = ladoDeToque(escala);
   const radioTirador = Math.max(12, toque / 2);
+
+  // En el teléfono, el navegador toma el deslizamiento del dedo como un desplazamiento de la página
+  // y corta el arrastre (pointercancel): `touch-action` no rige dentro del SVG. Si el toque empezó
+  // sobre una mesa (pointerdown llega antes que touchstart), se cancela el desplazamiento de ese
+  // toque; sobre el piso vacío, la página se desplaza como siempre. React escucha los toques como
+  // pasivos, por eso se registran aquí.
+  useEffect(() => {
+    const svg = plano.current;
+    if (!svg || !editable) return;
+    const frenar = (evento: TouchEvent) => {
+      if (arrastre.current) evento.preventDefault();
+    };
+    svg.addEventListener('touchstart', frenar, { passive: false });
+    svg.addEventListener('touchmove', frenar, { passive: false });
+    return () => {
+      svg.removeEventListener('touchstart', frenar);
+      svg.removeEventListener('touchmove', frenar);
+    };
+  }, [editable]);
 
   const empezar = (evento: React.PointerEvent, mesa: Mesa, tipo: Arrastre['tipo']) => {
     if (!edicion || evento.button !== 0) return;
@@ -132,7 +161,10 @@ export function PlanoMesas({
     actual.movio = true;
     const { inicial } = actual;
     if (actual.tipo === 'mover') {
-      edicion.alMover(inicial.id, inicial.posX + dx / escala, inicial.posY + dy / escala);
+      const posX = entre(inicial.posX + dx / escala, 0, ancho - inicial.ancho);
+      const posY = entre(inicial.posY + dy / escala, 0, alto - inicial.alto);
+      actual.ultimo = { posX, posY };
+      setEnVivo({ id: inicial.id, posX, posY });
       return;
     }
     // El tirador está en la esquina de la mesa girada: el movimiento se lleva a sus ejes.
@@ -147,6 +179,9 @@ export function PlanoMesas({
     arrastre.current = null;
     if (!actual) return;
     (evento.currentTarget as Element).releasePointerCapture?.(evento.pointerId);
+    // Al soltarla, la mesa queda donde se dejó, ajustada a la grilla por el editor.
+    if (actual.ultimo) edicion?.alMover(actual.id, actual.ultimo.posX, actual.ultimo.posY);
+    setEnVivo(null);
     if (!actual.movio && actual.tipo === 'mover') alElegir?.(actual.id);
   };
 
@@ -155,6 +190,7 @@ export function PlanoMesas({
 
   return (
     <svg
+      ref={plano}
       width={ancho2 * escala}
       height={alto2 * escala}
       viewBox={`${-MARGEN} ${-MARGEN} ${ancho2} ${alto2}`}
@@ -194,6 +230,7 @@ export function PlanoMesas({
         const tamanoNumero = Math.min(36, Math.max(14, Math.min(mesa.ancho, mesa.alto) * 0.42));
         const ladoX = Math.max(mesa.ancho + 44, toque);
         const ladoY = Math.max(mesa.alto + 44, toque);
+        const lugar = enVivo?.id === mesa.id ? enVivo : mesa;
         const cuerpo = (props: React.SVGProps<SVGElement>) =>
           redonda ? (
             <circle r={mesa.ancho / 2} {...(props as React.SVGProps<SVGCircleElement>)} />
@@ -211,7 +248,7 @@ export function PlanoMesas({
         return (
           <g
             key={mesa.id}
-            transform={`translate(${mesa.posX + mesa.ancho / 2} ${mesa.posY + mesa.alto / 2}) rotate(${mesa.rotacion})`}
+            transform={`translate(${lugar.posX + mesa.ancho / 2} ${lugar.posY + mesa.alto / 2}) rotate(${mesa.rotacion})`}
             role="button"
             tabIndex={0}
             aria-label={mesa.etiqueta}
