@@ -5,7 +5,8 @@ node_modules
 coverage
 playwright-report
 test-results
-tests
+# tests/ entra al contexto: `next build` revisa los tipos de todo el proyecto y scripts/carga.ts
+# importa tests/base-pruebas.ts. Las pruebas no llegan a la imagen, que copia solo el standalone.
 playwright.config.ts
 vitest.config.ts
 .env
