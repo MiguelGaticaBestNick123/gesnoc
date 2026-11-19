@@ -15,6 +15,7 @@ import { IconConfetti, IconTicket, IconTrophy } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { enviarJson } from '@/shared/red';
+import { useConfirmar } from '@/shared/ui/Confirmacion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { formatearHora, tituloDeFecha } from '@/shared/utilidades/fechas';
 import { formatearDocumento } from '@/shared/utilidades/rut';
@@ -62,6 +63,7 @@ function Ganadora({ ganador }: Readonly<{ ganador: Resultado }>) {
 // tanto, una pantalla completa hace la cuenta regresiva y gira el número, para proyectarlo en el local.
 export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
   const router = useRouter();
+  const preguntar = useConfirmar();
   const [rodando, setRodando] = useState<number | null>(null);
   const [resultados, setResultados] = useState<Record<number, Ganador>>({});
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +85,10 @@ export function Sorteo({ inicial }: Readonly<{ inicial: PantallaSorteo }>) {
 
   async function sortear(ambienteId: number, nombre: string) {
     // Es irreversible (RN-23): un toque accidental no debe revelar al ganador antes de tiempo.
-    const confirmado = window.confirm(
-      `¿Sortear el premio de ${nombre} entre ${inicial.participantes} ${inicial.participantes === 1 ? 'ticket' : 'tickets'}? El sorteo no se repite.`,
-    );
+    const confirmado = await preguntar({
+      mensaje: `¿Sortear el premio de ${nombre} entre ${inicial.participantes} ${inicial.participantes === 1 ? 'ticket' : 'tickets'}? El sorteo no se repite.`,
+      aceptar: 'Sortear',
+    });
     if (!confirmado) return;
     // Los que participaron: al refrescar, el ganador ya no cuenta entre los que pueden ganar.
     const participantes = inicial.participantes;

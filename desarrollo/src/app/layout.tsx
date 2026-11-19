@@ -3,6 +3,7 @@ import '@mantine/core/styles.css';
 import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from '@mantine/core';
 import type { Metadata, Viewport } from 'next';
 import { Barlow } from 'next/font/google';
+import { ProveedorConfirmacion } from '@/shared/ui/Confirmacion';
 import { tema } from '@/shared/ui/tema';
 
 // Tipografía de la referencia de diseño: se descarga al compilar y se sirve desde el mismo dominio.
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <MantineProvider theme={tema} defaultColorScheme="dark">
-          {children}
+          <ProveedorConfirmacion>{children}</ProveedorConfirmacion>
         </MantineProvider>
       </body>
     </html>

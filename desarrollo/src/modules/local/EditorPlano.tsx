@@ -26,6 +26,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useEffect, useEffectEvent, useState } from 'react';
 import { mensajeDeFalla } from '@/shared/red';
+import { useConfirmar } from '@/shared/ui/Confirmacion';
 import { EncabezadoPagina } from '@/shared/ui/EncabezadoPagina';
 import { guardarPlano } from './acciones';
 import {
@@ -69,6 +70,7 @@ export function EditorPlano({
   ambiente,
 }: Readonly<{ inicial: PlanoParaEditar; ambiente: Ambiente }>) {
   const router = useRouter();
+  const preguntar = useConfirmar();
   const plano = { ancho: ambiente.planoAncho, alto: ambiente.planoAlto };
   const [guardadas, setGuardadas] = useState<MesaEditable[]>(inicial.mesas);
   const [mesas, setMesas] = useState<MesaEditable[]>(inicial.mesas);
@@ -89,12 +91,21 @@ export function EditorPlano({
     // Los enlaces del menú navegan sin recargar y no disparan beforeunload: se pregunta antes de
     // salir, en la fase de captura, para detener el clic antes de que lo tome el enlace.
     const alSalir = (evento: MouseEvent) => {
-      const enlace = (evento.target as Element | null)?.closest('a[href]');
+      const enlace = (evento.target as Element | null)?.closest<HTMLAnchorElement>('a[href]');
       if (!enlace) return;
-      if (!window.confirm('Hay cambios sin guardar en el plano. ¿Salir y descartarlos?')) {
-        evento.preventDefault();
-        evento.stopPropagation();
-      }
+      // El clic se detiene mientras se pregunta en pantalla; si acepta, se navega a ese enlace.
+      evento.preventDefault();
+      evento.stopPropagation();
+      void preguntar({
+        mensaje: 'Hay cambios sin guardar en el plano. ¿Salir y descartarlos?',
+        aceptar: 'Salir sin guardar',
+        peligro: true,
+      }).then((acepta) => {
+        if (acepta) {
+          document.removeEventListener('click', alSalir, true);
+          router.push(enlace.getAttribute('href')!);
+        }
+      });
     };
     window.addEventListener('beforeunload', avisar);
     document.addEventListener('click', alSalir, true);
@@ -102,7 +113,7 @@ export function EditorPlano({
       window.removeEventListener('beforeunload', avisar);
       document.removeEventListener('click', alSalir, true);
     };
-  }, [hayCambios]);
+  }, [hayCambios, preguntar, router]);
 
   const cambiar = (id: number, cambio: (mesa: MesaEditable) => MesaEditable) => {
     setMesas((actuales) => actuales.map((mesa) => (mesa.id === id ? cambio(mesa) : mesa)));
@@ -150,8 +161,13 @@ export function EditorPlano({
     setMensaje(null);
   }
 
-  function descartar() {
-    if (!window.confirm('¿Descartar los cambios del plano y volver al último guardado?')) return;
+  async function descartar() {
+    const acepta = await preguntar({
+      mensaje: '¿Descartar los cambios del plano y volver al último guardado?',
+      aceptar: 'Descartar cambios',
+      peligro: true,
+    });
+    if (!acepta) return;
     setMesas(guardadas);
     setRetiradas([]);
     setSeleccionada(null);
@@ -183,10 +199,15 @@ export function EditorPlano({
     }
   }
 
-  function cambiarAmbiente(id: string) {
-    if (hayCambios && !window.confirm('Hay cambios sin guardar en este plano. ¿Descartarlos?')) {
-      return;
-    }
+  async function cambiarAmbiente(id: string) {
+    const descarta =
+      !hayCambios ||
+      (await preguntar({
+        mensaje: 'Hay cambios sin guardar en este plano. ¿Descartarlos?',
+        aceptar: 'Descartar cambios',
+        peligro: true,
+      }));
+    if (!descarta) return;
     router.push(`/admin/mapa?ambiente=${id}`);
   }
 

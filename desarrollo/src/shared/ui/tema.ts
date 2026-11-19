@@ -63,6 +63,23 @@ export const tema = createTheme({
       },
     },
     Tabs: { styles: { tab: { minHeight: 44 } } },
+    // El interruptor, igual: su etiqueta también lo cambia y la fila mide 44 px.
+    Switch: {
+      defaultProps: { size: 'md' },
+      styles: {
+        body: { alignItems: 'center' },
+        label: { minHeight: 44, display: 'flex', alignItems: 'center' },
+      },
+    },
+    // La casilla mide 24 px y su etiqueta, que también la marca, 44 px de alto: la fila completa
+    // se toca con un dedo (RNF-09). La casilla queda a la altura del texto aunque haya descripción.
+    Checkbox: {
+      defaultProps: { size: 'md' },
+      styles: {
+        inner: { marginTop: 10 },
+        label: { minHeight: 44, display: 'flex', alignItems: 'center' },
+      },
+    },
     // Un tono más claro que el violeta de los botones: sobre el fondo de la noche llega a 6:1.
     Anchor: { defaultProps: { c: 'violeta.3' } },
     // Los campos miden 44 px como los botones (Mantine trae 42 en el tamaño md).

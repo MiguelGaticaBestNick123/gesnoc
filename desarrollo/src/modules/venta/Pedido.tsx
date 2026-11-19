@@ -38,6 +38,7 @@ import {
 import { EncabezadoCuenta } from './EncabezadoCuenta';
 import type { PantallaPedido } from './servicios/cuentas';
 import type { PedidoEnviado } from './servicios/pedidos';
+import { useConfirmar } from '@/shared/ui/Confirmacion';
 import { hojaInferior } from '@/shared/ui/hoja';
 
 const SIN_CONFIRMAR = 'Este pedido quedó sin confirmar. Reintenta: no se duplica.';
@@ -49,6 +50,7 @@ const unir = (nombres: string[]) =>
 export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
   const { fecha, cuenta, categorias, productos } = pantalla;
   const router = useRouter();
+  const preguntar = useConfirmar();
   const llave = llaveDeBorrador(fecha, cuenta.numero);
   const [borrador, setBorrador] = useState<Borrador>(() =>
     leerBorrador(localStorage, llave, fecha),
@@ -147,7 +149,12 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
   }, []);
 
   async function cerrarCuentaVacia() {
-    if (!window.confirm('¿Cerrar esta cuenta? Solo se puede si no tiene consumo ni pagos.')) return;
+    const acepta = await preguntar({
+      mensaje: '¿Cerrar esta cuenta? Solo se puede si no tiene consumo ni pagos.',
+      aceptar: 'Cerrar cuenta',
+      peligro: true,
+    });
+    if (!acepta) return;
     const respuesta = await enviarJson('/api/cuentas/cerrar', { cuenta: cuenta.numero });
     if (respuesta.ok) router.push('/garzon');
     else setError(respuesta.error);
@@ -453,10 +460,13 @@ export function Pedido({ pantalla }: Readonly<{ pantalla: PantallaPedido }>) {
             <Button
               variant="subtle"
               color="red"
-              onClick={() => {
-                if (window.confirm('¿Vaciar el pedido? Se quitan todos los productos elegidos.')) {
-                  setBorrador(BORRADOR_VACIO);
-                }
+              onClick={async () => {
+                const acepta = await preguntar({
+                  mensaje: '¿Vaciar el pedido? Se quitan todos los productos elegidos.',
+                  aceptar: 'Vaciar pedido',
+                  peligro: true,
+                });
+                if (acepta) setBorrador(BORRADOR_VACIO);
               }}
             >
               Vaciar pedido
